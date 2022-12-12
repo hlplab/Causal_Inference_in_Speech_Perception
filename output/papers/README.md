@@ -1,0 +1,1 @@
+This is where you can put subfolders for each write-up. It's recommended that you further structure each subfolder into something like Round-1-JEP-G, Round-2-JEP-G, ..., so that each subfolder contains the cover letter, submitted manuscript, reviews received on that round, notes and replies to reviewers, etc.

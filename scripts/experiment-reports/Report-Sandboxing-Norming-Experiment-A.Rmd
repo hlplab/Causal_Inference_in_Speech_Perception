@@ -1,0 +1,180 @@
+---
+title: "Sandbox testing of Norming Experiment A"
+author: "YOUR NAMES"
+date: \today
+geometry: margin=2cm
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{siunitx}
+  - \usepackage{tabto}
+  - \usepackage{soul}
+  - \usepackage{xcolor}
+  - \usepackage{placeins}
+  - \usepackage{lscape}
+  - \usepackage{animate}
+  - \newcommand{\blandscape}{\begin{landscape}}
+  - \newcommand{\elandscape}{\end{landscape}}
+  - \makeatletter\renewcommand{\fps@table}{!ht}\makeatother
+  - \setstcolor{red}
+  - \usepackage{sectsty}
+  - \sectionfont{\color{blue}} 
+  - \subsectionfont{\color{blue}}
+  - \subsubsectionfont{\color{darkgray}}
+output:
+  pdf_document: 
+    fig_caption: yes
+    fig_width: 7
+    keep_tex: yes
+    latex_engine: xelatex
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+  fontsize: 10pt
+---
+
+```{r, include=F}
+library(knitr)
+
+opts_chunk$set(dev = 'pdf',
+               comment="", 
+               echo=FALSE, warning=TRUE, message=TRUE,
+               cache=FALSE, 
+               size="small",
+               tidy.opts = list(width.cutoff = 200),
+               fig.width = 8, fig.height = 4.5, fig.align = "center")
+
+
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+
+color_block = function(color) {
+  function(x, options) sprintf('\\color{%s}\\begin{verbatim}%s\\end{verbatim}\\color{black}',
+                               color, x)
+}
+knitr::knit_hooks$set(error = color_block('red'))
+knitr::knit_hooks$set(warning = color_block('orange'))
+```
+
+# Preamble 
+Loading libraries, functions, and setting constants.
+
+```{r, include=F}
+library(tidyverse)
+library(magrittr)
+
+library(broom)          # for extraction of coefficients
+
+library(gganimate)      # to animate plots
+library(RColorBrewer)   # to select brewer colors
+```
+
+```{r, include=F}
+options(width = 110)
+
+theme_set(theme_bw())
+```
+
+```{r functions, include=FALSE}
+source("functions-for-experiment-reports.R")
+```
+
+# Data import
+Loading and formatting data.
+
+```{r, message=F}
+
+```
+
+
+# Assessing the data
+
+## Carefully read comments provided by participants
+No comments provided in the sandbox HITs.
+
+```{r}
+
+```
+
+## Matching beween YAML file and conditions in this data
+
+ 1. Get the HIT ID for each participant. 
+```{r}
+```
+ 
+ 2. Go to the YAML success file (.success.yaml). 
+ 3. Look up that HIT ID.
+ 4. Count what *k*th HIT corresponds to that HIT ID from the top of the success file (e.g., it might be the 6th HIT ID).
+ 
+```{r}
+
+```
+
+## Have any participants taken the experiment more than once?
+
+If a worker shows up more than once below, it is a duplicate take. For sandboxing, this is not an issue. We include this debugging step here since we will use it during production.
+
+```{r}
+
+```
+
+## Does each HIT contain exactly 2 instances of each recording?
+Show all combinations of participant, test block, and video condition for which this is *not* true:
+
+```{r}
+
+```
+
+
+## Does the data only contain test results (as it should)?
+
+```{r}
+
+```
+
+
+## Did participants show increasing voiceless responses for stimuli with increasing VOT?
+We fit separate logistic regressions to each participant's responses with the VOT continuum as the sole (linear) predictor.
+
+```{r}
+
+```
+
+
+### Are there participants that are outliers in terms of the categorization functions?
+For example, did some participants swap the response keys. For that, we plot the participant-specific intercepts and slopes derived by the participant-specific logistic regressions to each participont's data) on a 2D landscape. 
+
+```{r, message=FALSE}
+
+```
+
+## How long did it take participants to complete the experiment?
+We have two ways of assessing the overall duration participants took to complete the experiment. The time between accepting and submitting the assignment includes any time that might pass before the participant actually starts the experiment (workers often select a few HITs---reserving them---and only then start working on them), time spent reading the instructions, and time spent on the survey: 
+
+```{r}
+
+```
+
+A second, perhaps more informative measure, is the time between the start of the first trial and the end of the last trial, which measures how much time was spent on the actual experiment.
+
+```{r}
+
+```
+
+
+### Were some participants particularly slow/fast to respond?
+We can also examine the pacing and variability in pacing across trials. For this, we plot the mean and standard deviation of each participants logarithm-transformed response times for all non-catch trials. Catch trials were excluded from this consideration since catch responses (pressing "B") could be given at any point of the video, making catch responses substantially faster than all other responses. 
+
+Participant with high SDs are those who might have, for example, have just one or two slow trials. Participant with high mean RTs but comparatively low SDs of those RTs, on the other hand, were consistently slow in responding.
+
+```{r}
+
+```
+
+
+# Session info
+```{r session_info, include=TRUE, echo=TRUE, results='markup'}
+devtools::session_info()
+```

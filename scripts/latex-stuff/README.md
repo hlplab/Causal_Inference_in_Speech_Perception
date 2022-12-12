@@ -1,0 +1,1 @@
+This folder contains information required to knit APA formatted manuscripts. There usually won't be a need for you to edit anything in this folder, or to add/remove information. Best leave it as-is.

@@ -1,0 +1,3 @@
+[submodule "experiments/series-A/template-R-project"]
+	path = experiments/series-A/template-R-project
+	url = https://github.com/hlplab/template-R-project.git

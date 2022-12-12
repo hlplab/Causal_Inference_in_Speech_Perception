@@ -1,0 +1,1 @@
+This is where you can put subfolders for conference you submitted to. It's recommended that you further structure each subfolder into e.g., Application/ with information about submitted abstracts, reviews, etc. Published/ with information about the final abstract, presentations as given (and potentially with corrections afterwards in a separate, clearly labeled file).

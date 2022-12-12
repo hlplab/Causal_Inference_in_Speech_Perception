@@ -1,0 +1,25 @@
+<!-- Do NOT knit this document. It is part of a larger document. Instead knit the main document (my-apa-formatted-article) -->
+
+# Introduction
+How humans managed to survive so far remains one of the central questions of the social sciences. ... Here are some references [e.g., @bradlow-bent2008; @nygaard1994; @Perrachione2016; @sidaras2009; @wade2007; @weil2001a; @xie2021jep]. And here is a figure references to Figure \@ref(fig:blub-results). 
+
+(ref:blub-results) You should use a verbose caption that is self-contained and clearly states the main points of the figure. When you look at the R markdown for this document, note that the caption is *outside* of the R-chunk but linked to the R-chunk through a reference in the chunk option fig.cap. Notice also how the reference in the main text uses the label fig:label, whereas the caption and the R chunk option fig.cap that generates the figure use the label ref:label. Finally, the R-chunk itself is called label. Make sure to follow this format in order to make sure that your figure references and captions knit correctly. This example also demonstrates how you can use a globally defined base width and height for all figures. In this example, the base height is multiplied by two because we're faceting the data into two rows.
+
+```{r blub-results, fig.width = base.width * 1, fig.height= base.height * 2, fig.cap="(ref:blub-results)", warning=FALSE}
+cars %>%
+  mutate(z = rbinom(nrow(.), 1, .5)) %>%
+  ggplot(aes(x = speed, y = dist)) +
+  geom_point() +
+  geom_smooth() +
+  facet_grid(z ~ .)
+```
+
+You can also make phonetic symbols, e.g., for the sound category [`r linguisticsdown::cond_cmpl("ʃ")`] [as in *ship*, Newman et al., -@newman2001]. And you can type equations like Equation \@ref(eq:posterior-probability-lapse), which describes Wichmann and Hill's psychometric model with parameters $\alpha$ and $\beta$ and more.  
+
+\begin{equation}\label{eq:posterior-probability-lapse}
+p(category | input) = (1 - \lambda) \frac{\mathcal{N}\!\left( input | \mu_c, \Sigma_c \right) \pi}{\Sigma_i \mathcal{N}\!\left( input | \mu_{c_i}, \Sigma_{c_i} \right) \pi_i} + \lambda \frac{\pi}{\Sigma_i \pi_i}
+\end{equation}
+
+<!-- This is a markdown comment that will NOT show when you knit the document.  -->
+
+All data and code for this article can be downloaded from[https://osf.io/q7gjp/](OSF). This article is written in R markdown, allowing readers to replicate our analyses with the press of a button using freely available software [R, @R; @RStudio], while changing any of the parameters of our models. Readers can revisit any of the assumptions we make---for example, by substituting alternative models of linguistic representations. The supplementary information (SI, \@ref(sec:SI-software)) lists the software/libraries required to compile this document. Beyond our immediate goals here, we hope that this can be helpful to researchers who are interested in developing more informative experimental designs, and to facilitate the interpretation of existing results [see also @tan2021]. 

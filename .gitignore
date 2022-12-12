@@ -1,0 +1,12 @@
+.DS_Store
+*.Rproj
+*.rds
+*.log
+*.gz
+*.Rproj
+*.tex
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*_cache*
