@@ -1,0 +1,21 @@
+<!-- Do NOT knit this document. It is part of a larger document. Instead knit the main document (my-apa-formatted-article) -->
+
+This is a place where you can summarize your to-do list while you're working on the paper. By putting it at the beginning of your paper and using a logical flag to switch it on and off (in the main document), you can keep this information accessible to your collaborators while also making it easy to remove when you want to share your document with someone else.
+
+## Highest priority
+  * AUTHOR:
+    * Do ....
+    * Fix ...
+    * Make new plot for ...
+    
+
+  * CO_AUTHOR 1:
+   * Re-read ... and make sure that we present their hypothesis correctly. 
+   
+  * CO-AUTHOR 2: 
+    * Code analysis for Experiment 2 ...
+    * Double check formula in Section ...
+  
+## To do later
+  
+  * Everyone: Eat ice-cream and perhaps have a beer.

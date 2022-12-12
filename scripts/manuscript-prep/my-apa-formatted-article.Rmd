@@ -1,0 +1,181 @@
+---
+title             : "YOUR PAPER TITLE"
+shorttitle        : "YOUR SHORT TITLE"
+date              : "`r format(Sys.time(), '%B %d, %Y')`"
+
+author: 
+  - name          : "YOUR NAME"
+    affiliation   : "1,2"
+    corresponding : yes    # Define only one corresponding author
+    address       : "YOUR ADDRESS"
+    email         : "YOUR@EMAIL-ADDRESS.COM"
+    # role: 
+    #   - Conceptualization
+    #   - Writing - Original Draft Preparation
+    #   - Writing - Review & Editing
+    #   - Coding of analyses and visualization
+  - name          : "YOUR CO-AUTHOR"
+    affiliation   : "2,3"
+    # role:
+    #   - Conceptualization
+    #   - Writing - Original Draft Preparation
+    #   - Writing - Review & Editing
+    #   - Coding of analyses and visualization
+  - name          : "YOUR OTHER CO-AUTHOR"
+    affiliation   : "2"
+    # role:
+    #   - Conceptualization & Framing
+    #   - Writing - Original Draft Preparation
+    #   - Writing - Review & Editing
+    #   - Visualization
+
+affiliation:
+  - id            : "1"
+    institution   : "Language Science, University of HERE, STATE"
+  - id            : "2"
+    institution   : "Brain and Cognitive Sciences, University of THERE"
+  - id            : "3"
+    institution   : "Computer Science, University of THERE"
+
+authornote: |
+  We are grateful to ### ommitted for review ###
+# list all your acknowledgments here. Do so early, and whenever somebody has helped you. Lead by example and acknowledge the inputs, sources, and generosity of other researchers. 
+
+abstract: |
+  YOUR ABSTRACT GOES HERE. All data and code for this study are shared via OSF, including the R markdown document that this article is generated from, and an R library that implements the models we present.
+  
+keywords          : "KEY-WORD1; KEY-WORD2; KEY-WORD3; ..."
+wordcount         : "X"
+
+bibliography      : ["latex-stuff/library.bib", "latex-stuff/r-references.bib"]
+link-citations    : yes
+csl               : latex-stuff/apa-6th-edition.csl
+
+floatsintext      : yes
+figurelist        : no
+tablelist         : no
+footnotelist      : no
+linenumbers       : yes
+numbersections    : true
+mask              : no
+draft             : no
+
+header-includes: 
+ - \usepackage{sectsty}
+ - \usepackage{animate}
+ - \usepackage{amsmath}
+ - \usepackage{tikz}
+ - \usetikzlibrary{bayesnet}
+ - \usepackage{booktabs}
+ - \usepackage{siunitx}
+ - \usepackage{soul}
+ - \usepackage{tabto}
+ - \usepackage{xcolor}
+ - \usepackage{placeins}
+ - \setstcolor{red}
+ - \sectionfont{\color{black}}
+ - \subsectionfont{\color{black}}
+ - \subsubsectionfont{\color{black}}
+ - \usepackage{setspace}\doublespacing
+ - \usepackage{subfig}
+ 
+documentclass     : "apa6"
+classoption       : "man"
+fontsize          : 11pt
+output: 
+  papaja::apa6_pdf:
+    latex_engine: xelatex
+    extra_dependencies: "subfig" 
+    includes:
+      in_header: latex-stuff/header.tex
+always_allow_html: true
+---
+
+<!-- THIS IS THE DOCUMENT THAT YOU USE FOR KNITTING. IT WILL KNIT ALL THE OTHER SECTIONS, TOO -->
+
+```{r libraries, include=FALSE, message=FALSE}
+devtools::install_github("crsh/papaja") # Make sure this library is up-to-date
+library(papaja)             # APA formatted ms
+
+library(tidyverse)
+library(magrittr)           # pipes
+library(rlang)              # quosures (in functions)
+library(assertthat)         # asserts (in functions)
+
+library(linguisticsdown)    # IPA symbols
+library(latexdiffr)         # trackchanges
+```
+
+```{r constants-general, include=FALSE}
+# IF you're using brms or rstan, uncomment the following:
+#
+# chains = 4
+# 
+# options(
+#   width = 1000,
+#   mc.cores = min(chains, parallel::detectCores()))
+```
+
+```{r functions-general, include=FALSE}
+source("functions.R")
+
+# For plotting
+myGplot.defaults("paper")
+
+# Get citation information
+r_refs(file = "latex-stuff/r-references.bib")
+```
+
+```{r knitr-setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE, message = FALSE, warning = TRUE, 
+  results = "markup", cache = TRUE,
+  interval = .2,
+  fig.path = "../figures/knitted/", fig.align = "center", fig.height = 2.5, fig.width = 2.5)
+
+knitr::knit_hooks$set(inline = function(x) {
+  prettyNum(x, big.mark=",")
+})
+
+# Some useful formatting for warnings and error messages, so that they are not easily missed.
+knitr::knit_hooks$set(document = function(x) {sub('\\usepackage[]{color}', '\\usepackage{xcolor}', x, fixed = TRUE)})
+color_block = function(color) { function(x, options) sprintf('\\color{%s}\\begin{verbatim}%s\\end{verbatim}\\color{black}', color, x) }
+knitr::knit_hooks$set(error = color_block('red'))
+knitr::knit_hooks$set(warning = color_block('orange'))
+
+# To keep figure sizes comparable across the paper, you can define a basic width and height (e.g., for each panel)
+# and then refer to those variables in the knitr chunk options that describe the figure width and height for a 
+# specific R chunk.
+options(width = 200, digits = 2, OutDec = ".", tinytex.verbose = TRUE)
+base.width = 2.15
+base.height = 2.15
+
+animate = T         # switch on/off to replace animations with facets (not yet implemented for all instances)
+TODO = F            # switch on/off to get to do list.
+RESET_FIGURES = T   # switch on/off whether figures that exist as files are regenerated
+```
+
+```{r analysis-preferences}
+# Seed for random number generation
+set.seed(42007)
+knitr::opts_chunk$set(cache.extra = knitr::rand_seed)
+```
+
+
+```{r, child="section-0-TO-DO.Rmd", eval= if (TODO) TRUE else FALSE}
+```
+
+<!-- Using inline R markdown child definition since only the quiet = T option oppresses both the latex *and* the R output of a child -->
+
+```{r, child="section-1-introduction.Rmd"}
+```
+
+```{r, child="section-6-general-discussion.Rmd"}
+```
+
+```{r, child="section-7-references.Rmd"}
+```
+
+```{r, child="supplementary-information.Rmd"}
+```
+
