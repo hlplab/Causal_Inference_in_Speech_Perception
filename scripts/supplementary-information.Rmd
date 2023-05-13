@@ -1,0 +1,152 @@
+---
+title: "Supplementary Information"
+author: "Shawn Cummings, Menghan Yang, and Florian Jaeger"
+date: "\today"
+geometry: margin=2cm
+output:
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '4'
+  fontsize: 10pt
+  pdf_document:
+    fig_caption: yes
+    fig_width: 7
+    keep_tex: yes
+    latex_engine: xelatex
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+header-includes:
+- \usepackage{booktabs}
+- \usepackage{siunitx}
+- \usepackage{tabto}
+- \usepackage{soul}
+- \usepackage{xcolor}
+- \usepackage{placeins}
+- \usepackage{lscape}
+- \usepackage{animate}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+- \makeatletter\renewcommand{\fps@table}{!ht}\makeatother
+- \setstcolor{red}
+- \usepackage{sectsty}
+- \sectionfont{\color{blue}}
+- \subsectionfont{\color{blue}}
+- \subsubsectionfont{\color{darkgray}}
+---
+
+```{r, include=FALSE}
+library(knitr)
+
+opts_chunk$set(dev = 'png',
+               comment="", 
+               echo=FALSE, warning=TRUE, message=TRUE,
+               cache=FALSE, 
+               size="small",
+               tidy.opts = list(width.cutoff = 200),
+               fig.width = 8, fig.height = 4.5, fig.align = "center")
+
+
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+
+color_block = function(color) {
+  function(x, options) sprintf('\\color{%s}\\begin{verbatim}%s\\end{verbatim}\\color{black}',
+                               color, x)
+}
+knitr::knit_hooks$set(error = color_block('red'))
+knitr::knit_hooks$set(warning = color_block('orange'))
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(magrittr)    # pipes
+library(lubridate)   # date conversion, etc.
+
+library(brms)        # Bayesian GL(M)Ms
+library(sjPlot)      # tables for Bayesian GL(M)Ms
+library(broom)       # extracting information from GL(M)Ms
+library(boot)         # easy logit() function
+
+library(linguisticsdown)  #IPA symbols
+library(rstan)
+
+# Setting cmdstanr
+library(curl)
+if (has_internet()) install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
+library(cmdstanr)
+install_cmdstan()
+```
+
+```{r constants, include=FALSE}
+source("constants.R")
+```
+
+# TO DO:
+
+ * do data formatting in *this* document, or in a script sourced by this document.
+
+# Context statement
+This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab, University of Rochester, is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information.
+
+# Experiment 1a-c
+
+## Data import
+We import and format the data for Experiments 1a-c, as well as Experiments A and 1 from Liu & Jaeger (2018).
+
+```{r}
+load("../data/Experiment-NORM-A-before-exclusions.RData") #named d.test.A
+d.Exp1a <- d.test.A %>%
+  mutate(Experiment = "CISP-1a")
+ 
+load("../data/Experiment-NORM-B-before-exclusions.RData") #named d.test.B
+d.Exp1b <- d.test.B %>%
+  mutate(Experiment = "CISP-1b")
+
+load("../data/Experiment-NORM-C-before-exclusions.RData") #named d.test.C
+d.Exp1c <- d.test.C %>%
+  mutate(Experiment = "CISP-1c")
+
+d.LJ18.test <- 
+  read.csv("../data/Liu Jaeger 2018/Liu-Jaeger-2018-test-1-s2.0-S0010027718300118-mmc2.csv") %>%
+  # Filter to norming experiment
+  filter(
+    Condition == 'Filler') %>%
+  mutate(
+    Experiment = factor('LJ18-NORM'),
+    ParticipantID = as.factor(paste0("LJ18.", Subject)), 
+    Condition.Test.Audio = Step, 
+    Condition.Test.Pen = "audio-only",
+    Condition.Test.OriginalLabel = NA,
+    Response = factor(case_when(Response == "SH" ~ "ASHI", Response == "S" ~ "ASI")),
+    # Blocks were 6 trials per block in LJ18 but 12 in CISP, so we re-calculate
+    # blocks for LJ18 to be blocks of 12 trials.
+    Block = Trial %/% 12 + 1, 
+    Trial = Trial + 1,
+    across(
+      c(Condition.Test.Pen, Condition.Test.OriginalLabel), 
+    factor)) %>%
+  select(
+    Experiment, ParticipantID,
+    Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Audio, 
+    Block, Trial, Response)
+
+d.test <- 
+  bind_rows(d.Exp1a, d.Exp1b, d.Exp1c, d.LJ18.test) %>%
+  rename(
+    audio_type = Answer.audio_type,
+    sex = Answer.sex) %>%
+  add_exclusions() %>%
+  mutate(Condition.Exposure.Pen = NA,
+         Condition.Exposure.LexicalLabel = NA) %>%
+  select(Block, Experiment, Condition.Exposure.Pen, 
+         Condition.Exposure.LexicalLabel, ParticipantID, Condition.Test.Audio,
+         Condition.Test.Pen, Response, Condition.Test.OriginalLabel)
+```
+
+
+
