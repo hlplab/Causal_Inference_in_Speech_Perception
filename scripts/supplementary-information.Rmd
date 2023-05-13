@@ -84,11 +84,19 @@ install_cmdstan()
 
 ```{r constants, include=FALSE}
 source("constants.R")
+
+# Set priors for all analyses
+priors <- 
+  c(
+    prior(student_t(3,0,2.5), class = b),
+    prior(cauchy(0,5), class = sd), 
+    prior(lkj(1), class = cor))
 ```
 
 # TO DO:
 
  * do data formatting in *this* document, or in a script sourced by this document.
+ * decided whether to add exclusion based on B-presses during test.
 
 # Context statement
 This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab, University of Rochester, is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information.
@@ -145,8 +153,37 @@ d.test <-
          Condition.Exposure.LexicalLabel = NA) %>%
   select(Block, Experiment, Condition.Exposure.Pen, 
          Condition.Exposure.LexicalLabel, ParticipantID, Condition.Test.Audio,
-         Condition.Test.Pen, Response, Condition.Test.OriginalLabel)
+         Condition.Test.Pen, Response, Condition.Test.OriginalLabel) 
+
+# Prep for analysis
+prep_for_analysis <- 
+  . %>%
+  mutate(Response.ASHI = ifelse(Response == "ASHI", 1, 0)) %>%
+  mutate(
+    Condition.Test.Pen = 
+      "contrasts<-"(factor(Condition.Test.Pen), , c(-0.5, 0.5)),
+    Condition.Test.OriginalLabel = 
+      "contrasts<-"(factor(Condition.Test.OriginalLabel), , c(0.5, -0.5)),
+    Block = Block - 1) %>%
+  select(Condition.Test.OriginalLabel, Condition.Test.Pen, Block, Condition.Test.Audio, ParticipantID, Response.ASHI) %>%
+  filter(!is.na(Response.ASHI))
 ```
 
-
-
+```{r}
+d.Exp1a.brm.full <- 
+  brm(
+  Response.ASHI ~
+    1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio) +
+    (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio) | ParticipantID),
+  data = 
+    d.test %>%
+    filter(Experiment == "CISP-1a") %>% 
+    prep_for_analysis(),
+  family = "bernoulli",
+  prior = priors,
+#  backend = "cmdstanr",
+  chains = 4, 
+  cores = min(parallel::detectCores(), 4), 
+  file = "../models/Exp1a")
+summary(d.Exp1a.brm.full)
+```
