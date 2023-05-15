@@ -127,19 +127,19 @@ This document contains the data preparation, visualization, and analyses reporte
 We import and format the data for Experiments 1a-c, as well as Experiments A and 1 from Liu & Jaeger (2018).
 
 ```{r}
-load("../data/Experiment-NORM-A-before-exclusions.RData") #named d.test.A
+load("../data/Experiment-NORM-A-before-exclusions.RData") 
 d.Exp1a <- d.test.A %>%
   mutate(
     Experiment = "CISP-1a",
     ParticipantID = paste(Experiment, ParticipantID, sep = "."))
  
-load("../data/Experiment-NORM-B-before-exclusions.RData") #named d.test.B
+load("../data/Experiment-NORM-B-before-exclusions.RData") 
 d.Exp1b <- d.test.B %>%
   mutate(
     Experiment = "CISP-1b",
     ParticipantID = paste(Experiment, ParticipantID, sep = "."))
 
-load("../data/Experiment-NORM-C-before-exclusions.RData") #named d.test.C
+load("../data/Experiment-NORM-C-before-exclusions.RData") 
 d.Exp1c <- d.test.C %>%
   mutate(
     Experiment = "CISP-1c",
@@ -225,6 +225,7 @@ d.test %<>%
     filter(!is.na(Response.ASHI))
 ```
 
+## Analyses
 
 ```{r}
 # Prep for analysis
@@ -239,63 +240,6 @@ prep_for_analysis <- function(data) {
     select(Experiment, Condition.Test.OriginalLabel, Condition.Test.Pen, Block, Condition.Test.Audio, ParticipantID, Response.ASHI) 
 }
 
-my_plots <- function(m) {
-  plot(conditional_effects(m, method = "posterior_linpred"), ask = F)
-}
-
-my_hypotheses <- function(m, experiment) { 
-  format <-  
-    . %>%
-    rename(BF = Evid.Ratio) %>%
-    mutate(
-      Experiment = experiment,
-      across(
-        c("Estimate", "Est.Error", starts_with("CI"), "Post.Prob"),
-        ~ signif(.x, 3)),
-      BF = ifelse(is.infinite(BF), paste(">", ndraws(m)), as.character(round(BF, 1)))) %>% 
-    relocate(Experiment, everything())
-
-  # mo() operators imply that the effects of the other variables are assessed at the reference level of the
-  # monotonic predictor. For Block, this is exactly what we want: evaluation of effects in the first Block.
-  # However, for the continuum, we'd like to assess effects in the middle of the continuum. This is taken 
-  # into account below.
-  list(
-    bind_rows(
-    hypothesis(m, "bsp_moCondition.Test.Audio > 0", class = NULL, scope = "standard")$hypothesis %>% 
-      mutate(Hypothesis = "Acoustic continuum more ASHI-like -> more ASHI-responses"),
-    # There are 5 continuum steps above the baseline, so we add 2.5 * the interaction of continuum and the 
-    # effect of interest to the effect of interest. (a more precise estimate could be obtained by following
-    # Figure 1 in Bürkner & Charpentier, which takes into account the specific simo estimates).
-    hypothesis(
-      m, 
-      "b_Condition.Test.OriginalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH > 0", 
-      class = NULL, scope = "standard")$hypothesis %>% 
-      mutate(Hypothesis = "Visual label ASHI -> more ASHI-responses"),
-    hypothesis(
-      m, 
-      "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", 
-      class = NULL, scope = "standard")$hypothesis %>% 
-      mutate(Hypothesis = "Pen location Mouth -> fewer ASHI-responses")) %>% 
-      format() %>%
-      kable(caption = "Main effects in Block 1"),
-  bind_rows(
-    hypothesis(m, "bsp_moBlock:moCondition.Test.Audio < 0", class = NULL, scope = "standard")$hypothesis %>% 
-      mutate(Hypothesis = "Continuum effect decreases over blocks"),
-    hypothesis(m, "bsp_moBlock:Condition.Test.OriginalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH < 0", class = NULL, scope = "standard")$hypothesis %>% 
-      mutate(Hypothesis = "Visual label effect decreases over blocks"),
-    hypothesis(m, "bsp_moBlock:Condition.Test.PenM + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.PenM > 0", class = NULL, scope = "standard")$hypothesis %>% 
-      mutate(Hypothesis = "Pen effect decreases over blocks")) %>% 
-    format()%>%
-    kable(caption = "Changes across blocks"),
-  bind_rows(
-    hypothesis(m, "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL, scope = "standard")$hypothesis %>% 
-      mutate(Hypothesis = "Pen effect increases for more ASHI-like acoustic input")) %>% 
-    format() %>%
-    kable(caption = "Changes across acoustic continuum"))
-}
-```
-
-```{r}
 fit_test_model <- function(data, experiment) {
   m <- brm(
     Response.ASHI ~
@@ -317,12 +261,98 @@ fit_test_model <- function(data, experiment) {
   return(m)
 }
 
-m.Exp1a <- fit_test_model(d.test, "CISP-1a")
-m.Exp1b <- fit_test_model(d.test, "CISP-1b")
-m.Exp1c <- fit_test_model(d.test, "CISP-1c")
+my_hypotheses <- function(m, experiment, plot = F) { 
+  format <-  
+    . %>%
+    rename(BF = Evid.Ratio) %>%
+    mutate(
+      Experiment = experiment,
+      across(
+        c("Estimate", "Est.Error", starts_with("CI"), "Post.Prob"),
+        ~ signif(.x, 3)),
+      BF = ifelse(is.infinite(BF), paste(">", ndraws(m)), as.character(round(BF, 1)))) %>% 
+    relocate(Experiment, everything())
 
-my_hypotheses(m.Exp1a, experiment = "Exp 1a")
-my_hypotheses(m.Exp1b, experiment = "Exp 1b")
-my_hypotheses(m.Exp1c, experiment = "Exp 1c")
+  # mo() operators imply that the effects of the other variables are assessed at the reference level of the
+  # monotonic predictor. For Block, this is exactly what we want: evaluation of effects in the first Block.
+  # However, for the continuum, we'd like to assess effects in the middle of the continuum. This is taken 
+  # into account below.
+  l <- list(
+    { h.main <- hypothesis(
+      m, 
+      c("bsp_moCondition.Test.Audio > 0", 
+        # There are 5 continuum steps above the baseline, so we add 2.5 * the interaction of continuum and the 
+        # effect of interest to the effect of interest. (a more precise estimate could be obtained by following
+        # Figure 1 in Bürkner & Charpentier, which takes into account the specific simo estimates).
+        "b_Condition.Test.OriginalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH > 0",
+        "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0"),
+      class = NULL) } %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "Acoustic continuum more ASHI-like -> more ASHI-responses",
+        "Visual label ASHI -> more ASHI-responses",
+        "Pen location Mouth -> fewer ASHI-responses")) %>%
+      format() %>%
+      kable(caption = "Main effects in Block 1"),
+    { h.block <- hypothesis(
+      m, 
+      c("bsp_moBlock:moCondition.Test.Audio = 0", 
+        "bsp_moBlock:Condition.Test.OriginalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0",
+        "bsp_moBlock:Condition.Test.PenM + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.PenM = 0"),
+      class = NULL) } %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "Continuum effect is stable over blocks",
+        "Visual label effect is stable over blocks",
+        "Pen effect is stable over blocks")) %>%
+      format() %>%
+      kable(caption = "Changes across blocks"),
+    { h.acoustic <- hypothesis(m, "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL, scope = "standard") } %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = "Pen effect increases for more ASHI-like acoustic input") %>% 
+      format() %>%
+      kable(caption = "Changes across acoustic continuum"))
+  
+  if (plot) {
+    plot(h.main)
+    plot(h.block)
+    plot(h.acoustic)
+  }
+  return(l)
+}
+
+my_plots <- function(m) {
+  plot(conditional_effects(m, method = "posterior_linpred"), ask = F)
+}
+
+my_plots_for_paper <- function(m) {
+  conditional_effects(
+    m, 
+    method = "posterior_linpred")
+}
+```
+
+### Experiment 1a
+
+```{r results='markup'}
+m.Exp1a <- fit_test_model(d.test, "CISP-1a")
+my_hypotheses(m.Exp1a, experiment = "Exp 1a") %>% map(print) -> TEMP
+my_plots(m.Exp1a)
+```
+
+### Experiment 1b
+
+```{r}
+m.Exp1b <- fit_test_model(d.test, "CISP-1b")
+my_hypotheses(m.Exp1b, experiment = "Exp 1b") %>% map(print) -> TEMP
+my_plots(m.Exp1b)
+```
+
+### Experiment 1c
+
+```{r}
+m.Exp1c <- fit_test_model(d.test, "CISP-1c")
+my_hypotheses(m.Exp1c, experiment = "Exp 1c")  %>% map(print) -> TEMP
+my_plots(m.Exp1c)
 ```
 
