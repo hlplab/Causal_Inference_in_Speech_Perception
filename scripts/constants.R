@@ -51,7 +51,11 @@ my_priors <- c(
 )
 
 # Functions ------------------------------------------------------------------
-## General functions ------------------------------------------------------------------
+## General functions ---------------------------------------------------------
+percent <- function(p) 
+  paste0(round(p * 100, 1), "%")
+
+
 scale_Gelman <- function(x) {
   (x - mean(x)) / (2 * sd(x))
 }
@@ -504,12 +508,12 @@ add_exclusions <- function(data, exclude_based_on_catch_trials = T) {
   # Failure to follow instructions
   data %<>%
     mutate(
-      Exclude_Participant.because_of_IgnoredInstructions = ifelse(audio_type %in% c("in-ear", "over-ear"), FALSE, TRUE))
+      Exclude_Participant.because_of_IgnoredInstructions = ifelse(Participant.AudioType %in% c("in-ear", "over-ear"), FALSE, TRUE))
   
   # Exclusion based on catch question
   data %<>%
     mutate(
-      Exclude_Participant.because_of_CatchQuestion = ifelse(sex == "woman", FALSE, TRUE))
+      Exclude_Participant.because_of_CatchQuestion = ifelse(Talker.Sex == "woman", FALSE, TRUE))
   
   # Exclusion based on catch trials
   data %<>%
@@ -597,7 +601,7 @@ add_exclusions <- function(data, exclude_based_on_catch_trials = T) {
     { if (!("Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal" %in% names(.))) 
       mutate(., Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal = F) else . } %>%
     mutate(
-      Exclude_Participant.Reason = factor(case_when(
+      Exclude_Participant.Reason = case_when(
         #Exclude_Participant.because_of_TechnicalDifficulty ~ "Technical difficulty",
         #Exclude_Participant.because_of_MultipleExperiments ~ "Repeat participant",
         Exclude_Participant.because_of_IgnoredInstructions ~ "No headphones",
@@ -607,46 +611,43 @@ add_exclusions <- function(data, exclude_based_on_catch_trials = T) {
         Exclude_Participant.because_of_SwappedKeys ~ "Swapped response keys",
         Exclude_Participant.because_of_RT ~ "Reaction time",
         Exclude_Participant.because_of_MissingTrials ~ "Too many missing trials",
-        T ~ "none")))
+        T ~ "none"))
+  
+  # Handle LJ18
+  data %<>%
+    mutate(
+      across(contains("because"), ~ ifelse(Experiment == "LJ18-NORM", NA, .x)),
+      Exclude_Participant.Reason = factor(ifelse(Experiment == "LJ18-NORM", "none", Exclude_Participant.Reason)))
   
   return(data)
 }
 
 
-
-
-addExclusionSummary <- function(
-  d, 
-  exclude_based_on_catch_trials = T,
-  plot = T, 
-  return_data = T
-) {
-    p <- d %>%
-      group_by(Experiment, ParticipantID, Exclude_Participant.Reason, Assignment.Submit.DuringDayTime) %>%
-      mutate(Response.log_RT = log10(Response.RT)) %>%
-      summarise_at("Response.log_RT", .funs = list("mean" = mean, "sd" = sd), na.rm = T) %>%
-      ggplot(aes(x = mean, y = sd)) +
-      geom_point(aes(color = Exclude_Participant.Reason, shape = Exclude_Participant.Reason, alpha = Assignment.Submit.DuringDayTime)) +
-      geom_rug() +
-      scale_x_continuous("mean log-RT (in msec)") +
-      scale_y_continuous("SD of log-RT") +
-      scale_color_manual(
-        "Reason for exclusion",
-        breaks = c("none", 
-                   "Technical difficulty", "Repeat participant", "No headphones", "Catch question or trials", "Lexical decision accuracy", "Swapped response keys", "Reaction time", "Too many missing trials"),
-        values = c("black", rep("red", 8))) +
-      scale_shape_manual(
-        "Reason for exclusion",
-        breaks = c("none", 
-                   "Technical difficulty", "Repeat participant", "No headphones", "Catch question or trials", "Lexical decision accuracy", "Swapped response keys", "Reaction time", "Too many missing trials"),
-        values = c(16, 15, 17, 10, 3, 4, 8, 9, 13)) +
-      scale_alpha_manual(
-        "Completed during\ndaytime (EST)?",
-        breaks = c(T, F),
-        values = c(1, .3))
-    
-  if (plot) { plot(p) }
-  if (return_data) return(d) else return(p)
+exclusionPlot <- function(data) {
+  p <- 
+    data %>%
+    droplevels() %>%
+    group_by(Experiment, ParticipantID, Exclude_Participant.Reason) %>%
+    mutate(Response.log_RT = log10(Response.RT)) %>%
+    summarise_at("Response.log_RT", .funs = list("mean" = mean, "sd" = sd), na.rm = T) %>%
+    ggplot(aes(x = mean, y = sd)) +
+    geom_point(aes(color = Exclude_Participant.Reason, shape = Exclude_Participant.Reason)) +
+    geom_rug() +
+    scale_x_continuous("mean log-RT (in msec)") +
+    scale_y_continuous("SD of log-RT") +
+    scale_color_manual(
+      "Reason for exclusion",
+      breaks = c("none", 
+                 "Technical difficulty", "Repeat participant", "No headphones", "Catch question or trials", "Lexical decision accuracy", "Swapped response keys", "Reaction time", "Too many missing trials"),
+      values = c("black", rep("red", 8))) +
+    scale_shape_manual(
+      "Reason for exclusion",
+      breaks = c("none", 
+                 "Technical difficulty", "Repeat participant", "No headphones", "Catch question or trials", "Lexical decision accuracy", "Swapped response keys", "Reaction time", "Too many missing trials"),
+      values = c(16, 15, 17, 10, 3, 4, 8, 9, 13)) +
+    facet_wrap(~ Experiment, nrow = 1)
+  
+  plot(p)
 }
 
 
