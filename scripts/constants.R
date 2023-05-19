@@ -547,7 +547,7 @@ add_exclusions <- function(data, exclude_based_on_catch_trials = T) {
     group_by(Experiment, ParticipantID) %>%
     # Get mean and SD of log-transformed RTs for each participant
     mutate(
-      Response.log_RT = log10(ifelse(Response.RT < 0 | Response.CatchTrial, NA_real_, Response.RT)),
+      Response.log_RT = log10(ifelse(Response.RT < 0, NA_real_, Response.RT)),
       Response.log_RT_scaled = scale(Response.log_RT),
       Response.mean_log_RT = mean(Response.log_RT, na.rm = T)) %>%
     group_by(Trial) %>%

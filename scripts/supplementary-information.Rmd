@@ -95,6 +95,34 @@ priors <-
     prior(lkj(1), class = cor))
 ```
 
+```{r functions to consolidate}
+format_more <- 
+  . %>%
+    # Potentially move these into the format function
+  rename(
+    Participant.AudioType = Answer.audio_type,
+    Participant.AudioStall = Answer.audio_stall,
+    Participant.VideoStall = Answer.video_stall,
+    Talker.Sex = Answer.sex,
+    Talker.PronunciationShift = Answer.ssh2,
+    Talker.PronunciationProperties = Answer.pronun,
+    Talker.SpeechDescription = Answer.speaker) %>%
+  add_exclusions() %>%
+  mutate(
+    Condition.Exposure.Pen = NA,
+    Condition.Exposure.LexicalLabel = NA,
+    Response.ASHI = ifelse(Response == "ASHI", 1, 0)) %>%
+  select(
+    Experiment, ParticipantID, starts_with("Participant."),
+    Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, 
+    Condition.Test.Audio, Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Keybindings,
+    Block, Trial, ItemID, 
+    Response, Response.ASHI, Response.RT, 
+    starts_with("Talker"),
+    starts_with("Duration"),
+    starts_with("Exclude")) 
+```
+
 # TO DO:
 
 ## Priority HIGHEST
@@ -167,62 +195,44 @@ d.LJ18.test <-
 
 d.test <- 
   bind_rows(d.Exp1a, d.Exp1b, d.Exp1c, d.LJ18.test) %>%
-  # Potentially move these into the format function
-  rename(
-    Participant.AudioType = Answer.audio_type,
-    Participant.AudioStall = Answer.audio_stall,
-    Participant.VideoStall = Answer.video_stall,
-    Talker.Sex = Answer.sex,
-    Talker.PronunciationShift = Answer.ssh2,
-    Talker.PronunciationProperties = Answer.pronun,
-    Talker.SpeechDescription = Answer.speaker) %>%
-  add_exclusions() %>%
-  mutate(
-    Condition.Exposure.Pen = NA,
-    Condition.Exposure.LexicalLabel = NA,
-    Response.ASHI = ifelse(Response == "ASHI", 1, 0)) %>%
-  select(
-    Experiment, ParticipantID, starts_with("Participant."),
-    Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, 
-    Condition.Test.Audio, Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Keybindings,
-    Block, Trial, ItemID, 
-    Response, Response.ASHI, Response.RT, 
-    starts_with("Talker"),
-    starts_with("Duration"),
-    starts_with("Exclude")) 
+  format_more()
 ```
 
 ## Exclusions
 
 ```{r}
-print(
-  d.test %>% 
-    distinct(Experiment, ParticipantID, Exclude_Participant.Reason) %>% 
-    group_by(Experiment, Exclude_Participant.Reason) %>% 
-    tally() %>% 
-    group_by(Experiment) %>%
-    mutate(Percent = percent(n / sum(n))))
-
-exclusionPlot(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")))
-
-d.test %<>% 
-  excludeData()
-
-message(
+run_exclusions <- function(data, experiment) {
+  print(
+    data %>% 
+      distinct(Experiment, ParticipantID, Exclude_Participant.Reason) %>% 
+      group_by(Experiment, Exclude_Participant.Reason) %>% 
+      tally() %>% 
+      group_by(Experiment) %>%
+      mutate(Percent = percent(n / sum(n))))
+  
+  exclusionPlot(data %>% filter(Experiment %in% experiment))
+  
+  data %<>% 
+    excludeData()
+  
+  message(
     "\nData submitted for analysis contains ", 
-    nrow(d.test %>% filter(is.na(Response.ASHI))),
+    nrow(data %>% filter(is.na(Response.ASHI))),
     " missing observations (",
-    percent(nrow(d.test %>% filter(is.na(Response.ASHI))) / nrow(d.test)),
+    percent(nrow(data %>% filter(is.na(Response.ASHI))) / nrow(data)),
     "), leaving ",
-    nrow(d.test %>% filter(!is.na(Response.ASHI))),
+    nrow(data %>% filter(!is.na(Response.ASHI))),
     " observations from ",
-    d.test %>% filter(!is.na(Response.ASHI)) %>% pull(ParticipantID) %>% unique() %>% length(),
+    data %>% filter(!is.na(Response.ASHI)) %>% pull(ParticipantID) %>% unique() %>% length(),
     " participants from ",
-    d.test %>% filter(!is.na(Response.ASHI)) %>% pull(Experiment) %>% unique() %>% length(),
+    data %>% filter(!is.na(Response.ASHI)) %>% pull(Experiment) %>% unique() %>% length(),
     " experiment(s).")
   
-d.test %<>%
+  data %>%
     filter(!is.na(Response.ASHI))
+}
+
+d.test %<>% run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
 ```
 
 ## Analyses
@@ -355,4 +365,50 @@ m.Exp1c <- fit_test_model(d.test, "CISP-1c")
 my_hypotheses(m.Exp1c, experiment = "Exp 1c")  %>% map(print) -> TEMP
 my_plots(m.Exp1c)
 ```
+# Experiments 2a-b
 
+## Data import
+We import and format the data for Experiments 2a-b.
+
+```{r}
+load("../data/Experiment-NORM-D-before-exclusions.RData") #named d.test.D
+load("../data/Experiment-NORM-E-before-exclusions.RData") #named d.test.E
+
+d.Exp2a <- 
+  d.test.D %>%
+  mutate(
+    Experiment = "CISP-2a",
+    ParticipantID = paste(Experiment, ParticipantID, sep = "."))
+ 
+d.Exp2b <- 
+  d.test.E %>%
+  mutate(Participant.Age = as.double(Participant.Age)) %>%
+  mutate(
+    Experiment = "CISP-2b",
+    ParticipantID = paste(Experiment, ParticipantID, sep = "."))
+
+d.test <- 
+  bind_rows(d.Exp2a, d.Exp2b) %>%
+  format_more()
+```
+## Exclusions
+
+```{r}
+d.test %<>% run_exclusions(c("CISP-2a", "CISP-2b"))
+```
+
+### Experiment 2a
+
+```{r results='markup'}
+m.Exp2a <- fit_test_model(d.test, "CISP-2a")
+my_hypotheses(m.Exp2a, experiment = "Exp 2a") %>% map(print) -> TEMP
+my_plots(m.Exp2a)
+```
+
+### Experiment 2b
+
+```{r}
+m.Exp2b <- fit_test_model(d.test, "CISP-2b")
+my_hypotheses(m.Exp2b, experiment = "Exp 2b") %>% map(print) -> TEMP
+my_plots(m.Exp2b)
+```
