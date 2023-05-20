@@ -1,4 +1,7 @@
 # Constants ------------------------------------------------------------------
+fig.base_width <- 1.75
+fig.base_height <- 1.75
+
 theme_set(
   theme_bw(base_size = 11) + 
     theme(
@@ -633,6 +636,22 @@ exclusionPlot <- function(data) {
     ggplot(aes(x = mean, y = sd)) +
     geom_point(aes(color = Exclude_Participant.Reason, shape = Exclude_Participant.Reason)) +
     geom_rug() +
+    geom_text(
+      data = 
+        . %>% 
+        group_by(Experiment) %>% 
+        summarise(
+          mean = max(mean),
+          sd = max(sd),
+          label = paste0(
+            "Excl. N=",
+            sum(Exclude_Participant.Reason != "none"),
+            " (",
+            percent(sum(Exclude_Participant.Reason != "none") / length(Exclude_Participant.Reason)),
+            ")")) %>%
+        ungroup() %>%
+        mutate(mean = max(mean), sd = max(sd)),
+      aes(label = label), color = "red", hjust = 1, vjust = 1) +
     scale_x_continuous("mean log-RT (in msec)") +
     scale_y_continuous("SD of log-RT") +
     scale_color_manual(

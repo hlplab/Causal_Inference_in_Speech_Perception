@@ -2,27 +2,15 @@
 title: "Supplementary Information"
 author: "Shawn Cummings and T. Florian Jaeger"
 date: "\today"
-
-header-includes:
-  - \usepackage{booktabs}
-  - \usepackage{siunitx}
-  - \usepackage{tabto}
-  - \usepackage{soul}
-  - \usepackage{xcolor}
-  - \usepackage{placeins}
-  - \usepackage{lscape}
-  - \usepackage{animate}
-  - \newcommand{\blandscape}{\begin{landscape}}
-  - \newcommand{\elandscape}{\end{landscape}}
-  - \makeatletter\renewcommand{\fps@table}{!ht}\makeatother
-  - \setstcolor{red}
-  - \usepackage{sectsty}
-  - \sectionfont{\color{blue}}
-  - \subsectionfont{\color{blue}}
-  - \subsubsectionfont{\color{darkgray}}
-  
-geometry: margin=2cm
 output:
+  word_document:
+    toc: yes
+    toc_depth: '4'
+  fontsize: 10pt
+  html_document:
+    df_print: paged
+    toc: yes
+    toc_depth: '4'
   pdf_document:
     fig_caption: yes
     fig_width: 7
@@ -31,11 +19,24 @@ output:
     number_sections: yes
     toc: yes
     toc_depth: 4
-  fontsize: 10pt
-  html_document:
-    df_print: paged
-    toc: yes
-    toc_depth: '4'
+geometry: margin=2cm
+header-includes:
+- \usepackage{booktabs}
+- \usepackage{siunitx}
+- \usepackage{tabto}
+- \usepackage{soul}
+- \usepackage{xcolor}
+- \usepackage{placeins}
+- \usepackage{lscape}
+- \usepackage{animate}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+- \makeatletter\renewcommand{\fps@table}{!ht}\makeatother
+- \setstcolor{red}
+- \usepackage{sectsty}
+- \sectionfont{\color{blue}}
+- \subsectionfont{\color{blue}}
+- \subsubsectionfont{\color{darkgray}}
 ---
 
 ```{r, include=FALSE}
@@ -48,7 +49,6 @@ opts_chunk$set(dev = 'png',
                size="small",
                tidy.opts = list(width.cutoff = 200),
                fig.width = 8, fig.height = 4.5, fig.align = "center")
-
 
 def.chunk.hook  <- knitr::knit_hooks$get("chunk")
 knitr::knit_hooks$set(chunk = function(x, options) {
@@ -86,13 +86,6 @@ library(cmdstanr)
 
 ```{r constants, include=FALSE}
 source("constants.R")
-
-# Set priors for all analyses
-priors <- 
-  c(
-    prior(student_t(3,0,2.5), class = b),
-    prior(cauchy(0,5), class = sd), 
-    prior(lkj(1), class = cor))
 ```
 
 ```{r functions to consolidate}
@@ -200,7 +193,7 @@ d.test <-
 
 ## Exclusions
 
-```{r}
+```{r exclusions, fig.width=4*fig.base_width, fig.height=fig.base_height }
 run_exclusions <- function(data, experiment) {
   print(
     data %>% 
@@ -288,45 +281,55 @@ my_hypotheses <- function(m, experiment, plot = F) {
   # However, for the continuum, we'd like to assess effects in the middle of the continuum. This is taken 
   # into account below.
   l <- list(
-    { h.main <- hypothesis(
+    { h.pen <- hypothesis(
       m, 
-      c("bsp_moCondition.Test.Audio > 0", 
+      c(
         # There are 5 continuum steps above the baseline, so we add 2.5 * the interaction of continuum and the 
         # effect of interest to the effect of interest. (a more precise estimate could be obtained by following
         # Figure 1 in Bürkner & Charpentier, which takes into account the specific simo estimates).
-        "b_Condition.Test.OriginalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH > 0",
-        "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0"),
+        "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
+        "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0"),
       class = NULL) } %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "Pen location Mouth -> fewer ASHI-responses",
+        "Pen effect increases for more ASHI-like acoustic input",
+        "Pen effect increases for visually ASHI-biased input")) %>%
+      format() %>%
+      kable(caption = "Effects of pen location."),
+    { h.cues <- hypothesis(
+      m, 
+      c("bsp_moCondition.Test.Audio > 0", 
+        "b_Condition.Test.OriginalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH > 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"), 
+      class = NULL, scope = "standard") } %>%
       .[["hypothesis"]] %>% 
       mutate(Hypothesis = c(
         "Acoustic continuum more ASHI-like -> more ASHI-responses",
         "Visual label ASHI -> more ASHI-responses",
-        "Pen location Mouth -> fewer ASHI-responses")) %>%
+        "Acoustic and visual bias effects are independent")) %>% 
       format() %>%
-      kable(caption = "Main effects in Block 1"),
+      kable(caption = "Effects of acoustic continuum and visual bias."),
     { h.block <- hypothesis(
       m, 
-      c("bsp_moBlock:moCondition.Test.Audio = 0", 
-        "bsp_moBlock:Condition.Test.OriginalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0",
-        "bsp_moBlock:Condition.Test.PenM + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.PenM = 0"),
+      c(
+        "bsp_moBlock:Condition.Test.PenM + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.PenM = 0",
+        "bsp_moBlock:moCondition.Test.Audio = 0", 
+        "bsp_moBlock:Condition.Test.OriginalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"),
       class = NULL) } %>%
       .[["hypothesis"]] %>% 
       mutate(Hypothesis = c(
+        "Pen effect is stable over blocks",
         "Continuum effect is stable over blocks",
-        "Visual label effect is stable over blocks",
-        "Pen effect is stable over blocks")) %>%
+        "Visual label effect is stable over blocks")) %>%
       format() %>%
-      kable(caption = "Changes across blocks"),
-    { h.acoustic <- hypothesis(m, "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL, scope = "standard") } %>%
-      .[["hypothesis"]] %>% 
-      mutate(Hypothesis = "Pen effect increases for more ASHI-like acoustic input") %>% 
-      format() %>%
-      kable(caption = "Changes across acoustic continuum"))
+      kable(caption = "Changes across blocks."))
   
   if (plot) {
-    plot(h.main)
+    plot(h.pen)
+    plot(h.cues)
     plot(h.block)
-    plot(h.acoustic)
   }
   return(l)
 }
@@ -347,6 +350,9 @@ my_plots_for_paper <- function(m) {
 ```{r results='markup'}
 m.Exp1a <- fit_test_model(d.test, "CISP-1a")
 my_hypotheses(m.Exp1a, experiment = "Exp 1a") %>% map(print) -> TEMP
+
+# Sanity check to see whether there are other significant effects, not included in hypothesis tests
+summary(m.Exp1a)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
 my_plots(m.Exp1a)
 ```
 
@@ -355,6 +361,9 @@ my_plots(m.Exp1a)
 ```{r}
 m.Exp1b <- fit_test_model(d.test, "CISP-1b")
 my_hypotheses(m.Exp1b, experiment = "Exp 1b") %>% map(print) -> TEMP
+# Sanity check to see whether there are other significant effects, not included in hypothesis tests
+summary(m.Exp1b)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
+
 my_plots(m.Exp1b)
 ```
 
@@ -363,6 +372,9 @@ my_plots(m.Exp1b)
 ```{r}
 m.Exp1c <- fit_test_model(d.test, "CISP-1c")
 my_hypotheses(m.Exp1c, experiment = "Exp 1c")  %>% map(print) -> TEMP
+# Sanity check to see whether there are other significant effects, not included in hypothesis tests
+summary(m.Exp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
+
 my_plots(m.Exp1c)
 ```
 # Experiments 2a-b
