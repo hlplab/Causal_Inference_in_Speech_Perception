@@ -234,20 +234,32 @@ d.test %<>% run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
 # Prep for analysis
 prep_for_analysis <- function(data) {
   data %>%
-    mutate(
-      Condition.Test.Pen = 
-        "contrasts<-"(factor(Condition.Test.Pen), , cbind("M" = c(-0.5, 0.5))),
-      Condition.Test.OriginalLabel = 
-        "contrasts<-"(factor(Condition.Test.OriginalLabel), , cbind("SH" = c(-0.5, 0.5))),
-      Block = Block - 1) %>%
-    select(Experiment, Condition.Test.OriginalLabel, Condition.Test.Pen, Block, Condition.Test.Audio, ParticipantID, Response.ASHI) 
+    { if (all(!is.na(.$Condition.Test.Pen), !is.na(.$Condition.Test.OriginalLabel))) 
+      mutate(
+        .,
+        Condition.Test.Pen = 
+          "contrasts<-"(factor(Condition.Test.Pen), , cbind("M" = c(-0.5, 0.5))),
+        Condition.Test.OriginalLabel = 
+          "contrasts<-"(factor(Condition.Test.OriginalLabel), , cbind("SH" = c(-0.5, 0.5)))) else . } %>%
+    mutate(Block = Block - 1) %>%
+    select(Experiment, 
+           Condition.Test.OriginalLabel, Condition.Test.Pen, Block, Condition.Test.Audio, 
+           ParticipantID, Response.ASHI) 
 }
 
-fit_test_model <- function(data, experiment) {
+fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% experiment) T else F) {
+  my_formula <- if (audio_only) {
+    bf(Response.ASHI ~
+         1 + mo(Block) * mo(Condition.Test.Audio) +
+         (1 + mo(Condition.Test.Audio) | ParticipantID))
+  } else {
+    bf(Response.ASHI ~
+         1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio) +
+         (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID))
+  }
+  
   m <- brm(
-    Response.ASHI ~
-      1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio) +
-      (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID),
+    my_formula,
     data = 
       data %>%
       filter(Experiment %in% experiment) %>% 
@@ -377,6 +389,34 @@ summary(m.Exp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x,
 
 my_plots(m.Exp1c)
 ```
+### Liu and Jaeger (2018)
+For comparison, we also analyzed Liu and Jaeger's norming experiment with the same analysis approach employed in the present study.
+
+```{r}
+m.LJ18 <- fit_test_model(d.test, "LJ18-NORM")
+my_hypotheses(m.LJ18, experiment = "Exp LJ18")  %>% map(print) -> TEMP
+# Sanity check to see whether there are other significant effects, not included in hypothesis tests
+summary(m.LJ18)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
+
+my_plots(m.LJ18)
+
+d.test %>% 
+  filter(Experiment == "LJ18-NORM") %>%
+  data_grid(ParticipantID, Condition.Test.Audio, Block = 1) %>%
+  add_epred_draws(m.LJ18, re_formula = NULL) %>%
+  ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI)) +
+  stat_lineribbon(aes(y = .epred), color = "black", alpha = .5) +
+  stat_summary(
+    data = 
+      d.test %>% 
+      filter(Experiment == "LJ18-NORM", Block == 1) %>%
+      group_by(ParticipantID, Condition.Test.Audio) %>%
+      summarise(Response.ASHI = mean(Response.ASHI)),
+    geom = "pointrange",
+    color = "black") +
+  scale_fill_grey()
+```
+
 # Experiments 2a-b
 
 ## Data import

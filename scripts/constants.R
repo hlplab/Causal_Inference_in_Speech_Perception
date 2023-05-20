@@ -674,27 +674,7 @@ excludeData <- function(data) {
   data %<>%
     filter(
       Exclude_Participant.Reason == "none",
-      !Exclude_Trial.because_of_RT)
-  
-  return(data)
-}
-
-
-excludeDataForExpo <- function(data) {
-  data %<>%
-    mutate(
-      Exclude_Participant.Reason = factor(case_when(
-        Exclude_Participant.because_of_TechnicalDifficulty ~ "Technical difficulty",
-        Exclude_Participant.because_of_MultipleExperiments ~ "Repeat participant",
-        Exclude_Participant.because_of_IgnoredInstructions ~ "No headphones",
-        Exclude_Participant.because_of_CatchQuestion ~ "Catch question",
-        Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal ~ "Lexical decision accuracy",
-        Exclude_Participant.because_of_SwappedKeys ~ "Swapped response keys",
-        Exclude_Participant.because_of_RT ~ "Reaction time",
-        Exclude_Participant.because_of_MissingTrials ~ "Too many missing trials",
-        T ~ "none"
-      ))) %>%
-    excludeData()
+      !Exclude_Trial.because_of_RT | Experiment == "LJ18-NORM")
   
   return(data)
 }
