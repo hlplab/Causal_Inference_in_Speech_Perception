@@ -405,7 +405,7 @@ d.test %>%
   data_grid(ParticipantID, Condition.Test.Audio, Block = 1) %>%
   add_epred_draws(m.LJ18, re_formula = NULL) %>%
   ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI)) +
-  stat_lineribbon(aes(y = .epred), color = "black", alpha = .5) +
+  stat_lineribbon(aes(y = .epred), color = "black") +
   stat_summary(
     data = 
       d.test %>% 
