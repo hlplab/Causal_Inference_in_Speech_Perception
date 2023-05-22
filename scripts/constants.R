@@ -508,6 +508,15 @@ add_exclusions <- function(data, exclude_based_on_catch_trials = T) {
   #     Exclude_Participant.because_of_MultipleExperiments = ifelse(Assignment.Submit.DateTime.UTC > min(Assignment.Submit.DateTime.UTC), T, F)) %>%
   #   ungroup() 
   
+  # Lexical decision accuracy
+  data %<>%
+    group_by(Experiment, ParticipantID) %>%
+    mutate(Accuracy.LD = mean(Response.CorrectWordStatus,
+                         na.rm = T)) %>%
+    ungroup() %>%
+    mutate(Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal = ifelse(
+             Accuracy.LD >= .85, FALSE, TRUE))
+
   # Failure to follow instructions
   data %<>%
     mutate(

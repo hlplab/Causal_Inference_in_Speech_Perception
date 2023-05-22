@@ -71,9 +71,9 @@ library(brms)        # Bayesian GL(M)Ms
 library(sjPlot)      # tables for Bayesian GL(M)Ms
 library(broom)       # extracting information from GL(M)Ms
 library(lme4)        # Frequentist GLMMs
-library(linguisticsdown)  #IPA symbols
+#library(linguisticsdown)  #IPA symbols
 library(rstan)
-library(cmdstanr)
+#library(cmdstanr) # Not available for R 4.2.3?
 library(boot)         # easy logit() function
 ```
 
@@ -101,9 +101,12 @@ d.Exp1c <- d.test.C %>%
   mutate(Experiment = "CISP-1c")
 
 d.Exp1 <- bind_rows(d.Exp1a, d.Exp1b, d.Exp1c) %>%
-  rename(audio_type = Answer.audio_type,
-         sex = Answer.sex) %>%
+  rename(Participant.AudioType = Answer.audio_type,
+         Talker.Sex = Answer.sex) %>%
   add_exclusions()
+
+rm(d.test.A, d.test.B, d.test.C,
+   d.Exp1a, d.Exp1b, d.Exp1c)
 
 # load("../data/Experiment-NORM-D-before-exclusions.RData") #named d.test.D
 # d.NormD.test <- d.test.D
@@ -128,17 +131,106 @@ d.LJ18.test <- read.csv("../data/Liu Jaeger 2018/Liu-Jaeger-2018-test-1-s2.0-S00
 #   mutate(Experiment = "ExpC")
 
 load("../data/Experiment-2-before-exclusions.RData") #named d.Exp2
-d.Exp2 <- d.Exp2 %>%
+d.Exp2 %<>%
+  rename(Participant.AudioType = audio_type,
+         Talker.Sex = sex) %>%
   add_exclusions() %>%
   mutate(Experiment = "CISP-2")
 
 load("../data/Experiment-3-before-exclusions.RData") #named d.Exp3
-d.Exp3 <- d.Exp3 %>%
+d.Exp3 %<>%
+  rename(Participant.AudioType = audio_type,
+         Talker.Sex = sex) %>%
   add_exclusions() %>%
   mutate(Experiment = "CISP-3")
-
-
 ```
+
+
+Exclusion summaries
+```{r}
+d.Exp1.excluded <- d.Exp1 %>%
+  group_by(ParticipantID) %>%
+  filter(Exclude_Participant.Reason != "none") %>%
+  select(Exclude_Participant.Reason, Experiment) %>%
+  unique()
+
+d.Exp2.excluded <- d.Exp2 %>%
+  group_by(ParticipantID) %>%
+  filter(Exclude_Participant.Reason != "none") %>%
+  select(Exclude_Participant.Reason, Experiment) %>%
+  unique()
+
+d.Exp3.excluded <- d.Exp3 %>%
+  group_by(ParticipantID) %>%
+  filter(Exclude_Participant.Reason != "none") %>%
+  select(Exclude_Participant.Reason, Experiment) %>%
+  unique()
+
+exclusion.summary <- bind_rows(d.Exp1.excluded,
+                               d.Exp2.excluded,
+                               d.Exp3.excluded)
+exclusion.summary
+rm(d.Exp1.excluded, d.Exp2.excluded, d.Exp3.excluded)
+```
+
+
+```{r}
+## Create df for this:
+d.Exp1.forExclusionSummary <- d.Exp1 %>%
+  group_by(Experiment, ParticipantID) %>%
+  mutate(Exclude_Participant.because_of_TOTAL = ifelse(Exclude_Participant.Reason != "none", T, F)) %>%
+  select(starts_with("Exclude_Participant.because")) %>%
+  distinct()
+
+d.Exp2.forExclusionSummary <- d.Exp2 %>%
+  group_by(Experiment, ParticipantID) %>%
+  mutate(Exclude_Participant.because_of_TOTAL = ifelse(Exclude_Participant.Reason != "none", T, F)) %>%
+  select(starts_with("Exclude_Participant.because")) %>%
+  distinct()
+
+d.Exp3.forExclusionSummary <- d.Exp3 %>%
+  group_by(Experiment, ParticipantID) %>%
+  mutate(Exclude_Participant.because_of_TOTAL = ifelse(Exclude_Participant.Reason != "none", T, F)) %>%
+  select(starts_with("Exclude_Participant.because")) %>%
+  distinct()
+
+forExclusionSummary <- rbind(d.Exp1.forExclusionSummary,
+                             d.Exp2.forExclusionSummary,
+                             d.Exp3.forExclusionSummary)
+rm(d.Exp1.forExclusionSummary,
+                             d.Exp2.forExclusionSummary,
+                             d.Exp3.forExclusionSummary)
+
+exclusionTable <- forExclusionSummary %>%
+  group_by(Experiment) %>%
+  select(-ParticipantID) %>%
+  summarise_all(
+    function(x) { 
+      paste0(
+        sum(x),
+        " (", 100 * round(sum(x) / length(x), 3), "%)") } ) %>% 
+  mutate_all(~ gsub("NA", "0", .x)) %>%
+  mutate_all(~ gsub("0 \\(0\\%\\)", "-", .x)) %>%
+  # Sort columns
+  select(
+    Experiment,
+    #Exclude_Participant.because_of_TechnicalDifficulty,
+    #Exclude_Participant.because_of_MultipleExperiments,
+    Exclude_Participant.because_of_IgnoredInstructions,
+    Exclude_Participant.because_of_CatchQuestion,
+    #Exclude_Participant.because_of_CatchTrials,
+    #Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal,
+    Exclude_Participant.because_of_SwappedKeys,
+    Exclude_Participant.because_of_RT,
+    Exclude_Participant.because_of_MissingTrials,
+    Exclude_Participant.because_of_TOTAL) %>%
+  rename_all(~ gsub("Exclude_Participant.because_of_", "", .x)) %>%
+  t(.) %>%
+  kable(
+    label = "Exclusions")
+exclusionTable
+```
+
 
 # Formatting LJ18 to include same column labels as other studies
 
@@ -232,6 +324,9 @@ d.test %>%
 save(d.test, 
   file =  "../data/Combined-Experiments-after-exclusions.RData")
 ```
+
+
+
 # CISP-1 with LJ18 as a norm
 
 ```{r}
