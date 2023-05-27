@@ -70,14 +70,16 @@ library(magrittr)    # pipes
 library(lubridate)   # date conversion, etc.
 
 library(brms)        # Bayesian GL(M)Ms
+library(tidybayes)   # extract posterior from brmfits
+library(modelr)      # create data grids
 library(sjPlot)      # tables for Bayesian GL(M)Ms
 library(broom)       # extracting information from GL(M)Ms
-library(boot)         # easy logit() function
+library(boot)        # easy logit() function
 
 library(linguisticsdown)  #IPA symbols
 library(rstan)
 
-# # Setting cmdstanr
+# Setting up cmdstanr
 # library(curl)
 # if (has_internet()) install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
 library(cmdstanr)
@@ -195,6 +197,7 @@ d.test <-
 
 ```{r exclusions, fig.width=4*fig.base_width, fig.height=fig.base_height }
 run_exclusions <- function(data, experiment) {
+  data %<>% filter(Experiment %in% experiment)
   print(
     data %>% 
       distinct(Experiment, ParticipantID, Exclude_Participant.Reason) %>% 
@@ -203,7 +206,7 @@ run_exclusions <- function(data, experiment) {
       group_by(Experiment) %>%
       mutate(Percent = percent(n / sum(n))))
   
-  exclusionPlot(data %>% filter(Experiment %in% experiment))
+  exclusionPlot(data)
   
   data %<>% 
     excludeData()
@@ -225,7 +228,9 @@ run_exclusions <- function(data, experiment) {
     filter(!is.na(Response.ASHI))
 }
 
-d.test %<>% run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
+d.test.Exp1 <-
+  d.test %>% 
+  run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
 ```
 
 ## Analyses
@@ -234,6 +239,11 @@ d.test %<>% run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
 # Prep for analysis
 prep_for_analysis <- function(data) {
   data %>%
+    { if (length(unique(.$Experiment)) > 1) 
+      mutate(
+        .,
+        Experiment = 
+          "contrasts<-"(factor(Experiment), , contr.sum(length(unique(.$Experiment))))) else . } %>%
     { if (all(!is.na(.$Condition.Test.Pen), !is.na(.$Condition.Test.OriginalLabel))) 
       mutate(
         .,
@@ -253,9 +263,12 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
          1 + mo(Block) * mo(Condition.Test.Audio) +
          (1 + mo(Condition.Test.Audio) | ParticipantID))
   } else {
-    bf(Response.ASHI ~
-         1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio) +
-         (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID))
+    bf(paste(
+      "Response.ASHI ~",
+      
+      "1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio)",
+      if (length(unique(data$Experiment)) > 1) "* Experiment +" else "+",
+      "(1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)"))
   }
   
   m <- brm(
@@ -265,7 +278,7 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
       filter(Experiment %in% experiment) %>% 
       prep_for_analysis(),
     family = "bernoulli",
-    prior = priors,
+    prior = my_priors,
     sample_prior = "yes",
     backend = "cmdstanr",
     chains = 4, 
@@ -319,7 +332,7 @@ my_hypotheses <- function(m, experiment, plot = F) {
       .[["hypothesis"]] %>% 
       mutate(Hypothesis = c(
         "Acoustic continuum more ASHI-like -> more ASHI-responses",
-        "Visual label ASHI -> more ASHI-responses",
+        "Visual bias ASHI -> more ASHI-responses",
         "Acoustic and visual bias effects are independent")) %>% 
       format() %>%
       kable(caption = "Effects of acoustic continuum and visual bias."),
@@ -334,7 +347,7 @@ my_hypotheses <- function(m, experiment, plot = F) {
       mutate(Hypothesis = c(
         "Pen effect is stable over blocks",
         "Continuum effect is stable over blocks",
-        "Visual label effect is stable over blocks")) %>%
+        "Visual bias effect is stable over blocks")) %>%
       format() %>%
       kable(caption = "Changes across blocks."))
   
@@ -360,18 +373,40 @@ my_plots_for_paper <- function(m) {
 ### Experiment 1a
 
 ```{r results='markup'}
-m.Exp1a <- fit_test_model(d.test, "CISP-1a")
+m.Exp1a <- fit_test_model(d.test.Exp1, "CISP-1a")
 my_hypotheses(m.Exp1a, experiment = "Exp 1a") %>% map(print) -> TEMP
 
 # Sanity check to see whether there are other significant effects, not included in hypothesis tests
 summary(m.Exp1a)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
 my_plots(m.Exp1a)
+
+d.test.Exp1 %>% 
+  filter(Experiment == "CISP-1a") %>%
+  droplevels() %>%
+  data_grid(ParticipantID, Condition.Test.OriginalLabel, Condition.Test.Pen, Condition.Test.Audio, Block = 0) %>%
+  add_epred_draws(m.Exp1a, re_formula = NA) %>%
+  ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, color = Condition.Test.Pen)) +
+  stat_lineribbon(
+    aes(
+      y = .epred, 
+      alpha = after_stat(level), 
+      fill = Condition.Test.Pen),
+    .width = c(0.95)) +
+  stat_summary(fun = mean, geom = "line", aes(y = .epred)) +
+  stat_summary(
+    data = 
+      d.test.Exp1 %>% 
+      filter(Experiment == "CISP-1a") %>%
+      group_by(ParticipantID, Condition.Test.Pen, Condition.Test.Audio) %>%
+      summarise(Response.ASHI = mean(Response.ASHI)),
+    geom = "pointrange",
+    position = position_dodge(.25)) 
 ```
 
 ### Experiment 1b
 
 ```{r}
-m.Exp1b <- fit_test_model(d.test, "CISP-1b")
+m.Exp1b <- fit_test_model(d.test.Exp1, "CISP-1b")
 my_hypotheses(m.Exp1b, experiment = "Exp 1b") %>% map(print) -> TEMP
 # Sanity check to see whether there are other significant effects, not included in hypothesis tests
 summary(m.Exp1b)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
@@ -382,7 +417,7 @@ my_plots(m.Exp1b)
 ### Experiment 1c
 
 ```{r}
-m.Exp1c <- fit_test_model(d.test, "CISP-1c")
+m.Exp1c <- fit_test_model(d.test.Exp1, "CISP-1c")
 my_hypotheses(m.Exp1c, experiment = "Exp 1c")  %>% map(print) -> TEMP
 # Sanity check to see whether there are other significant effects, not included in hypothesis tests
 summary(m.Exp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
@@ -393,23 +428,53 @@ my_plots(m.Exp1c)
 For comparison, we also analyzed Liu and Jaeger's norming experiment with the same analysis approach employed in the present study.
 
 ```{r}
-m.LJ18 <- fit_test_model(d.test, "LJ18-NORM")
-my_hypotheses(m.LJ18, experiment = "Exp LJ18")  %>% map(print) -> TEMP
+d.test.LJ18 <- 
+  d.test %>%
+  run_exclusions("LJ18-NORM")
+
+m.LJ18 <- fit_test_model(d.test.LJ18, "LJ18-NORM")
+my_LJ18_hypothesis <- function(m, experiment = "LJ18-NORM") {
+  format <-  
+    . %>%
+    rename(BF = Evid.Ratio) %>%
+    mutate(
+      Experiment = experiment,
+      across(
+        c("Estimate", "Est.Error", starts_with("CI"), "Post.Prob"),
+        ~ signif(.x, 3)),
+      BF = ifelse(is.infinite(BF), paste(">", ndraws(m)), as.character(round(BF, 1)))) %>% 
+    relocate(Experiment, everything())
+  
+  hypothesis(
+    m, 
+    c("bsp_moCondition.Test.Audio > 0",
+      "bsp_moBlock:moCondition.Test.Audio = 0"), 
+    class = NULL, scope = "standard") %>%
+    .[["hypothesis"]] %>% 
+    mutate(
+      Experiment = "LJ18-NORM",
+      Hypothesis = c(
+        "Acoustic continuum more ASHI-like -> more ASHI-responses",
+        "Continuum effect is stable over blocks")) %>% 
+    format() %>%
+    kable(caption = "Effects of acoustic continuum.")
+}
+
+my_LJ18_hypothesis(m.LJ18)
 # Sanity check to see whether there are other significant effects, not included in hypothesis tests
 summary(m.LJ18)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
 
 my_plots(m.LJ18)
 
-d.test %>% 
-  filter(Experiment == "LJ18-NORM") %>%
+d.test.LJ18 %>% 
   data_grid(ParticipantID, Condition.Test.Audio, Block = 1) %>%
   add_epred_draws(m.LJ18, re_formula = NULL) %>%
   ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI)) +
   stat_lineribbon(aes(y = .epred), color = "black") +
   stat_summary(
     data = 
-      d.test %>% 
-      filter(Experiment == "LJ18-NORM", Block == 1) %>%
+      d.test.LJ18 %>% 
+      filter(Block == 1) %>%
       group_by(ParticipantID, Condition.Test.Audio) %>%
       summarise(Response.ASHI = mean(Response.ASHI)),
     geom = "pointrange",
@@ -439,28 +504,35 @@ d.Exp2b <-
     Experiment = "CISP-2b",
     ParticipantID = paste(Experiment, ParticipantID, sep = "."))
 
-d.test <- 
+d.test.Exp2 <- 
   bind_rows(d.Exp2a, d.Exp2b) %>%
   format_more()
 ```
 ## Exclusions
 
 ```{r}
-d.test %<>% run_exclusions(c("CISP-2a", "CISP-2b"))
+d.test.Exp2 %<>% run_exclusions(c("CISP-2a", "CISP-2b"))
 ```
 
 ### Experiment 2a
 
 ```{r results='markup'}
-m.Exp2a <- fit_test_model(d.test, "CISP-2a")
+m.Exp2a <- fit_test_model(d.test.Exp2, "CISP-2a")
 my_hypotheses(m.Exp2a, experiment = "Exp 2a") %>% map(print) -> TEMP
 my_plots(m.Exp2a)
+```
+
+### Comparison of Experiment 2a against Experiment 1c
+
+```{r results='markup'}
+m.Exp2a.vs.Exp1c <- fit_test_model(data = bind_rows(d.test.Exp1, d.test.Exp2), experiment = c("CISP-1c", "CISP-2a"))
+
 ```
 
 ### Experiment 2b
 
 ```{r}
-m.Exp2b <- fit_test_model(d.test, "CISP-2b")
+m.Exp2b <- fit_test_model(d.test.Exp2, "CISP-2b")
 my_hypotheses(m.Exp2b, experiment = "Exp 2b") %>% map(print) -> TEMP
 my_plots(m.Exp2b)
 ```
