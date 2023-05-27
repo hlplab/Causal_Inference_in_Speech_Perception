@@ -282,6 +282,9 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
     sample_prior = "yes",
     backend = "cmdstanr",
     chains = 4, 
+    warmup = if (length(unique(data$Experiment)) > 1) 2000 else 1000,
+    iter = if (length(unique(data$Experiment)) > 1) 3000 else 2000,
+    control = list(adapt_delta = if (length(unique(data$Experiment)) > 1) .95 else .8),
     cores = min(parallel::detectCores(), 4), 
     threads = threading(threads = 4),
     file = paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-"))
@@ -491,10 +494,10 @@ We import and format the data for Experiments 2a-b.
 load("../data/Experiment-NORM-D-before-exclusions.RData") #named d.test.D
 load("../data/Experiment-NORM-E-before-exclusions.RData") #named d.test.E
 
-d.Exp2a <- 
+d.Exp2 <- 
   d.test.D %>%
   mutate(
-    Experiment = "CISP-2a",
+    Experiment = "CISP-2",
     ParticipantID = paste(Experiment, ParticipantID, sep = "."))
  
 d.Exp2b <- 
@@ -505,28 +508,70 @@ d.Exp2b <-
     ParticipantID = paste(Experiment, ParticipantID, sep = "."))
 
 d.test.Exp2 <- 
-  bind_rows(d.Exp2a, d.Exp2b) %>%
+  bind_rows(d.Exp2, d.Exp2b) %>%
   format_more()
 ```
 ## Exclusions
 
 ```{r}
-d.test.Exp2 %<>% run_exclusions(c("CISP-2a", "CISP-2b"))
+d.test.Exp2 %<>% run_exclusions(c("CISP-2", "CISP-2b"))
 ```
 
 ### Experiment 2a
 
 ```{r results='markup'}
-m.Exp2a <- fit_test_model(d.test.Exp2, "CISP-2a")
-my_hypotheses(m.Exp2a, experiment = "Exp 2a") %>% map(print) -> TEMP
-my_plots(m.Exp2a)
+m.Exp2 <- fit_test_model(d.test.Exp2, "CISP-2")
+my_hypotheses(m.Exp2, experiment = "Exp 2") %>% map(print) -> TEMP
+my_plots(m.Exp2)
 ```
 
 ### Comparison of Experiment 2a against Experiment 1c
 
 ```{r results='markup'}
-m.Exp2a.vs.Exp1c <- fit_test_model(data = bind_rows(d.test.Exp1, d.test.Exp2), experiment = c("CISP-1c", "CISP-2a"))
+bind_rows(d.test.Exp1, d.test.Exp2) %>% 
+  filter(Experiment %in% c("CISP-1c", "CISP-2")) %>%
+  droplevels() %>%
+  group_by(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel) %>%
+  summarise(Response.ASHI = mean(Response.ASHI)) %>%
+  ggplot(aes(x = Condition.Test.OriginalLabel, y = Response.ASHI, linetype = Experiment, color = Condition.Test.Pen)) +
+  stat_summary(fun = mean, geom = "line") +
+  stat_summary(
+    geom = "pointrange",
+    position = position_dodge(.25))
 
+bind_rows(d.test.Exp1, d.test.Exp2) %>% 
+  filter(Experiment %in% c("CISP-1c", "CISP-2")) %>%
+  droplevels() %>%
+  group_by(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio) %>%
+  summarise(Response.ASHI = mean(Response.ASHI)) %>%
+  ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, color = Condition.Test.Pen, linetype = Experiment)) +
+  stat_summary(fun = mean, geom = "line") +
+  stat_summary(
+    geom = "pointrange",
+    position = position_dodge(.25))
+
+bind_rows(d.test.Exp1, d.test.Exp2) %>% 
+  filter(Experiment %in% c("CISP-1c", "CISP-2")) %>%
+  droplevels() %>%
+  group_by(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, Condition.Test.OriginalLabel) %>%
+  summarise(Response.ASHI = mean(Response.ASHI)) %>%
+  ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, color = Condition.Test.Pen, linetype = Experiment)) +
+  stat_summary(fun = mean, geom = "line") +
+  stat_summary(
+    geom = "pointrange",
+    position = position_dodge(.25)) +
+  facet_wrap(~ Condition.Test.OriginalLabel)
+
+m.Exp2vsExp1c <- fit_test_model(data = bind_rows(d.test.Exp1, d.test.Exp2), experiment = c("CISP-1c", "CISP-2"))
+# Does Experiment 2 have fewer ASHI responses (in the middle of the continuum)? YES, somewhat.
+hypothesis(m.Exp2vsExp1c, "b_Experiment1  + 2.5 * bsp_moCondition.Test.Audio:Experiment1 < 0", class = NULL)
+# Is there still an affect of pen across the two experiments? YES
+hypothesis(m.Exp2vsExp1c, "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL)
+# And, is that effect of pen smaller in Experiment 2? NOT REALLY?!?!
+hypothesis(m.Exp2vsExp1c, "b_Condition.Test.PenM:Experiment1 > 0", class = NULL)
+hypothesis(m.Exp2vsExp1c, "b_Condition.Test.PenM:Experiment1  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM:Experiment1 > 0", class = NULL)
+
+summary(m.Exp2vsExp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
 ```
 
 ### Experiment 2b
