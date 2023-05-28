@@ -42,13 +42,13 @@ header-includes:
 ```{r, include=FALSE}
 library(knitr)
 
-opts_chunk$set(dev = 'png',
+opts_chunk$set(dev = 'png', dpi = 96,
                comment="", 
                echo=FALSE, warning=TRUE, message=TRUE,
                cache=FALSE, 
                size="small",
                tidy.opts = list(width.cutoff = 200),
-               fig.width = 8, fig.height = 4.5, fig.align = "center")
+               fig.width = fig.base_width, fig.height = fig.base_height, fig.align = "center")
 
 def.chunk.hook  <- knitr::knit_hooks$get("chunk")
 knitr::knit_hooks$set(chunk = function(x, options) {
@@ -317,13 +317,15 @@ my_hypotheses <- function(m, experiment, plot = F) {
         # Figure 1 in Bürkner & Charpentier, which takes into account the specific simo estimates).
         "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
         "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
-        "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0"),
+        "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0"),
       class = NULL) } %>%
       .[["hypothesis"]] %>% 
       mutate(Hypothesis = c(
         "Pen location Mouth -> fewer ASHI-responses",
         "Pen effect increases for more ASHI-like acoustic input",
-        "Pen effect increases for visually ASHI-biased input")) %>%
+        "Pen effect increases for visually ASHI-biased input",
+        "Pen effect increases even more when acoustic and visual input is ASHHI-biased")) %>%
       format() %>%
       kable(caption = "Effects of pen location."),
     { h.cues <- hypothesis(
@@ -362,16 +364,100 @@ my_hypotheses <- function(m, experiment, plot = F) {
   return(l)
 }
 
-my_plots <- function(m) {
+plot_model_predictions <- function(m) {
   plot(conditional_effects(m, method = "posterior_linpred"), ask = F)
 }
 
-my_plots_for_paper <- function(m) {
+plot_model_predictions_for_paper <- function(m) {
   conditional_effects(
     m, 
     method = "posterior_linpred")
 }
+
+plot_data <- function(data, experiment) {
+  require(dplyr)
+  require(ggplot2)
+  require(cowplot)
+  
+  dodge <- .4
+  shared_components <- 
+    list(
+      stat_summary(fun = mean, geom = "line", position = position_dodge(dodge)),
+      stat_summary(fun = mean, geom = "point", position = position_dodge(dodge)),
+      stat_summary(fun.data = mean_cl_boot, geom = "pointrange", position = position_dodge(dodge), linetype = 1, alpha = .5),
+      scale_y_continuous('Proportion "ASHI"-responses'),
+      scale_shape_manual(
+        "Pen location", 
+        breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = shapes.test.pen_locations),
+      scale_linetype_manual(
+        "Pen location", 
+        breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = linetypes.test.pen_locations),
+    facet_wrap(~ Experiment, ncol = 1))
+  
+  aggregate <- function(data, ...) {
+    groups = enquos(...)
+    data %>%
+      filter(Experiment %in% experiment) %>%
+      mutate(Experiment = gsub("CISP-", "Exp ", Experiment)) %>%
+      droplevels() %>%
+      group_by(!!! groups) %>%
+      summarise(Response.ASHI = mean(Response.ASHI)) 
+  }
+  
+  p <- list()
+  p[[1]] <- 
+    data %>%
+    aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel) %>%
+    ggplot(aes(x = Condition.Test.OriginalLabel, y = Response.ASHI, 
+               shape = Condition.Test.Pen, linetype = Condition.Test.Pen,
+               group = Condition.Test.Pen)) +
+    shared_components +
+    scale_x_discrete('Visual bias') +
+    # scale_color_manual(
+    #   'Visual bias', 
+    #   breaks = levels.test.visual_labels, labels = labels.test.visual_labels, values = colors.test.visual_labels) +
+    coord_cartesian(ylim = c(.1, .9)) +
+    theme(legend.position = "none")
+  
+  p[[2]] <- 
+    data %>% 
+    aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio) %>%
+    ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, shape = Condition.Test.Pen, linetype = Condition.Test.Pen)) +
+    scale_x_continuous(
+      'Acoustic continuum', 
+      breaks = as.integer(append(range(data$Condition.Test.Audio), mean(range(data$Condition.Test.Audio))))) +
+    shared_components + 
+    coord_cartesian(xlim = range(data$Condition.Test.Audio), ylim = c(.1, .9))
+  
+  # p[[3]] <- 
+  #   data %>%
+  #   aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, Condition.Test.OriginalLabel) %>%
+  #   ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, color = Condition.Test.OriginalLabel, 
+  #              shape = Condition.Test.Pen, linetype = Condition.Test.Pen)) +
+  #   scale_x_continuous('Acoustic continuum', limits = range(data$Condition.Test.Audio)) +
+  #   scale_color_manual(
+  #     'Visual bias', 
+  #     breaks = levels.test.visual_labels, labels = labels.test.visual_labels, values = colors.test.visual_labels) +
+  #   shared_components +
+  #   coord_cartesian(xlim = range(data$Condition.Test.Audio))
+  #   theme(legend.position = "none")
+  
+  cowplot::plot_grid(
+    plotlist = p, 
+    align = "hv", axis = "btrl", 
+    ncol = length(p), labels = paste0(LETTERS[1:length(p)], ")"),
+    rel_widths = c(.3, .7), rel_heights = 1.5)
+}
 ```
+
+```{r fig.height=8, fig.width=6}
+ggsave(
+  plot_data(d.test.Exp1, experiment = c("CISP-1a", "CISP-1b", "CISP-1c")),
+  file = "../figures/Experiment 1a-c.png", 
+  width = fig.base_width * 3,
+  height = fig.base_height * 3 + .25)
+```
+
 
 ### Experiment 1a
 
@@ -381,30 +467,9 @@ my_hypotheses(m.Exp1a, experiment = "Exp 1a") %>% map(print) -> TEMP
 
 # Sanity check to see whether there are other significant effects, not included in hypothesis tests
 summary(m.Exp1a)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
-my_plots(m.Exp1a)
-
-d.test.Exp1 %>% 
-  filter(Experiment == "CISP-1a") %>%
-  droplevels() %>%
-  data_grid(ParticipantID, Condition.Test.OriginalLabel, Condition.Test.Pen, Condition.Test.Audio, Block = 0) %>%
-  add_epred_draws(m.Exp1a, re_formula = NA) %>%
-  ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, color = Condition.Test.Pen)) +
-  stat_lineribbon(
-    aes(
-      y = .epred, 
-      alpha = after_stat(level), 
-      fill = Condition.Test.Pen),
-    .width = c(0.95)) +
-  stat_summary(fun = mean, geom = "line", aes(y = .epred)) +
-  stat_summary(
-    data = 
-      d.test.Exp1 %>% 
-      filter(Experiment == "CISP-1a") %>%
-      group_by(ParticipantID, Condition.Test.Pen, Condition.Test.Audio) %>%
-      summarise(Response.ASHI = mean(Response.ASHI)),
-    geom = "pointrange",
-    position = position_dodge(.25)) 
+plot_model_predictions(m.Exp1a)
 ```
+
 
 ### Experiment 1b
 
@@ -414,7 +479,7 @@ my_hypotheses(m.Exp1b, experiment = "Exp 1b") %>% map(print) -> TEMP
 # Sanity check to see whether there are other significant effects, not included in hypothesis tests
 summary(m.Exp1b)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
 
-my_plots(m.Exp1b)
+plot_model_predictions(m.Exp1b)
 ```
 
 ### Experiment 1c
@@ -425,7 +490,7 @@ my_hypotheses(m.Exp1c, experiment = "Exp 1c")  %>% map(print) -> TEMP
 # Sanity check to see whether there are other significant effects, not included in hypothesis tests
 summary(m.Exp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
 
-my_plots(m.Exp1c)
+plot_model_predictions(m.Exp1c)
 ```
 ### Liu and Jaeger (2018)
 For comparison, we also analyzed Liu and Jaeger's norming experiment with the same analysis approach employed in the present study.
@@ -467,7 +532,7 @@ my_LJ18_hypothesis(m.LJ18)
 # Sanity check to see whether there are other significant effects, not included in hypothesis tests
 summary(m.LJ18)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
 
-my_plots(m.LJ18)
+plot_model_predictions(m.LJ18)
 
 d.test.LJ18 %>% 
   data_grid(ParticipantID, Condition.Test.Audio, Block = 1) %>%
@@ -485,10 +550,10 @@ d.test.LJ18 %>%
   scale_fill_grey()
 ```
 
-# Experiments 2a-b
+# Experiments 2
 
 ## Data import
-We import and format the data for Experiments 2a-b.
+We import and format the data for Experiments 2.
 
 ```{r}
 load("../data/Experiment-NORM-D-before-exclusions.RData") #named d.test.D
@@ -519,10 +584,20 @@ d.test.Exp2 %<>% run_exclusions(c("CISP-2", "CISP-2b"))
 
 ### Experiment 2a
 
+```{r fig.height=8, fig.width=6}
+ggsave(
+  plot_data(
+    bind_rows(d.test.Exp1, d.test.Exp2), 
+    experiment = c("CISP-1c", "CISP-2")),
+  file = "../figures/Experiment 2.png", 
+  width = fig.base_width * 3,
+  height = fig.base_height * 2 + .25)
+```
+
 ```{r results='markup'}
 m.Exp2 <- fit_test_model(d.test.Exp2, "CISP-2")
 my_hypotheses(m.Exp2, experiment = "Exp 2") %>% map(print) -> TEMP
-my_plots(m.Exp2)
+plot_model_predictions(m.Exp2)
 ```
 
 ### Comparison of Experiment 2a against Experiment 1c
@@ -579,5 +654,5 @@ summary(m.Exp2vsExp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(
 ```{r}
 m.Exp2b <- fit_test_model(d.test.Exp2, "CISP-2b")
 my_hypotheses(m.Exp2b, experiment = "Exp 2b") %>% map(print) -> TEMP
-my_plots(m.Exp2b)
+plot_model_predictions(m.Exp2b)
 ```

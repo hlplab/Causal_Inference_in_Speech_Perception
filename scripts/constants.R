@@ -3,9 +3,13 @@ fig.base_width <- 1.75
 fig.base_height <- 1.75
 
 theme_set(
-  theme_bw(base_size = 11) + 
+  theme_bw(base_size = 10) + 
     theme(
-      panel.grid = element_blank()))
+      legend.position = "top",
+      legend.key.width = unit(1, "cm"),
+      panel.grid = element_blank(),
+      strip.background = element_rect(fill = "black"),
+      strip.text = element_text(color = "white")))
 
 levels.ItemID_exposure <- unlist(map(c("S", "SH", "F", "FN"), ~ paste0(.x, 1:200)))
 levels.ItemID_test.A <- paste0("Frame", c(1:12))
