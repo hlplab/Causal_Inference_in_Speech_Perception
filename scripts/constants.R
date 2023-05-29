@@ -1,6 +1,6 @@
 # Constants ------------------------------------------------------------------
 fig.base_width <- 1.75
-fig.base_height <- 1.75
+fig.base_height <- 1.85
 
 theme_set(
   theme_bw(base_size = 10) + 
@@ -40,7 +40,7 @@ linetypes.exposure.pen_locations <- c(3, 4)
 
 shapes.exposure.pen_locations <- c(20, 21)
 linetypes.test.pen_locations <- c(1, 2)     # not yet thought through
-shapes.test.pen_locations <- c(17, 19)      # not yet thought through
+shapes.test.pen_locations <- c(15, 17)      # not yet thought through
 linetypes.test.visual_labels <- c(1, 2)
 shapes.test.visual_labels <- c(17, 19)
 

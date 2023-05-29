@@ -374,17 +374,21 @@ plot_model_predictions_for_paper <- function(m) {
     method = "posterior_linpred")
 }
 
-plot_data <- function(data, experiment) {
+plot_data <- function(data, experiment, background_experiment = NULL) {
   require(dplyr)
   require(ggplot2)
   require(cowplot)
   
-  dodge <- .4
+  dodge <- .5
+  background_dodge <- dodge + .25
   shared_components <- 
     list(
-      stat_summary(fun = mean, geom = "line", position = position_dodge(dodge)),
-      stat_summary(fun = mean, geom = "point", position = position_dodge(dodge)),
-      stat_summary(fun.data = mean_cl_boot, geom = "pointrange", position = position_dodge(dodge), linetype = 1, alpha = .5),
+      stat_summary(fun = mean, geom = "line", position = position_dodge(dodge), 
+                   alpha = .5),
+      stat_summary(fun = mean, geom = "point", position = position_dodge(dodge), 
+                   size = 1),
+      stat_summary(fun.data = mean_cl_boot, geom = "linerange", position = position_dodge(dodge), 
+                   linetype = 1, alpha = .65),
       scale_y_continuous('Proportion "ASHI"-responses'),
       scale_shape_manual(
         "Pen location", 
@@ -392,12 +396,12 @@ plot_data <- function(data, experiment) {
       scale_linetype_manual(
         "Pen location", 
         breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = linetypes.test.pen_locations),
-    facet_wrap(~ Experiment, ncol = 1))
+      facet_wrap(~ Experiment, ncol = 1))
   
-  aggregate <- function(data, ...) {
+  aggregate <- function(data, ..., e = experiment) {
     groups = enquos(...)
     data %>%
-      filter(Experiment %in% experiment) %>%
+      filter(Experiment %in% e) %>%
       mutate(Experiment = gsub("CISP-", "Exp ", Experiment)) %>%
       droplevels() %>%
       group_by(!!! groups) %>%
@@ -406,6 +410,41 @@ plot_data <- function(data, experiment) {
   
   p <- list()
   p[[1]] <- 
+    data %>% 
+    aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio) %>%
+    ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, shape = Condition.Test.Pen, linetype = Condition.Test.Pen)) +
+    scale_x_continuous(
+      'Acoustic continuum', 
+      breaks = as.integer(append(range(data$Condition.Test.Audio), mean(range(data$Condition.Test.Audio))))) +
+    shared_components + 
+    coord_cartesian(xlim = range(data$Condition.Test.Audio), ylim = c(.1, .9))
+  
+  if (!is.null(background_experiment))
+    p[[1]] <- 
+    p[[1]] + list(
+      stat_summary(
+        data = data %>%
+          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
+                    e = background_experiment) %>% 
+          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
+        fun = mean, geom = "line", position = position_dodge(dodge + background_dodge), 
+        alpha = .5, color = "gray75"),
+      stat_summary(
+        data = data %>%
+          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
+                    e = background_experiment) %>% 
+          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
+        fun = mean, geom = "point", position = position_dodge(dodge + background_dodge), 
+        size = 1, color = "gray75"),
+      stat_summary(
+        data = data %>%
+          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
+                    e = background_experiment) %>% 
+          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
+        fun.data = mean_cl_boot, geom = "linerange", position = position_dodge(dodge + background_dodge), 
+        linetype = 1, alpha = .65, color = "gray75"))
+  
+    p[[2]] <- 
     data %>%
     aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel) %>%
     ggplot(aes(x = Condition.Test.OriginalLabel, y = Response.ASHI, 
@@ -419,16 +458,31 @@ plot_data <- function(data, experiment) {
     coord_cartesian(ylim = c(.1, .9)) +
     theme(legend.position = "none")
   
-  p[[2]] <- 
-    data %>% 
-    aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio) %>%
-    ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, shape = Condition.Test.Pen, linetype = Condition.Test.Pen)) +
-    scale_x_continuous(
-      'Acoustic continuum', 
-      breaks = as.integer(append(range(data$Condition.Test.Audio), mean(range(data$Condition.Test.Audio))))) +
-    shared_components + 
-    coord_cartesian(xlim = range(data$Condition.Test.Audio), ylim = c(.1, .9))
-  
+  if (!is.null(background_experiment))
+    p[[2]] <- 
+    p[[2]] + list(
+      stat_summary(
+        data = data %>%
+          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
+                    e = background_experiment) %>% 
+          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
+        fun = mean, geom = "line", position = position_dodge(dodge + background_dodge), 
+        alpha = .5, color = "gray75"),
+      stat_summary(
+        data = data %>%
+          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
+                    e = background_experiment) %>% 
+          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
+        fun = mean, geom = "point", position = position_dodge(dodge + background_dodge), 
+        size = 1, color = "gray75"),
+      stat_summary(
+        data = data %>%
+          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
+                    e = background_experiment) %>% 
+          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
+        fun.data = mean_cl_boot, geom = "linerange", position = position_dodge(dodge + background_dodge), 
+        linetype = 1, alpha = .65, color = "gray75"))
+
   # p[[3]] <- 
   #   data %>%
   #   aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, Condition.Test.OriginalLabel) %>%
@@ -446,7 +500,7 @@ plot_data <- function(data, experiment) {
     plotlist = p, 
     align = "hv", axis = "btrl", 
     ncol = length(p), labels = paste0(LETTERS[1:length(p)], ")"),
-    rel_widths = c(.3, .7), rel_heights = 1.5)
+    rel_widths = c(.7, .3), rel_heights = 1.5)
 }
 ```
 
@@ -588,10 +642,10 @@ d.test.Exp2 %<>% run_exclusions(c("CISP-2", "CISP-2b"))
 ggsave(
   plot_data(
     bind_rows(d.test.Exp1, d.test.Exp2), 
-    experiment = c("CISP-1c", "CISP-2")),
+    experiment = "CISP-2", background_experiment = "CISP-1c"),
   file = "../figures/Experiment 2.png", 
   width = fig.base_width * 3,
-  height = fig.base_height * 2 + .25)
+  height = fig.base_height + .5)
 ```
 
 ```{r results='markup'}
@@ -603,40 +657,6 @@ plot_model_predictions(m.Exp2)
 ### Comparison of Experiment 2a against Experiment 1c
 
 ```{r results='markup'}
-bind_rows(d.test.Exp1, d.test.Exp2) %>% 
-  filter(Experiment %in% c("CISP-1c", "CISP-2")) %>%
-  droplevels() %>%
-  group_by(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel) %>%
-  summarise(Response.ASHI = mean(Response.ASHI)) %>%
-  ggplot(aes(x = Condition.Test.OriginalLabel, y = Response.ASHI, linetype = Experiment, color = Condition.Test.Pen)) +
-  stat_summary(fun = mean, geom = "line") +
-  stat_summary(
-    geom = "pointrange",
-    position = position_dodge(.25))
-
-bind_rows(d.test.Exp1, d.test.Exp2) %>% 
-  filter(Experiment %in% c("CISP-1c", "CISP-2")) %>%
-  droplevels() %>%
-  group_by(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio) %>%
-  summarise(Response.ASHI = mean(Response.ASHI)) %>%
-  ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, color = Condition.Test.Pen, linetype = Experiment)) +
-  stat_summary(fun = mean, geom = "line") +
-  stat_summary(
-    geom = "pointrange",
-    position = position_dodge(.25))
-
-bind_rows(d.test.Exp1, d.test.Exp2) %>% 
-  filter(Experiment %in% c("CISP-1c", "CISP-2")) %>%
-  droplevels() %>%
-  group_by(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, Condition.Test.OriginalLabel) %>%
-  summarise(Response.ASHI = mean(Response.ASHI)) %>%
-  ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, color = Condition.Test.Pen, linetype = Experiment)) +
-  stat_summary(fun = mean, geom = "line") +
-  stat_summary(
-    geom = "pointrange",
-    position = position_dodge(.25)) +
-  facet_wrap(~ Condition.Test.OriginalLabel)
-
 m.Exp2vsExp1c <- fit_test_model(data = bind_rows(d.test.Exp1, d.test.Exp2), experiment = c("CISP-1c", "CISP-2"))
 # Does Experiment 2 have fewer ASHI responses (in the middle of the continuum)? YES, somewhat.
 hypothesis(m.Exp2vsExp1c, "b_Experiment1  + 2.5 * bsp_moCondition.Test.Audio:Experiment1 < 0", class = NULL)
