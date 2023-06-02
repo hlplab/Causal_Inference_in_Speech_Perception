@@ -197,12 +197,12 @@ d.Exp3.forExclusionSummary <- d.Exp3 %>%
 forExclusionSummary <- rbind(d.Exp1.forExclusionSummary,
                              d.Exp2.forExclusionSummary,
                              d.Exp3.forExclusionSummary)
-rm(d.Exp1.forExclusionSummary,
-                             d.Exp2.forExclusionSummary,
-                             d.Exp3.forExclusionSummary)
+#rm(d.Exp1.forExclusionSummary, d.Exp2.forExclusionSummary,d.Exp3.forExclusionSummary)
 
-exclusionTable <- forExclusionSummary %>%
+exclusionTable <- d.Exp1.forExclusionSummary %>%
   group_by(Experiment) %>%
+  mutate(Recruited = length(unique(ParticipantID))) %>%
+  group_by(Experiment, Recruited) %>%
   select(-ParticipantID) %>%
   summarise_all(
     function(x) { 
@@ -214,6 +214,7 @@ exclusionTable <- forExclusionSummary %>%
   # Sort columns
   select(
     Experiment,
+    Recruited,
     #Exclude_Participant.because_of_TechnicalDifficulty,
     #Exclude_Participant.because_of_MultipleExperiments,
     Exclude_Participant.because_of_IgnoredInstructions,
