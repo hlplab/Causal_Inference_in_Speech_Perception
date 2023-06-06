@@ -40,8 +40,33 @@ header-includes:
 ---
 
 ```{r, include=FALSE}
-library(knitr)
+library(tidyverse)
+library(magrittr)    # pipes
+library(lubridate)   # date conversion, etc.
 
+library(brms)        # Bayesian GL(M)Ms
+library(tidybayes)   # extract posterior from brmfits
+library(modelr)      # create data grids
+library(sjPlot)      # tables for Bayesian GL(M)Ms
+library(broom)       # extracting information from GL(M)Ms
+library(boot)        # easy logit() function
+
+library(knitr)
+library(linguisticsdown)  #IPA symbols
+library(rstan)
+
+# Setting up cmdstanr
+# library(curl)
+# if (has_internet()) install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
+library(cmdstanr)
+# install_cmdstan()
+```
+
+```{r constants, include=FALSE}
+source("constants.R")
+```
+
+```{r, include=FALSE}
 opts_chunk$set(dev = 'png', dpi = 96,
                comment="", 
                echo=FALSE, warning=TRUE, message=TRUE,
@@ -64,44 +89,19 @@ knitr::knit_hooks$set(error = color_block('red'))
 knitr::knit_hooks$set(warning = color_block('orange'))
 ```
 
-```{r, include=FALSE}
-library(tidyverse)
-library(magrittr)    # pipes
-library(lubridate)   # date conversion, etc.
-
-library(brms)        # Bayesian GL(M)Ms
-library(tidybayes)   # extract posterior from brmfits
-library(modelr)      # create data grids
-library(sjPlot)      # tables for Bayesian GL(M)Ms
-library(broom)       # extracting information from GL(M)Ms
-library(boot)        # easy logit() function
-
-library(linguisticsdown)  #IPA symbols
-library(rstan)
-
-# Setting up cmdstanr
-# library(curl)
-# if (has_internet()) install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
-library(cmdstanr)
-# install_cmdstan()
-```
-
-```{r constants, include=FALSE}
-source("constants.R")
-```
-
 ```{r functions to consolidate}
 format_more <- 
   . %>%
-    # Potentially move these into the format function
+  # Potentially move these into the format function
+  rename_with(~ gsub("Answer.", "", .x)) %>%
   rename(
-    Participant.AudioType = Answer.audio_type,
-    Participant.AudioStall = Answer.audio_stall,
-    Participant.VideoStall = Answer.video_stall,
-    Talker.Sex = Answer.sex,
-    Talker.PronunciationShift = Answer.ssh2,
-    Talker.PronunciationProperties = Answer.pronun,
-    Talker.SpeechDescription = Answer.speaker) %>%
+    Participant.AudioType = audio_type,
+    Participant.AudioStall = audio_stall,
+    Participant.VideoStall = video_stall,
+    Talker.Sex = sex,
+    Talker.PronunciationShift = ssh2,
+    Talker.PronunciationProperties = pronun,
+    Talker.SpeechDescription = speaker) %>%
   add_exclusions() %>%
   mutate(
     Condition.Exposure.Pen = NA,
@@ -111,8 +111,8 @@ format_more <-
     Experiment, ParticipantID, starts_with("Participant."),
     Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, 
     Condition.Test.Audio, Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Keybindings,
-    Block, Trial, ItemID, 
-    Response, Response.ASHI, Response.RT, 
+    Phase, Block, Trial, ItemID, 
+    Response, Response.ASHI, Response.RT, Response.CatchTrial,
     starts_with("Talker"),
     starts_with("Duration"),
     starts_with("Exclude")) 
@@ -139,31 +139,35 @@ format_more <-
     Talker.SpeechDescription = Answer.speaker)
  
  * consolidate constants.R and functions.R. It's currently unclear what's in which and why.
+ * fill in all survey questions in procedure section for Exp 1a-c, and provide some summary of participants' responses where relevant.
 
 
 # Context statement
 This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab, University of Rochester, is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information.
 
-# Experiment 1a-c
+# Experiments 1a-c
+Experiment 1a was conducted between 1/20-22/2021. Experiment 1b was conducted between 3/03-04/2021. Experiment 1c was conducted between 6/03-05/2021. 
 
 ## Data import
-We import and format the data for Experiments 1a-c, as well as Experiments A and 1 from Liu & Jaeger (2018).
 
 ```{r}
 load("../data/Experiment-NORM-A-before-exclusions.RData") 
-d.Exp1a <- d.test.A %>%
+d.Exp1a <- 
+  d.test.A %>%
   mutate(
     Experiment = "CISP-1a",
     ParticipantID = paste(Experiment, ParticipantID, sep = "."))
  
 load("../data/Experiment-NORM-B-before-exclusions.RData") 
-d.Exp1b <- d.test.B %>%
+d.Exp1b <- 
+  d.test.B %>%
   mutate(
     Experiment = "CISP-1b",
     ParticipantID = paste(Experiment, ParticipantID, sep = "."))
 
 load("../data/Experiment-NORM-C-before-exclusions.RData") 
-d.Exp1c <- d.test.C %>%
+d.Exp1c <- 
+  d.test.C %>%
   mutate(
     Experiment = "CISP-1c",
     ParticipantID = paste(Experiment, ParticipantID, sep = "."))
@@ -184,14 +188,26 @@ d.LJ18.test <-
     # blocks for LJ18 to be blocks of 12 trials.
     Block = Trial %/% 12 + 1, 
     Trial = Trial + 1,
-    across(
-      c(Condition.Test.Pen, Condition.Test.OriginalLabel), 
-    factor)) 
+    across(c(Condition.Test.Pen, Condition.Test.OriginalLabel), factor))
 
 d.test <- 
   bind_rows(d.Exp1a, d.Exp1b, d.Exp1c, d.LJ18.test) %>%
   format_more()
+
+rm(d.test.A, d.test.B, d.test.C)
 ```
+
+## Materials: Selection of acoustic continuum steps
+As described in the main text, we aimed to maximize the power to detect effects---like that oc the pen in the mouth---along the *asi-ashi* continuum. Specifically, we aimed to select one step that, across all other manipulations, would yield approximated 25% *ashi* responses, four steps that would yield close to 50% *ashi* responses, and one step that would yield 75% *ashi* responses.
+
+The intention for Experiment 1a was to employ the exact same acoustic steps as in @liu-jaeger2018: 12, 14, 15, 16, 17, and 19, where higher numbers indicate acoustically more ashi-like steps. However, a labelling mistake resulted in the steps being internally named with higher numbers indicating proportion of asi, rather than ashi. The actual steps that were used in Experiment 1a were 13, 15, 16, 17, 18, 20 unintentionally shifting the test continuum 1 step towards the ashi end, compared to @liu-jaeger2018. As we report below, Experiment 1a yielded overall more asi than ashi responses. Experiment 1b thus attempted to expand the test stimuli towards the ashi end of the continuum. However, as we still had not discovered the labeling mistake, we ended up expanding the continuum even further towards the asi end instead, with steps 10, 13, 14, 15, 16, 20. At this point, we identified the labeling mistake. Experiment 1c employed steps 13, 18, 19, 20, 21, and 26. We emphasize that the location of the test steps is not critical for Experiments 1a-c.
+
+## Procedure: Further details on exit survey
+<!-- TO DO SHAWN: could you fill in more information about the questions we asked, including a full list of questions? -->
+
+For Experiment 1b, we made minor changes to the survey. We removed one question about audio quality which asked participants to rate the quality of their audio equipment as "bad", "good", "professional", etc. Previous analyses in our lab have found that the subjective nature of this question makes it hard to interpret. And, in order to encourage the participants to answer survey questions truthfully, we emphasized that they would get compensated independent of their answers, and that truthful answers would greatly help us with the interpretation of results. <!-- TO DO: please check whether this is all correct. I belive we have detailed notes about these changes both in an RMD file I created back then, and in the Javascript / survey code itself. -->
+
+For Experiment 1c, we revised our questions about internet connectivity. Specifically, we changed the two questions that asked about video or sound issues during the experiment. We clarified that these questions were asking solely about technical issues, rather than any oddities between the alignment of the video and audio (as separate questions already assessed that aspect). The revised questions were introduced by the following statement: "The videos and sounds in this experiment were manipulated by aligning the same video with different sound sources. As a consequence, you might have noticed some 'jumps' or slightly odd-looking moments in the video. Here we are interested in *potential technical issues with the internet connection* beyond any oddities you might have noticed about how the video and sound aligned." (emphasis in original) Then two questions assessed whether the videos or sounds failed to load or stopped and restarted playing during exposure. As these revised questions explicitly mentioned that the videos and sounds had been manipulated, they were moved towards the end of the survey, so that they followed any questions that inquired about the pronunciation of the talker in the video (recall that participants could not go back to previously answered questions). <!-- TO DO: please check whether this is all correct. I belive we have detailed notes about these changes both in an RMD file I created back then, and in the Javascript / survey code itself. -->
 
 ## Exclusions
 
@@ -231,6 +247,10 @@ run_exclusions <- function(data, experiment) {
 d.test.Exp1 <-
   d.test %>% 
   run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
+
+d.test %<>%
+  excludeData() %>%
+  filter(!is.na(Response.ASHI))
 ```
 
 ## Analyses
@@ -265,9 +285,8 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
   } else {
     bf(paste(
       "Response.ASHI ~",
-      
       "1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio)",
-      if (length(unique(data$Experiment)) > 1) "* Experiment +" else "+",
+      if (length(unique(experiment)) > 1) "* Experiment +" else "+",
       "(1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)"))
   }
   
@@ -379,16 +398,19 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
   require(ggplot2)
   require(cowplot)
   
-  dodge <- .5
-  background_dodge <- dodge + .25
-  shared_components <- 
+  shared_stats <- function(data = NULL, color = "black", dodge = .5) 
     list(
-      stat_summary(fun = mean, geom = "line", position = position_dodge(dodge), 
-                   alpha = .5),
-      stat_summary(fun = mean, geom = "point", position = position_dodge(dodge), 
-                   size = 1),
-      stat_summary(fun.data = mean_cl_boot, geom = "linerange", position = position_dodge(dodge), 
-                   linetype = 1, alpha = .65),
+      stat_summary(
+        data = data, fun = mean, geom = "line", 
+        position = position_dodge(dodge), alpha = .5, color = color),
+      stat_summary(
+        data = data, fun = mean, geom = "point", 
+        position = position_dodge(dodge), size = 1, color = color),
+      stat_summary(
+        data = data, fun.data = mean_cl_boot, geom = "linerange", 
+        position = position_dodge(dodge), linetype = 1, alpha = .65, color = color))
+  shared_formatting <- 
+    list(
       scale_y_continuous('Proportion "ASHI"-responses'),
       scale_shape_manual(
         "Pen location", 
@@ -404,6 +426,7 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
       filter(Experiment %in% e) %>%
       mutate(Experiment = gsub("CISP-", "Exp ", Experiment)) %>%
       droplevels() %>%
+      mutate(Condition.Test.Pen = ifelse(Condition.Test.Pen == "audio-only", "H", as.character(Condition.Test.Pen))) %>%
       group_by(!!! groups) %>%
       summarise(Response.ASHI = mean(Response.ASHI)) 
   }
@@ -416,33 +439,22 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
     scale_x_continuous(
       'Acoustic continuum', 
       breaks = as.integer(append(range(data$Condition.Test.Audio), mean(range(data$Condition.Test.Audio))))) +
-    shared_components + 
+    shared_stats() +
+    shared_formatting + 
     coord_cartesian(xlim = range(data$Condition.Test.Audio), ylim = c(.1, .9))
   
   if (!is.null(background_experiment))
     p[[1]] <- 
-    p[[1]] + list(
-      stat_summary(
+    p[[1]] + 
+    shared_stats(
         data = data %>%
           aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
                     e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun = mean, geom = "line", position = position_dodge(dodge + background_dodge), 
-        alpha = .5, color = "gray75"),
-      stat_summary(
-        data = data %>%
-          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
-                    e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun = mean, geom = "point", position = position_dodge(dodge + background_dodge), 
-        size = 1, color = "gray75"),
-      stat_summary(
-        data = data %>%
-          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
-                    e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun.data = mean_cl_boot, geom = "linerange", position = position_dodge(dodge + background_dodge), 
-        linetype = 1, alpha = .65, color = "gray75"))
+          ungroup() %>%
+          select(-Experiment) %>%
+          crossing(Experiment = gsub("CISP-", "Exp ", experiment)), 
+        dodge = 1, 
+        color = "gray75")
   
     p[[2]] <- 
     data %>%
@@ -450,7 +462,8 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
     ggplot(aes(x = Condition.Test.OriginalLabel, y = Response.ASHI, 
                shape = Condition.Test.Pen, linetype = Condition.Test.Pen,
                group = Condition.Test.Pen)) +
-    shared_components +
+    shared_stats(dodge = .25) +
+    shared_formatting + 
     scale_x_discrete('Visual bias') +
     # scale_color_manual(
     #   'Visual bias', 
@@ -458,30 +471,18 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
     coord_cartesian(ylim = c(.1, .9)) +
     theme(legend.position = "none")
   
-  if (!is.null(background_experiment))
+  if (!is.null(background_experiment) & !("LJ18-NORM" %in% background_experiment))
     p[[2]] <- 
-    p[[2]] + list(
-      stat_summary(
+    p[[2]] + 
+      shared_stats(
         data = data %>%
           aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
                     e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun = mean, geom = "line", position = position_dodge(dodge + background_dodge), 
-        alpha = .5, color = "gray75"),
-      stat_summary(
-        data = data %>%
-          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
-                    e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun = mean, geom = "point", position = position_dodge(dodge + background_dodge), 
-        size = 1, color = "gray75"),
-      stat_summary(
-        data = data %>%
-          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
-                    e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun.data = mean_cl_boot, geom = "linerange", position = position_dodge(dodge + background_dodge), 
-        linetype = 1, alpha = .65, color = "gray75"))
+          ungroup() %>%
+          select(-Experiment) %>%
+          crossing(Experiment = gsub("CISP-", "Exp ", experiment)), 
+        dodge = .5, 
+        color = "gray75")
 
   # p[[3]] <- 
   #   data %>%
@@ -504,9 +505,12 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
 }
 ```
 
-```{r fig.height=8, fig.width=6}
+```{r}
+p <- plot_data(d.test, experiment = c("CISP-1a", "CISP-1b", "CISP-1c"), background_experiment = "LJ18-NORM")
+plot(p)
+  
 ggsave(
-  plot_data(d.test.Exp1, experiment = c("CISP-1a", "CISP-1b", "CISP-1c")),
+  p,
   file = "../figures/Experiment 1a-c.png", 
   width = fig.base_width * 3,
   height = fig.base_height * 3 + .25)
@@ -604,10 +608,12 @@ d.test.LJ18 %>%
   scale_fill_grey()
 ```
 
-# Experiments 2
+# Experiments 2 and 2b
+We conducted two experiments that were designed to test whether listeners need to see the effects of the pen on the articulators *during the production of the fricative*, or whether the presence of a pen during the production of a fricative is sufficient to cause the effects observed in Experiments 1a-c. To this end, Experiments 2 and 2b introduced a black box that occluded the talker's mouth during the articulation of the fricative (see main text for details). The two experiments were identical except that Experiment 2b introduced an additional task intended to assure that participants paid attention to the videos (rather than just the audio). This change in procedure from Experiment 2 to 2b was intended to address an alternative explanation for the results of Experiment 2. As reported below, Experiment 2 did not find the effects of pen location that were present in Experiments 1a-c. This raised the question as to whether participants in Experiment 2 failed to pay attention to the video (unlike in Experiments 1a-c). The additional task in Experiment 2b addressed this possibility.
+
+Experiment 2 was conducted between 7/14-15/2021. Experiment 2b was conducted between 7/23-24/2021.
 
 ## Data import
-We import and format the data for Experiments 2.
 
 ```{r}
 load("../data/Experiment-NORM-D-before-exclusions.RData") #named d.test.D
@@ -629,27 +635,42 @@ d.Exp2b <-
 d.test.Exp2 <- 
   bind_rows(d.Exp2, d.Exp2b) %>%
   format_more()
+
+rm(d.test.D, d.test.E)
 ```
+
+## Procedure
+Experiment 2 employed the exact same tasks as Experiment 1a-c. Experiment 2b, however, introduced an additional task. Participants were asked to press SPACE whenever the pen was in the talker's mouth. After pressing SPACE, participants had to answer whether they heard *asi* or *ashi*, as in all preceding experiments. Figure \@ref(fig:XXX) shows a screenshot of the specific instructions. 
+
+<!-- TO DO: Shawn, can we add the screen shot from your email here, or perhaps a screen shot of the entire screen, incl. the part you had in your email -->
+
 ## Exclusions
+Figure \@ref(fig:XXX) summarized the exclusions for Experiment 2 and 2b. Of note is the high exclusion rate for Experiment 2b, for which almost one fourth of all participants stated after the experiment that they had not been wearing head phones. This deterioration of data quality for experiments conducted over Mechanical Turk post 2020 was also observed in other experiments conducted in our lab during the same time period. Like in the present case, deterioration of data quality tended to be particularly pronounced in those other studies when we conducted a series of experiments, One possible explanation is our recruitment criterion, which only allowed participants to see the experiment if they had *not* participated in any previous experiment of the series. This successively reduces the participant pool, potentially making the experiment vulnerable to increasingly less cooperative participants. 
+
+This motivated our switch to the Prolific crowdsourcing experiments for subsequent experiments. Experiment 2b was the last experiment we conducted over Mechanical Turk. <!-- TO DO: correct? -->
 
 ```{r}
 d.test.Exp2 %<>% run_exclusions(c("CISP-2", "CISP-2b"))
 ```
 
-### Experiment 2a
+### Experiment 2
 
-```{r fig.height=8, fig.width=6}
-ggsave(
+```{r}
+p <- 
   plot_data(
     bind_rows(d.test.Exp1, d.test.Exp2), 
-    experiment = "CISP-2", background_experiment = "CISP-1c"),
+    experiment = "CISP-2", background_experiment = "CISP-1c")
+plot(p)
+
+ggsave(
+  p,
   file = "../figures/Experiment 2.png", 
   width = fig.base_width * 3,
   height = fig.base_height + .5)
 ```
 
 ```{r results='markup'}
-m.Exp2 <- fit_test_model(d.test.Exp2, "CISP-2")
+m.Exp2 <- fit_test_model(d.test.Exp2, experiment = "CISP-2")
 my_hypotheses(m.Exp2, experiment = "Exp 2") %>% map(print) -> TEMP
 plot_model_predictions(m.Exp2)
 ```
@@ -670,9 +691,78 @@ summary(m.Exp2vsExp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(
 ```
 
 ### Experiment 2b
+We first analyzed the accuracy of SPACE presses. Participants were significantly above chance in detecting the pen in the mouth of the talker (75% accurate). Participants were, however, much more accurate when the pen was not in the mouth of the talker (95%). This asymmetry is not particularly surprising: correct detection of the pen in the mouth required a key press, whereas correct detection that the pen was not in the mouth (but rather in the hand) required no action at all.
+
+```{r}
+d.test.Exp2 %>%
+  mutate(Reponse.CatchCorrect = ifelse(Response.CatchTrial == (Condition.Test.Pen == "mouth"), 1, 0)) %>%
+  ggplot(aes(x = Condition.Test.Pen, y = Reponse.CatchCorrect, shape = Condition.Test.Pen)) +
+  stat_summary(fun.data = mean_cl_boot, geom = "pointrange") +
+  scale_x_discrete(
+    "Pen location", 
+    breaks = levels.test.pen_locations, 
+    labels = labels.test.pen_locations) +
+  scale_y_continuous("Proportion correct responses about pen location") +
+  scale_shape_manual(
+    "Pen location", 
+    breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = shapes.test.pen_locations)
+```
+
+Next, we turn to participants categorization responses---i.e., whether participants heard *asi* or *ashi*. Figure \@ref(fig:results-exp2b) summarizes participants' categorization responses. Compared to Experiment 2, participants in Experiment 2b exhibited noticeably weaker effects of the acoustic continuum (more shallow slope in Figure \@ref(fig:results-exp2b)a). This suggests a trade-off introduced by the secondary task in Experiment 2b: either because participants focused more on the visual input, or because the categorization response was delivered *after* the response to the visual stimulus (SPACE press), participants' responses were less affected by the acoustic continuum. Critically, however, Experiment 2b replicates all effects found in Experiment 2. It is worth noting though that, in line with the idea of a trade-off, the effects of pen location and the visual bias were more pronounced in Experiment 2b, compared to 2. 
+
+(ref:results-exp2b) Summary of participants’ responses in Experiments 2b, depending on pen location and acoustic continuum step (Panel A) or visual bias (Panel B). For comparison, the results from Experiment 2 are shown in the background. The two experiments were identical except for the secondary task introduced in Experiment 2b.
+
+```{r results-exp2b, fig.width=fig.base_width * 3, fig.height=fig.base_height + .5, fig.cap="(ref:results-exp2b)"}
+p <-
+  plot_data(
+    bind_rows(d.test.Exp1, d.test.Exp2), 
+    experiment = "CISP-2b", background_experiment = "CISP-2")
+plot(p)
+
+ggsave(
+  p,
+  file = "../figures/Experiment 2b.png", 
+  width = fig.base_width * 3,
+  height = fig.base_height + .5)
+```
 
 ```{r}
 m.Exp2b <- fit_test_model(d.test.Exp2, "CISP-2b")
 my_hypotheses(m.Exp2b, experiment = "Exp 2b") %>% map(print) -> TEMP
 plot_model_predictions(m.Exp2b)
 ```
+
+# Experiment 3
+Experiment 3 was conducted
+
+## Data import
+
+```{r}
+rm(d.Exp2)
+load("../data/Experiment-3-before-exclusions.RData") 
+d.Exp3 <- 
+  d.Exp2 %>%
+  mutate(
+    Experiment = "CISP-3",
+    Condition.Test.Keybindings = NA,                                  # TO DO: delete after unifying data format
+    ParticipantID = paste(Experiment, ParticipantID, sep = ".")) %>%
+  format_more()
+
+d.exposure.Exp3 <- d.Exp3 %>% filter(Phase == "exposure") %>% excludeData()
+d.test.Exp3 <- d.Exp3 %>% filter(Phase == "test")
+
+rm(d.Exp2)
+```
+
+## Procedure: Comparison to Liu and Jaeger (2018)
+The generation of exposure orders differed somewhat from that in LJ18. LJ18 generated two pseudo-randomized stimulus orders for exposure. These lists and their respective reverse orders formed four different exposure orders. Key binding---whether "X" and "M" corresponds to a word response or a non-word response, respectively, or vice versa---were counterbalanced across participants within each of these four orders, resulting in a total of 8 different exposure lists. The two pseudorandom orders in LJ18 were generated by repeatedly randomizing the order of stimuli until critical items, fillers, and catch trials were somewhat evenly distributed across the list. We took a more systematic approach, described in the main text, with the goal to create many randomized stimulus orders across participants, thereby creating cross-participant variability in nuisance factors not expected to affect test performance. 
+
+Our catch trial procedure also differed somewhat from LJ18. In LJ18, participants had to answer the lexical decision question even on catch trials. This means participants had to press "X" or "M" even after pressing "B" to indicate that they had noticed the white dot. The trial would not proceed until "X" or "M" had been pressed. While piloting our experiments, we realized that this procedure created confusion. Thus, unlike Liu and Jaeger (2018), the catch trials in the present experiment ended when the participant pressed "B" whereas participants in Liu and Jaeger (2018) had to additionally answer the word vs. non-word question.
+
+## Exclusions
+
+```{r}
+d.test.Exp3 %<>% run_exclusions(c("CISP-3"))
+```
+
+## Analysis
