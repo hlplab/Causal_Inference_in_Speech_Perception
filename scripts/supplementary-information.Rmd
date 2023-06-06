@@ -40,8 +40,33 @@ header-includes:
 ---
 
 ```{r, include=FALSE}
-library(knitr)
+library(tidyverse)
+library(magrittr)    # pipes
+library(lubridate)   # date conversion, etc.
 
+library(brms)        # Bayesian GL(M)Ms
+library(tidybayes)   # extract posterior from brmfits
+library(modelr)      # create data grids
+library(sjPlot)      # tables for Bayesian GL(M)Ms
+library(broom)       # extracting information from GL(M)Ms
+library(boot)        # easy logit() function
+
+library(knitr)
+library(linguisticsdown)  #IPA symbols
+library(rstan)
+
+# Setting up cmdstanr
+# library(curl)
+# if (has_internet()) install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
+library(cmdstanr)
+# install_cmdstan()
+```
+
+```{r constants, include=FALSE}
+source("constants.R")
+```
+
+```{r, include=FALSE}
 opts_chunk$set(dev = 'png', dpi = 96,
                comment="", 
                echo=FALSE, warning=TRUE, message=TRUE,
@@ -62,32 +87,6 @@ color_block = function(color) {
 }
 knitr::knit_hooks$set(error = color_block('red'))
 knitr::knit_hooks$set(warning = color_block('orange'))
-```
-
-```{r, include=FALSE}
-library(tidyverse)
-library(magrittr)    # pipes
-library(lubridate)   # date conversion, etc.
-
-library(brms)        # Bayesian GL(M)Ms
-library(tidybayes)   # extract posterior from brmfits
-library(modelr)      # create data grids
-library(sjPlot)      # tables for Bayesian GL(M)Ms
-library(broom)       # extracting information from GL(M)Ms
-library(boot)        # easy logit() function
-
-library(linguisticsdown)  #IPA symbols
-library(rstan)
-
-# Setting up cmdstanr
-# library(curl)
-# if (has_internet()) install.packages("cmdstanr", repos = c("https://mc-stan.org/r-packages/", getOption("repos")))
-library(cmdstanr)
-# install_cmdstan()
-```
-
-```{r constants, include=FALSE}
-source("constants.R")
 ```
 
 ```{r functions to consolidate}
@@ -190,8 +189,15 @@ d.LJ18.test <-
 
 d.test <- 
   bind_rows(d.Exp1a, d.Exp1b, d.Exp1c, d.LJ18.test) %>%
-  format_more()
+  format_more() %>%
+  excludeData() %>%
+  filter(!is.na(Response.ASHI))
 ```
+
+## Materials: Selection of acoustic continuum steps
+As described in the main text, we aimed to maximize the power to detect effects---like that oc the pen in the mouth---along the *asi-ashi* continuum. Specifically, we aimed to select one step that, across all other manipulations, would yield approximated 25% *ashi* responses, four steps that would yield close to 50% *ashi* responses, and one step that would yield 75% *ashi* responses.
+
+The intention for Experiment 1a was to employ the exact same acoustic steps as in @liu-jaeger2018: 12, 14, 15, 16, 17, and 19, where higher numbers indicate acoustically more ashi-like steps. However, a labelling mistake resulted in the steps being internally named with higher numbers indicating proportion of asi, rather than ashi. The actual steps that were used in Experiment 1a were 13, 15, 16, 17, 18, 20 unintentionally shifting the test continuum 1 step towards the ashi end, compared to @liu-jaeger2018. As we report below, Experiment 1a yielded overall more asi than ashi responses. Experiment 1b thus attempted to expand the test stimuli towards the ashi end of the continuum. However, as we still had not discovered the labeling mistake, we ended up expanding the continuum even further towards the asi end instead, with steps 10, 13, 14, 15, 16, 20. At this point, we identified the labeling mistake. Experiment 1c employed steps 13, 18, 19, 20, 21, and 26. We emphasize that the location of the test steps is not critical for Experiments 1a-c.
 
 ## Exclusions
 
@@ -379,16 +385,19 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
   require(ggplot2)
   require(cowplot)
   
-  dodge <- .5
-  background_dodge <- dodge + .25
-  shared_components <- 
+  shared_stats <- function(data = NULL, color = "black", dodge = .5) 
     list(
-      stat_summary(fun = mean, geom = "line", position = position_dodge(dodge), 
-                   alpha = .5),
-      stat_summary(fun = mean, geom = "point", position = position_dodge(dodge), 
-                   size = 1),
-      stat_summary(fun.data = mean_cl_boot, geom = "linerange", position = position_dodge(dodge), 
-                   linetype = 1, alpha = .65),
+      stat_summary(
+        data = data, fun = mean, geom = "line", 
+        position = position_dodge(dodge), alpha = .5, color = color),
+      stat_summary(
+        data = data, fun = mean, geom = "point", 
+        position = position_dodge(dodge), size = 1, color = color),
+      stat_summary(
+        data = data, fun.data = mean_cl_boot, geom = "linerange", 
+        position = position_dodge(dodge), linetype = 1, alpha = .65, color = color))
+  shared_formatting <- 
+    list(
       scale_y_continuous('Proportion "ASHI"-responses'),
       scale_shape_manual(
         "Pen location", 
@@ -404,6 +413,7 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
       filter(Experiment %in% e) %>%
       mutate(Experiment = gsub("CISP-", "Exp ", Experiment)) %>%
       droplevels() %>%
+      mutate(Condition.Test.Pen = ifelse(Condition.Test.Pen == "audio-only", "H", as.character(Condition.Test.Pen))) %>%
       group_by(!!! groups) %>%
       summarise(Response.ASHI = mean(Response.ASHI)) 
   }
@@ -416,33 +426,22 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
     scale_x_continuous(
       'Acoustic continuum', 
       breaks = as.integer(append(range(data$Condition.Test.Audio), mean(range(data$Condition.Test.Audio))))) +
-    shared_components + 
+    shared_stats() +
+    shared_formatting + 
     coord_cartesian(xlim = range(data$Condition.Test.Audio), ylim = c(.1, .9))
   
   if (!is.null(background_experiment))
     p[[1]] <- 
-    p[[1]] + list(
-      stat_summary(
+    p[[1]] + 
+    shared_stats(
         data = data %>%
           aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
                     e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun = mean, geom = "line", position = position_dodge(dodge + background_dodge), 
-        alpha = .5, color = "gray75"),
-      stat_summary(
-        data = data %>%
-          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
-                    e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun = mean, geom = "point", position = position_dodge(dodge + background_dodge), 
-        size = 1, color = "gray75"),
-      stat_summary(
-        data = data %>%
-          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
-                    e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun.data = mean_cl_boot, geom = "linerange", position = position_dodge(dodge + background_dodge), 
-        linetype = 1, alpha = .65, color = "gray75"))
+          ungroup() %>%
+          select(-Experiment) %>%
+          crossing(Experiment = gsub("CISP-", "Exp ", experiment)), 
+        dodge = 1, 
+        color = "gray75")
   
     p[[2]] <- 
     data %>%
@@ -450,7 +449,8 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
     ggplot(aes(x = Condition.Test.OriginalLabel, y = Response.ASHI, 
                shape = Condition.Test.Pen, linetype = Condition.Test.Pen,
                group = Condition.Test.Pen)) +
-    shared_components +
+    shared_stats(dodge = .25) +
+    shared_formatting + 
     scale_x_discrete('Visual bias') +
     # scale_color_manual(
     #   'Visual bias', 
@@ -458,30 +458,18 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
     coord_cartesian(ylim = c(.1, .9)) +
     theme(legend.position = "none")
   
-  if (!is.null(background_experiment))
+  if (!is.null(background_experiment) & !("LJ18-NORM" %in% background_experiment))
     p[[2]] <- 
-    p[[2]] + list(
-      stat_summary(
+    p[[2]] + 
+      shared_stats(
         data = data %>%
           aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
                     e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun = mean, geom = "line", position = position_dodge(dodge + background_dodge), 
-        alpha = .5, color = "gray75"),
-      stat_summary(
-        data = data %>%
-          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
-                    e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun = mean, geom = "point", position = position_dodge(dodge + background_dodge), 
-        size = 1, color = "gray75"),
-      stat_summary(
-        data = data %>%
-          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
-                    e = background_experiment) %>% 
-          mutate(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        fun.data = mean_cl_boot, geom = "linerange", position = position_dodge(dodge + background_dodge), 
-        linetype = 1, alpha = .65, color = "gray75"))
+          ungroup() %>%
+          select(-Experiment) %>%
+          crossing(Experiment = gsub("CISP-", "Exp ", experiment)), 
+        dodge = .5, 
+        color = "gray75")
 
   # p[[3]] <- 
   #   data %>%
@@ -506,7 +494,7 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
 
 ```{r fig.height=8, fig.width=6}
 ggsave(
-  plot_data(d.test.Exp1, experiment = c("CISP-1a", "CISP-1b", "CISP-1c")),
+  plot_data(d.test, experiment = c("CISP-1a", "CISP-1b", "CISP-1c"), background_experiment = "LJ18-NORM"),
   file = "../figures/Experiment 1a-c.png", 
   width = fig.base_width * 3,
   height = fig.base_height * 3 + .25)
