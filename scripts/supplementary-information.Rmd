@@ -712,7 +712,7 @@ Next, we turn to participants categorization responses---i.e., whether participa
 
 (ref:results-exp2b) Summary of participants’ responses in Experiments 2b, depending on pen location and acoustic continuum step (Panel A) or visual bias (Panel B). For comparison, the results from Experiment 2 are shown in the background. The two experiments were identical except for the secondary task introduced in Experiment 2b.
 
-```{r results-exp2b, fig.width=fig.base_width * 3, fig.height=fig.base_height + .5 fig.cap="(ref:results-exp2b)"}
+```{r results-exp2b, fig.width=fig.base_width * 3, fig.height=fig.base_height + .5, fig.cap="(ref:results-exp2b)"}
 p <-
   plot_data(
     bind_rows(d.test.Exp1, d.test.Exp2), 
