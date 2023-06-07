@@ -138,6 +138,7 @@ format_more <-
     Talker.SpeechDescription = Answer.speaker)
  
  * consolidate constants.R and functions.R. It's currently unclear what's in which and why.
+ * fill in all survey questions in procedure section for Exp 1a-c, and provide some summary of participants' responses where relevant.
 
 
 # Context statement
@@ -198,6 +199,13 @@ d.test <-
 As described in the main text, we aimed to maximize the power to detect effects---like that oc the pen in the mouth---along the *asi-ashi* continuum. Specifically, we aimed to select one step that, across all other manipulations, would yield approximated 25% *ashi* responses, four steps that would yield close to 50% *ashi* responses, and one step that would yield 75% *ashi* responses.
 
 The intention for Experiment 1a was to employ the exact same acoustic steps as in @liu-jaeger2018: 12, 14, 15, 16, 17, and 19, where higher numbers indicate acoustically more ashi-like steps. However, a labelling mistake resulted in the steps being internally named with higher numbers indicating proportion of asi, rather than ashi. The actual steps that were used in Experiment 1a were 13, 15, 16, 17, 18, 20 unintentionally shifting the test continuum 1 step towards the ashi end, compared to @liu-jaeger2018. As we report below, Experiment 1a yielded overall more asi than ashi responses. Experiment 1b thus attempted to expand the test stimuli towards the ashi end of the continuum. However, as we still had not discovered the labeling mistake, we ended up expanding the continuum even further towards the asi end instead, with steps 10, 13, 14, 15, 16, 20. At this point, we identified the labeling mistake. Experiment 1c employed steps 13, 18, 19, 20, 21, and 26. We emphasize that the location of the test steps is not critical for Experiments 1a-c.
+
+## Procedure: Further details on exit survey
+<!-- TO DO SHAWN: could you fill in more information about the questions we asked, including a full list of questions? -->
+
+For Experiment 1b, we made minor changes to the survey. We removed one question about audio quality which asked participants to rate the quality of their audio equipment as "bad", "good", "professional", etc. Previous analyses in our lab have found that the subjective nature of this question makes it hard to interpret. And, in order to encourage the participants to answer survey questions truthfully, we emphasized that they would get compensated independent of their answers, and that truthful answers would greatly help us with the interpretation of results. <!-- TO DO: please check whether this is all correct. I belive we have detailed notes about these changes both in an RMD file I created back then, and in the Javascript / survey code itself. -->
+
+For Experiment 1c, we revised our questions about internet connectivity. Specifically, we changed the two questions that asked about video or sound issues during the experiment. We clarified that these questions were asking solely about technical issues, rather than any oddities between the alignment of the video and audio (as separate questions already assessed that aspect). The revised questions were introduced by the following statement: "The videos and sounds in this experiment were manipulated by aligning the same video with different sound sources. As a consequence, you might have noticed some 'jumps' or slightly odd-looking moments in the video. Here we are interested in *potential technical issues with the internet connection* beyond any oddities you might have noticed about how the video and sound aligned." (emphasis in original) Then two questions assessed whether the videos or sounds failed to load or stopped and restarted playing during exposure. As these revised questions explicitly mentioned that the videos and sounds had been manipulated, they were moved towards the end of the survey, so that they followed any questions that inquired about the pronunciation of the talker in the video (recall that participants could not go back to previously answered questions). <!-- TO DO: please check whether this is all correct. I belive we have detailed notes about these changes both in an RMD file I created back then, and in the Javascript / survey code itself. -->
 
 ## Exclusions
 
@@ -664,3 +672,10 @@ m.Exp2b <- fit_test_model(d.test.Exp2, "CISP-2b")
 my_hypotheses(m.Exp2b, experiment = "Exp 2b") %>% map(print) -> TEMP
 plot_model_predictions(m.Exp2b)
 ```
+
+# Experiment 3
+
+## Procedure: Comparison to Liu and Jaeger (2018)
+The generation of exposure orders differed somewhat from that in LJ18. LJ18 generated two pseudo-randomized stimulus orders for exposure. These lists and their respective reverse orders formed four different exposure orders. Key binding---whether "X" and "M" corresponds to a word response or a non-word response, respectively, or vice versa---were counterbalanced across participants within each of these four orders, resulting in a total of 8 different exposure lists. The two pseudorandom orders in LJ18 were generated by repeatedly randomizing the order of stimuli until critical items, fillers, and catch trials were somewhat evenly distributed across the list. We took a more systematic approach, described in the main text, with the goal to create many randomized stimulus orders across participants, thereby creating cross-participant variability in nuisance factors not expected to affect test performance. 
+
+Our catch trial procedure also differed somewhat from LJ18. In LJ18, participants had to answer the lexical decision question even on catch trials. This means participants had to press "X" or "M" even after pressing "B" to indicate that they had noticed the white dot. The trial would not proceed until "X" or "M" had been pressed. While piloting our experiments, we realized that this procedure created confusion. Thus, unlike Liu and Jaeger (2018), the catch trials in the present experiment ended when the participant pressed "B" whereas participants in Liu and Jaeger (2018) had to additionally answer the word vs. non-word question.
