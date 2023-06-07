@@ -111,7 +111,7 @@ format_more <-
     Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, 
     Condition.Test.Audio, Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Keybindings,
     Block, Trial, ItemID, 
-    Response, Response.ASHI, Response.RT, 
+    Response, Response.ASHI, Response.RT, Response.CatchTrial,
     starts_with("Talker"),
     starts_with("Duration"),
     starts_with("Exclude")) 
@@ -144,26 +144,29 @@ format_more <-
 # Context statement
 This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab, University of Rochester, is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information.
 
-# Experiment 1a-c
+# Experiments 1a-c
+Experiment 1a was conducted between 1/20-22/2021. Experiment 1b was conducted between 3/03-04/2021. Experiment 1c was conducted between 6/03-05/2021. 
 
 ## Data import
-We import and format the data for Experiments 1a-c, as well as Experiments A and 1 from Liu & Jaeger (2018).
 
 ```{r}
 load("../data/Experiment-NORM-A-before-exclusions.RData") 
-d.Exp1a <- d.test.A %>%
+d.Exp1a <- 
+  d.test.A %>%
   mutate(
     Experiment = "CISP-1a",
     ParticipantID = paste(Experiment, ParticipantID, sep = "."))
  
 load("../data/Experiment-NORM-B-before-exclusions.RData") 
-d.Exp1b <- d.test.B %>%
+d.Exp1b <- 
+  d.test.B %>%
   mutate(
     Experiment = "CISP-1b",
     ParticipantID = paste(Experiment, ParticipantID, sep = "."))
 
 load("../data/Experiment-NORM-C-before-exclusions.RData") 
-d.Exp1c <- d.test.C %>%
+d.Exp1c <- 
+  d.test.C %>%
   mutate(
     Experiment = "CISP-1c",
     ParticipantID = paste(Experiment, ParticipantID, sep = "."))
@@ -184,15 +187,13 @@ d.LJ18.test <-
     # blocks for LJ18 to be blocks of 12 trials.
     Block = Trial %/% 12 + 1, 
     Trial = Trial + 1,
-    across(
-      c(Condition.Test.Pen, Condition.Test.OriginalLabel), 
-    factor)) 
+    across(c(Condition.Test.Pen, Condition.Test.OriginalLabel), factor))
 
 d.test <- 
   bind_rows(d.Exp1a, d.Exp1b, d.Exp1c, d.LJ18.test) %>%
-  format_more() %>%
-  excludeData() %>%
-  filter(!is.na(Response.ASHI))
+  format_more()
+
+rm(d.test.A, d.test.B, d.test.C)
 ```
 
 ## Materials: Selection of acoustic continuum steps
@@ -245,6 +246,10 @@ run_exclusions <- function(data, experiment) {
 d.test.Exp1 <-
   d.test %>% 
   run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
+
+d.test %<>%
+  excludeData() %>%
+  filter(!is.na(Response.ASHI))
 ```
 
 ## Analyses
@@ -279,9 +284,8 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
   } else {
     bf(paste(
       "Response.ASHI ~",
-      
       "1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio)",
-      if (length(unique(data$Experiment)) > 1) "* Experiment +" else "+",
+      if (length(unique(experiment)) > 1) "* Experiment +" else "+",
       "(1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)"))
   }
   
@@ -500,9 +504,12 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
 }
 ```
 
-```{r fig.height=8, fig.width=6}
+```{r}
+p <- plot_data(d.test, experiment = c("CISP-1a", "CISP-1b", "CISP-1c"), background_experiment = "LJ18-NORM")
+plot(p)
+  
 ggsave(
-  plot_data(d.test, experiment = c("CISP-1a", "CISP-1b", "CISP-1c"), background_experiment = "LJ18-NORM"),
+  p,
   file = "../figures/Experiment 1a-c.png", 
   width = fig.base_width * 3,
   height = fig.base_height * 3 + .25)
@@ -600,10 +607,12 @@ d.test.LJ18 %>%
   scale_fill_grey()
 ```
 
-# Experiments 2
+# Experiments 2 and 2b
+We conducted two experiments that were designed to test whether listeners need to see the effects of the pen on the articulators *during the production of the fricative*, or whether the presence of a pen during the production of a fricative is sufficient to cause the effects observed in Experiments 1a-c. To this end, Experiments 2 and 2b introduced a black box that occluded the talker's mouth during the articulation of the fricative (see main text for details). The two experiments were identical except that Experiment 2b introduced an additional task intended to assure that participants paid attention to the videos (rather than just the audio). This change in procedure from Experiment 2 to 2b was intended to address an alternative explanation for the results of Experiment 2. As reported below, Experiment 2 did not find the effects of pen location that were present in Experiments 1a-c. This raised the question as to whether participants in Experiment 2 failed to pay attention to the video (unlike in Experiments 1a-c). The additional task in Experiment 2b addressed this possibility.
+
+Experiment 2 was conducted between 7/14-15/2021. Experiment 2b was conducted between 7/23-24/2021.
 
 ## Data import
-We import and format the data for Experiments 2.
 
 ```{r}
 load("../data/Experiment-NORM-D-before-exclusions.RData") #named d.test.D
@@ -625,27 +634,42 @@ d.Exp2b <-
 d.test.Exp2 <- 
   bind_rows(d.Exp2, d.Exp2b) %>%
   format_more()
+
+rm(d.test.D, d.test.E)
 ```
+
+## Procedure
+Experiment 2 employed the exact same tasks as Experiment 1a-c. Experiment 2b, however, introduced an additional task. Participants were asked to press SPACE whenever the pen was in the talker's mouth. After pressing SPACE, participants had to answer whether they heard *asi* or *ashi*, as in all preceding experiments. Figure \@ref(fig:XXX) shows a screenshot of the specific instructions. 
+
+<!-- TO DO: Shawn, can we add the screen shot from your email here, or perhaps a screen shot of the entire screen, incl. the part you had in your email -->
+
 ## Exclusions
+Figure \@ref(fig:XXX) summarized the exclusions for Experiment 2 and 2b. Of note is the high exclusion rate for Experiment 2b, for which almost one fourth of all participants stated after the experiment that they had not been wearing head phones. This deterioration of data quality for experiments conducted over Mechanical Turk post 2020 was also observed in other experiments conducted in our lab during the same time period. Like in the present case, deterioration of data quality tended to be particularly pronounced in those other studies when we conducted a series of experiments, One possible explanation is our recruitment criterion, which only allowed participants to see the experiment if they had *not* participated in any previous experiment of the series. This successively reduces the participant pool, potentially making the experiment vulnerable to increasingly less cooperative participants. 
+
+This motivated our switch to the Prolific crowdsourcing experiments for subsequent experiments. Experiment 2b was the last experiment we conducted over Mechanical Turk. <!-- TO DO: correct? -->
 
 ```{r}
 d.test.Exp2 %<>% run_exclusions(c("CISP-2", "CISP-2b"))
 ```
 
-### Experiment 2a
+### Experiment 2
 
-```{r fig.height=8, fig.width=6}
-ggsave(
+```{r}
+p <- 
   plot_data(
     bind_rows(d.test.Exp1, d.test.Exp2), 
-    experiment = "CISP-2", background_experiment = "CISP-1c"),
+    experiment = "CISP-2", background_experiment = "CISP-1c")
+plot(p)
+
+ggsave(
+  p,
   file = "../figures/Experiment 2.png", 
   width = fig.base_width * 3,
   height = fig.base_height + .5)
 ```
 
 ```{r results='markup'}
-m.Exp2 <- fit_test_model(d.test.Exp2, "CISP-2")
+m.Exp2 <- fit_test_model(d.test.Exp2, experiment = "CISP-2")
 my_hypotheses(m.Exp2, experiment = "Exp 2") %>% map(print) -> TEMP
 plot_model_predictions(m.Exp2)
 ```
@@ -666,6 +690,40 @@ summary(m.Exp2vsExp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(
 ```
 
 ### Experiment 2b
+We first analyzed the accuracy of SPACE presses. Participants were significantly above chance in detecting the pen in the mouth of the talker (75% accurate). Participants were, however, much more accurate when the pen was not in the mouth of the talker (95%). This asymmetry is not particularly surprising: correct detection of the pen in the mouth required a key press, whereas correct detection that the pen was not in the mouth (but rather in the hand) required no action at all.
+
+```{r}
+d.test.Exp2 %>%
+  mutate(Reponse.CatchCorrect = ifelse(Response.CatchTrial == (Condition.Test.Pen == "mouth"), 1, 0)) %>%
+  ggplot(aes(x = Condition.Test.Pen, y = Reponse.CatchCorrect, shape = Condition.Test.Pen)) +
+  stat_summary(fun.data = mean_cl_boot, geom = "pointrange") +
+  scale_x_discrete(
+    "Pen location", 
+    breaks = levels.test.pen_locations, 
+    labels = labels.test.pen_locations) +
+  scale_y_continuous("Proportion correct responses about pen location") +
+  scale_shape_manual(
+    "Pen location", 
+    breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = shapes.test.pen_locations)
+```
+
+Next, we turn to participants categorization responses---i.e., whether participants heard *asi* or *ashi*. Figure \@ref(fig:results-exp2b) summarizes participants' categorization responses. Compared to Experiment 2, participants in Experiment 2b exhibited noticeably weaker effects of the acoustic continuum (more shallow slope in Figure \@ref(fig:results-exp2b)a). This suggests a trade-off introduced by the secondary task in Experiment 2b: either because participants focused more on the visual input, or because the categorization response was delivered *after* the response to the visual stimulus (SPACE press), participants' responses were less affected by the acoustic continuum. Critically, however, Experiment 2b replicates all effects found in Experiment 2. It is worth noting though that, in line with the idea of a trade-off, the effects of pen location and the visual bias were more pronounced in Experiment 2b, compared to 2. 
+
+(ref:results-exp2b) Summary of participants’ responses in Experiments 2b, depending on pen location and acoustic continuum step (Panel A) or visual bias (Panel B). For comparison, the results from Experiment 2 are shown in the background. The two experiments were identical except for the secondary task introduced in Experiment 2b.
+
+```{r results-exp2b, fig.width=fig.base_width * 3, fig.height=fig.base_height + .5 fig.cap="(ref:results-exp2b)"}
+p <-
+  plot_data(
+    bind_rows(d.test.Exp1, d.test.Exp2), 
+    experiment = "CISP-2b", background_experiment = "CISP-2")
+plot(p)
+
+ggsave(
+  p,
+  file = "../figures/Experiment 2b.png", 
+  width = fig.base_width * 3,
+  height = fig.base_height + .5)
+```
 
 ```{r}
 m.Exp2b <- fit_test_model(d.test.Exp2, "CISP-2b")
