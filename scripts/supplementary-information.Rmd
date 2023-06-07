@@ -111,7 +111,7 @@ format_more <-
     Experiment, ParticipantID, starts_with("Participant."),
     Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, 
     Condition.Test.Audio, Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Keybindings,
-    Block, Trial, ItemID, 
+    Phase, Block, Trial, ItemID, 
     Response, Response.ASHI, Response.RT, Response.CatchTrial,
     starts_with("Talker"),
     starts_with("Duration"),
@@ -744,8 +744,12 @@ d.Exp3 <-
   d.Exp2 %>%
   mutate(
     Experiment = "CISP-3",
+    Condition.Test.Keybindings = NA,                                  # TO DO: delete after unifying data format
     ParticipantID = paste(Experiment, ParticipantID, sep = ".")) %>%
   format_more()
+
+d.exposure.Exp3 <- d.Exp3 %>% filter(Phase == "exposure") %>% excludeData()
+d.test.Exp3 <- d.Exp3 %>% filter(Phase == "test")
 
 rm(d.Exp2)
 ```
@@ -758,5 +762,7 @@ Our catch trial procedure also differed somewhat from LJ18. In LJ18, participant
 ## Exclusions
 
 ```{r}
-d.Exp3 %<>% run_exclusions(c("CISP-3"))
+d.test.Exp3 %<>% run_exclusions(c("CISP-3"))
 ```
+
+## Analysis
