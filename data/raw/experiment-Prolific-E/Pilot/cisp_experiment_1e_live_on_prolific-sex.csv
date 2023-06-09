@@ -1,9 +1,0 @@
-workerid,proliferate.condition,sex,error
-78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,woman,
-71,condition=H&label=S&respKeyExp=1&respKeyTest=1,woman,
-70,condition=H&label=S&respKeyExp=1&respKeyTest=0,woman,
-74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,woman,
-73,condition=H&label=S&respKeyExp=0&respKeyTest=1,woman,
-72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,woman,
-65,condition=H&label=S&respKeyExp=0&respKeyTest=0,woman,
-66,condition=H&label=S&respKeyExp=0&respKeyTest=0,woman,

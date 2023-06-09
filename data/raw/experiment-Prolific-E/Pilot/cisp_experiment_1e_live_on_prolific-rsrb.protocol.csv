@@ -1,9 +1,0 @@
-workerid,proliferate.condition,rsrb.protocol,error
-78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,RSRB00045955,
-71,condition=H&label=S&respKeyExp=1&respKeyTest=1,RSRB00045955,
-70,condition=H&label=S&respKeyExp=1&respKeyTest=0,RSRB00045955,
-74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,RSRB00045955,
-73,condition=H&label=S&respKeyExp=0&respKeyTest=1,RSRB00045955,
-72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,RSRB00045955,
-65,condition=H&label=S&respKeyExp=0&respKeyTest=0,RSRB00045955,
-66,condition=H&label=S&respKeyExp=0&respKeyTest=0,RSRB00045955,

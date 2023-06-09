@@ -1,9 +1,0 @@
-workerid,proliferate.condition,platform,error
-78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,prolific,
-71,condition=H&label=S&respKeyExp=1&respKeyTest=1,prolific,
-70,condition=H&label=S&respKeyExp=1&respKeyTest=0,prolific,
-74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,prolific,
-73,condition=H&label=S&respKeyExp=0&respKeyTest=1,prolific,
-72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,prolific,
-65,condition=H&label=S&respKeyExp=0&respKeyTest=0,prolific,
-66,condition=H&label=S&respKeyExp=0&respKeyTest=0,prolific,

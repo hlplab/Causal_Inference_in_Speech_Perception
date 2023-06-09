@@ -1,9 +1,0 @@
-workerid,proliferate.condition,social1,error
-78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,never,
-71,condition=H&label=S&respKeyExp=1&respKeyTest=1,never,
-70,condition=H&label=S&respKeyExp=1&respKeyTest=0,never,
-74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,never,
-73,condition=H&label=S&respKeyExp=0&respKeyTest=1,never,
-72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,never,
-65,condition=H&label=S&respKeyExp=0&respKeyTest=0,never,
-66,condition=H&label=S&respKeyExp=0&respKeyTest=0,never,

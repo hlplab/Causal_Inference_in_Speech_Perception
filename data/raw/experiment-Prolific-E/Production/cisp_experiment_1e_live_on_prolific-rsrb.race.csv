@@ -1,3 +1,0 @@
-workerid,proliferate.condition,rsrb.race,error
-386,condition=H&label=SH&respKeyExp=0&respKeyTest=1,white;,
-461,condition=H&label=SH&respKeyExp=0&respKeyTest=1,,Field rsrb.race not present for participant!

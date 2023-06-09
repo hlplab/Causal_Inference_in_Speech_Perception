@@ -1,9 +1,0 @@
-workerid,proliferate.condition,audio_type,error
-78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,over-ear,
-71,condition=H&label=S&respKeyExp=1&respKeyTest=1,over-ear,
-70,condition=H&label=S&respKeyExp=1&respKeyTest=0,over-ear,
-74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,over-ear,
-73,condition=H&label=S&respKeyExp=0&respKeyTest=1,over-ear,
-72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,in-ear,
-65,condition=H&label=S&respKeyExp=0&respKeyTest=0,in-ear,
-66,condition=H&label=S&respKeyExp=0&respKeyTest=0,in-ear,

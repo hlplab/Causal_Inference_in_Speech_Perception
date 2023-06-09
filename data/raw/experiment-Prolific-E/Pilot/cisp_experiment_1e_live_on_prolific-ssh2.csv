@@ -1,9 +1,0 @@
-workerid,proliferate.condition,ssh2,error
-78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,normal,
-71,condition=H&label=S&respKeyExp=1&respKeyTest=1,s-like-sh,
-70,condition=H&label=S&respKeyExp=1&respKeyTest=0,sh-like-s,
-74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,sh-like-s,
-73,condition=H&label=S&respKeyExp=0&respKeyTest=1,sh-like-s,
-72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,normal,
-65,condition=H&label=S&respKeyExp=0&respKeyTest=0,s-like-sh,
-66,condition=H&label=S&respKeyExp=0&respKeyTest=0,normal,

@@ -1,9 +1,0 @@
-workerid,proliferate.condition,audio_stall,error
-78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,no,
-71,condition=H&label=S&respKeyExp=1&respKeyTest=1,no,
-70,condition=H&label=S&respKeyExp=1&respKeyTest=0,no,
-74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,no,
-73,condition=H&label=S&respKeyExp=0&respKeyTest=1,no,
-72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,no,
-65,condition=H&label=S&respKeyExp=0&respKeyTest=0,no,
-66,condition=H&label=S&respKeyExp=0&respKeyTest=0,no,

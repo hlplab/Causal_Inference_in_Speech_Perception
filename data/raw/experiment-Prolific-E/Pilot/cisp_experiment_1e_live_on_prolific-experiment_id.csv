@@ -1,9 +1,0 @@
-workerid,proliferate.condition,experiment_id,error
-78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,3eb3fa91-7ae3-49b9-b1bd-bec623420349,
-71,condition=H&label=S&respKeyExp=1&respKeyTest=1,3eb3fa91-7ae3-49b9-b1bd-bec623420349,
-70,condition=H&label=S&respKeyExp=1&respKeyTest=0,3eb3fa91-7ae3-49b9-b1bd-bec623420349,
-74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,3eb3fa91-7ae3-49b9-b1bd-bec623420349,
-73,condition=H&label=S&respKeyExp=0&respKeyTest=1,3eb3fa91-7ae3-49b9-b1bd-bec623420349,
-72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,3eb3fa91-7ae3-49b9-b1bd-bec623420349,
-65,condition=H&label=S&respKeyExp=0&respKeyTest=0,3eb3fa91-7ae3-49b9-b1bd-bec623420349,
-66,condition=H&label=S&respKeyExp=0&respKeyTest=0,3eb3fa91-7ae3-49b9-b1bd-bec623420349,
