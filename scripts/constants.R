@@ -692,7 +692,50 @@ excludeData <- function(data) {
   return(data)
 }
 
-
+run_exclusions <- function(data, experiment) {
+  data %<>% filter(Experiment %in% experiment)
+  print(
+    data %>% 
+      distinct(Experiment, ParticipantID, Exclude_Participant.Reason) %>% 
+      group_by(Experiment, Exclude_Participant.Reason) %>% 
+      tally() %>% 
+      group_by(Experiment) %>%
+      mutate(Percent = percent(n / sum(n))))
+  
+  message(
+    data %>% 
+      distinct(Experiment, ParticipantID, Duration.Assignment) %>% 
+      group_by(Experiment) %>%
+      summarise(across(Duration.Assignment, list("mean" = mean, "sd" = sd))) %>%
+      mutate(msg = paste0(    
+        "Participants took on average ", 
+        round(Duration.Assignment_mean, 1),
+        " minutes to complete the experiment (SD = ",
+        round(Duration.Assignment_sd, 1),
+        ").")) %>% 
+      pull(msg) %>%
+      paste(., collapse = "\n"))
+  exclusionPlot(data)
+  
+  data %<>% 
+    excludeData()
+  
+  message(
+    "\nData submitted for analysis contains ", 
+    nrow(data %>% filter(is.na(Response.ASHI))),
+    " missing observations (",
+    percent(nrow(data %>% filter(is.na(Response.ASHI))) / nrow(data)),
+    "), leaving ",
+    nrow(data %>% filter(!is.na(Response.ASHI))),
+    " observations from ",
+    data %>% filter(!is.na(Response.ASHI)) %>% pull(ParticipantID) %>% unique() %>% length(),
+    " participants from ",
+    data %>% filter(!is.na(Response.ASHI)) %>% pull(Experiment) %>% unique() %>% length(),
+    " experiment(s).")
+  
+  data %>%
+    filter(!is.na(Response.ASHI))
+}
 ## Data summaries ------------------------------------------------------- 
 
 getParticipantsPerList <- function(d) {
@@ -749,63 +792,144 @@ plotDemographicInformation <- function(
 }
 
 ## Model fitting and summarizing ----------------------------------------------------------------
+# Prep for analysis
+prep_for_analysis <- function(data) {
+  require(rlang)
+  
+  data %<>%
+    { if (length(unique(.$Experiment)) == 2) {
+      mutate(
+        .,
+        Experiment = 
+          "contrasts<-"(factor(Experiment), , cbind(c(-.5, .5)))) 
+    } else if (length(unique(.$Experiment)) > 1) {
+      mutate(
+        .,
+        Experiment = 
+          "contrasts<-"(factor(Experiment), , contr.sum(length(unique(Experiment))) * .5)) 
+    } else . } %>%
+    { if (all(!is.na(.$Condition.Test.Pen), !is.na(.$Condition.Test.OriginalLabel))) 
+      mutate(
+        .,
+        Condition.Test.Pen = 
+          "contrasts<-"(factor(Condition.Test.Pen), , cbind("M" = c(-0.5, 0.5))),
+        Condition.Test.OriginalLabel = 
+          "contrasts<-"(factor(Condition.Test.OriginalLabel), , cbind("SH" = c(-0.5, 0.5)))) else . } %>%
+    mutate(Block = Block - 1) %>%
+    select(Experiment, 
+           Condition.Test.OriginalLabel, Condition.Test.Pen, Block, Condition.Test.Audio, 
+           ParticipantID, Response.ASHI) 
+  
+  if (length(unique(data$Experiment)) == 2)
+    dimnames(contrasts(data$Experiment))[[2]] = sort(unique(data$Experiment))[2]
+  
+  return(data)
+}
 
-fitModel <- function(
-  .data,
-  condition.exposure.pen, 
-  condition.test.pen,
-  override = F,
-  model = NULL,
-  priors = my_priors
-) {
-  require(brms)
-  require(assertthat)
-  
-  assert_that(all(is.string(condition.exposure.pen), is.string(condition.test.pen), is.flag(override)))
-  assert_that(condition.exposure.pen %in% c("H", "M"))
-  assert_that(condition.test.pen %in% c("H", "M"))
-  assert_that(xor(is.null(model), is.brmsfit(model)))
-  
-  filename = paste0("../models/Experiment-A-brm-test-PI", condition.exposure.pen, "-PI", condition.test.pen, ".rds")
-  if (override & file.exists(filename)) file.remove(filename)
-  
-  .data %<>%
-    filter(Experiment == "A", 
-           Condition.Exposure.Pen == condition.exposure.pen, 
-           Condition.Test.Pen == condition.test.pen) %>%
-    droplevels() %>%
-    prepVars()
-  
-  # Compile model unless another model has been handed to this function
-  if (is.null(model)) {
-    model <- brm(
-      Response ~ 
-        1 + 
-        Condition.Exposure.LexicalLabel * 
-        Block * cCondition.Test.Audio * 
-        Condition.Test.OriginalLabel +
-        (1 + Block * cCondition.Test.Audio * Condition.Test.OriginalLabel | ParticipantID) +
-        (1 + Condition.Exposure.LexicalLabel * Block * cCondition.Test.Audio | ItemID),
-      data = .data,
-      family = brms::bernoulli(link = "logit"),
-      prior = priors,
-      warmup = 1000,
-      iter = 3000,
-      control = list(adapt_delta = .99),
-      backend = "cmdstanr", threads = threading(2),
-      file = filename)
+fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% experiment) T else F) {
+  my_formula <- if (audio_only) {
+    bf(Response.ASHI ~
+         1 + mo(Block) * mo(Condition.Test.Audio) +
+         (1 + mo(Condition.Test.Audio) | ParticipantID))
   } else {
-    model <- update(
-      model,
-      newdata = .data,
-      warmup = 1000,
-      iter = 3000,
-      control = list(adapt_delta = .99),
-      backend = "cmdstanr", threads = threading(2),
-      file = filename)
+    bf(paste(
+      "Response.ASHI ~",
+      "1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio)",
+      if (length(unique(experiment)) > 1) "* Experiment +" else "+",
+      "(1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)"))
   }
   
-  return(model)
+  m <- brm(
+    my_formula,
+    data = 
+      data %>%
+      filter(Experiment %in% experiment) %>% 
+      prep_for_analysis(),
+    family = "bernoulli",
+    prior = my_priors,
+    sample_prior = "yes",
+    backend = "cmdstanr",
+    chains = 4, 
+    warmup = if (length(unique(data$Experiment)) > 1) 2000 else 1000,
+    iter = if (length(unique(data$Experiment)) > 1) 3000 else 2000,
+    control = list(adapt_delta = if (length(unique(data$Experiment)) > 1) .95 else .8),
+    cores = min(parallel::detectCores(), 4), 
+    threads = threading(threads = 4),
+    file = paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-"))
+  
+  return(m)
+}
+
+my_hypotheses <- function(m, experiment, plot = F) { 
+  format <-  
+    . %>%
+    rename(BF = Evid.Ratio) %>%
+    mutate(
+      Experiment = experiment,
+      across(
+        c("Estimate", "Est.Error", starts_with("CI"), "Post.Prob"),
+        ~ signif(.x, 3)),
+      BF = ifelse(is.infinite(BF), paste(">", ndraws(m)), as.character(round(BF, 1)))) %>% 
+    relocate(Experiment, everything())
+  
+  # mo() operators imply that the effects of the other variables are assessed at the reference level of the
+  # monotonic predictor. For Block, this is exactly what we want: evaluation of effects in the first Block.
+  # However, for the continuum, we'd like to assess effects in the middle of the continuum. This is taken 
+  # into account below.
+  l <- list(
+    { h.pen <- hypothesis(
+      m, 
+      c(
+        # There are 5 continuum steps above the baseline, so we add 2.5 * the interaction of continuum and the 
+        # effect of interest to the effect of interest. (a more precise estimate could be obtained by following
+        # Figure 1 in Bürkner & Charpentier, which takes into account the specific simo estimates).
+        "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
+        "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0"),
+      class = NULL) } %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "Pen location Mouth -> fewer ASHI-responses",
+        "Pen effect increases for more ASHI-like acoustic input",
+        "Pen effect increases for visually ASHI-biased input",
+        "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
+      format() %>%
+      kable(caption = "Effects of pen location."),
+    { h.cues <- hypothesis(
+      m, 
+      c("bsp_moCondition.Test.Audio > 0", 
+        "b_Condition.Test.OriginalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH > 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"), 
+      class = NULL, scope = "standard") } %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "Acoustic continuum more ASHI-like -> more ASHI-responses",
+        "Visual bias ASHI -> more ASHI-responses",
+        "Acoustic and visual bias effects are independent")) %>% 
+      format() %>%
+      kable(caption = "Effects of acoustic continuum and visual bias."),
+    { h.block <- hypothesis(
+      m, 
+      c(
+        "bsp_moBlock:Condition.Test.PenM + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.PenM = 0",
+        "bsp_moBlock:moCondition.Test.Audio = 0", 
+        "bsp_moBlock:Condition.Test.OriginalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"),
+      class = NULL) } %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "Pen effect is stable over blocks",
+        "Continuum effect is stable over blocks",
+        "Visual bias effect is stable over blocks")) %>%
+      format() %>%
+      kable(caption = "Changes across blocks."))
+  
+  if (plot) {
+    plot(h.pen)
+    plot(h.cues)
+    plot(h.block)
+  }
+  return(l)
 }
 
 
@@ -829,11 +953,6 @@ simplifyPredictorNames <- function(model) {
     map(~gsub(" \\(Test\\)", "", .x)) %>%
     map(~paste(.x, collapse = " : ")) %>%
     unlist()
-  
-  # preds <- c(
-  #   "Intercept",
-  #   grep(":", preds[-1], invert = T, value = T,), 
-  #   sort(grep(":", preds[-1], value = T)))
 }
 
 
@@ -841,6 +960,131 @@ simplifyPredictorNames <- function(model) {
 
 
 ## Model visualization ------------------------------------------------------- 
+plot_data <- function(data, experiment, background_experiment = NULL) {
+  require(dplyr)
+  require(ggplot2)
+  require(cowplot)
+  
+  shared_stats <- function(data = NULL, color = "black", dodge = .5) 
+    list(
+      stat_summary(
+        data = data, fun = mean, geom = "line", 
+        position = position_dodge(dodge), alpha = .5, color = color),
+      stat_summary(
+        data = data, fun = mean, geom = "point", 
+        position = position_dodge(dodge), size = 1, color = color),
+      stat_summary(
+        data = data, fun.data = mean_cl_boot, geom = "linerange", 
+        position = position_dodge(dodge), linetype = 1, alpha = .65, color = color))
+  shared_formatting <- 
+    list(
+      scale_y_continuous('Proportion "ASHI"-responses'),
+      scale_shape_manual(
+        "Pen location", 
+        breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = shapes.test.pen_locations),
+      scale_linetype_manual(
+        "Pen location", 
+        breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = linetypes.test.pen_locations),
+      facet_wrap(~ Experiment, ncol = 1))
+  
+  aggregate <- function(data, ..., e = experiment) {
+    groups = enquos(...)
+    data %>%
+      filter(Experiment %in% e) %>%
+      mutate(Experiment = gsub("CISP-", "Exp ", Experiment)) %>%
+      droplevels() %>%
+      mutate(Condition.Test.Pen = ifelse(Condition.Test.Pen == "audio-only", "H", as.character(Condition.Test.Pen))) %>%
+      group_by(!!! groups) %>%
+      summarise(Response.ASHI = mean(Response.ASHI)) 
+  }
+  
+  p <- list()
+  p[[1]] <- 
+    data %>% 
+    aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio) %>%
+    ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, shape = Condition.Test.Pen, linetype = Condition.Test.Pen)) +
+    scale_x_continuous(
+      'Acoustic continuum', 
+      breaks = as.integer(append(range(data$Condition.Test.Audio), mean(range(data$Condition.Test.Audio))))) +
+    shared_stats() +
+    shared_formatting + 
+    coord_cartesian(xlim = range(data$Condition.Test.Audio), ylim = c(.1, .9))
+  
+  if (!is.null(background_experiment))
+    p[[1]] <- 
+    p[[1]] + 
+    shared_stats(
+      data = data %>%
+        aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
+                  e = background_experiment) %>% 
+        ungroup() %>%
+        select(-Experiment) %>%
+        crossing(Experiment = gsub("CISP-", "Exp ", experiment)), 
+      dodge = 1, 
+      color = "gray75")
+  
+  p[[2]] <- 
+    data %>%
+    aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel) %>%
+    ggplot(aes(x = Condition.Test.OriginalLabel, y = Response.ASHI, 
+               shape = Condition.Test.Pen, linetype = Condition.Test.Pen,
+               group = Condition.Test.Pen)) +
+    shared_stats(dodge = .25) +
+    shared_formatting + 
+    scale_x_discrete('Visual bias') +
+    # scale_color_manual(
+    #   'Visual bias', 
+    #   breaks = levels.test.visual_labels, labels = labels.test.visual_labels, values = colors.test.visual_labels) +
+    coord_cartesian(ylim = c(.1, .9)) +
+    theme(legend.position = "none")
+  
+  if (!is.null(background_experiment) & !("LJ18-NORM" %in% background_experiment))
+    p[[2]] <- 
+    p[[2]] + 
+    shared_stats(
+      data = data %>%
+        aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
+                  e = background_experiment) %>% 
+        ungroup() %>%
+        select(-Experiment) %>%
+        crossing(Experiment = gsub("CISP-", "Exp ", experiment)), 
+      dodge = .5, 
+      color = "gray75")
+  
+  # p[[3]] <- 
+  #   data %>%
+  #   aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, Condition.Test.OriginalLabel) %>%
+  #   ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, color = Condition.Test.OriginalLabel, 
+  #              shape = Condition.Test.Pen, linetype = Condition.Test.Pen)) +
+  #   scale_x_continuous('Acoustic continuum', limits = range(data$Condition.Test.Audio)) +
+  #   scale_color_manual(
+  #     'Visual bias', 
+  #     breaks = levels.test.visual_labels, labels = labels.test.visual_labels, values = colors.test.visual_labels) +
+  #   shared_components +
+  #   coord_cartesian(xlim = range(data$Condition.Test.Audio))
+  #   theme(legend.position = "none")
+  
+  cowplot::plot_grid(
+    plotlist = p, 
+    align = "hv", axis = "btrl", 
+    ncol = length(p), labels = paste0(LETTERS[1:length(p)], ")"),
+    rel_widths = c(.7, .3), rel_heights = 1.5)
+}
+
+
+plot_model_predictions <- function(m) {
+  plot(conditional_effects(m, method = "posterior_linpred"), ask = F)
+}
+
+plot_model_predictions_for_paper <- function(m) {
+  conditional_effects(
+    m, 
+    method = "posterior_linpred")
+}
+
+
+
+
 get_scale_name <- function(variable) {
   case_when(
     variable == "Condition.Exposure.LexicalLabel" ~ "Shifted sound (exposure)",

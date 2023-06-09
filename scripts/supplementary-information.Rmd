@@ -118,35 +118,56 @@ format_more <-
     starts_with("Exclude")) 
 ```
 
-# TO DO:
-
-## Priority HIGHEST
-
- * in add_exclusions, there is commented out code at the top of the function. Why is it commented out, and how are we removing participants for technical difficult if not there?
-
-## Priority MEDIUM
-
- * make sure that data formatting *function* is in *this* repo (raw data should *not* be in this repo)
- * consider adding renaming of variables into formatting function, removing it from early code chunk:
- 
- rename(
-    Participant.AudioType = Answer.audio_type,
-    Participant.AudioStall = Answer.audio_stall,
-    Participant.VideoStall = Answer.video_stall,
-    Talker.Sex = Answer.sex,
-    Talker.PronunciationShift = Answer.ssh2,
-    Talker.PronunciationProperties = Answer.pronun,
-    Talker.SpeechDescription = Answer.speaker)
- 
- * consolidate constants.R and functions.R. It's currently unclear what's in which and why.
- * fill in all survey questions in procedure section for Exp 1a-c, and provide some summary of participants' responses where relevant.
-
-
 # Context statement
-This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab, University of Rochester, is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information.
+This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab, University of Rochester, is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206/7 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information.
+
+# Chronology of Experiments (NEEDS WORK)
+We conducted five test-only and six exposure-test experiments for this project. The main text does summarize these experiments in the order that makes them most accessible. Here we summarize when those experiments were conducted. 
+<!-- TO DO: fill in missing dates and subject N XXX--->
+
+ * **Experiment 1a:** test-only experiment (N = 64) conducted over MTurk between 01/20-22/2021. 
+ * **Experiment 1b:** test-only experiment (N = 64) conducted over MTurk between 03/03-04/2021. 
+ * **Experiment XXX:** exposure-test experiment (N = XXX) conducted over MTurk between 03/XXX-XXX/2021. 
+ * **Experiment 1c:** test-only experiment (N = 64) conducted over MTurk between 06/03-05/2021. 
+ * **Experiment 2:** test-only experiment (N = 64) conducted over MTurk between  07/14-15/2021. 
+ * **Experiment 2b:** test-only experiment (N = 64) conducted over MTurk between 07/23-24/2021.
+ * **Experiment XXX:** exposure-test experiment (N = XXX) conducted over MTurk between 08/XXX-XXX/2021. 
+ * **Experiment XXX:** practice-only pilot (N = 32) conducted over MTurk between 11/XXX-XXX/2021. 
+ * **Experiment XXX:** practice-only pilot (N = 22) conducted over MTurk between 12/XXX-XXX/2021. 
+ * **Experiment 3:** exposure-test experiment (N = 257) conducted over Prolific between 05/XXX-XXX/2022. 
+ * **Experiment 4:** exposure-test experiment (N = XXX) conducted over Prolific between 07/XXX-XXX/2022. 
+ 
+
+ * Experiment-A:
+   *  2x2x2 design: 2 pen location in exposure (hand or mouth) x 2 bias (S or SH) x 2 pen location in test (hand or mouth, manipulated within-subject)
+   * Used the same audio steps as what we're now calling Exp 1b (10, 13, 14, 15, 16, 20 ASHI-high, resulting in too many S responses across the board)
+   * In PIM condition, pen was also in mouth during *typical* trials (unlike in Kraljic and Liu experiments)
+
+ * Experiment-B:
+   * Replication intended to fix audio step mishap
+   * Identical design as Experiment-A
+   * Corrected the audio steps, and used the same as what we're now calling Exp 1c (13, 18, 19, 20, 21, 26 ASHI-high)
+   * In PIM condition, pen was also in mouth during *typical* trials (unlike in Kraljic and Liu experiments)
+
+<!-- TO DO: correct? -->
+
+ * Experiment-C, Experiment-D:
+   * Norms toying with the practice setup
+
+ * Experiment-Prolific-E (May 2022): ------- Experiment 3?
+    * The good one: Replication with lessons learned
+    * Same 2x2x2 as Experiments A & B
+    * Included new 6-trial practice phase, but did not restart if people missed trials (enforcePerfection = F)
+    * Used correct audio steps (Experiment 1c)
+
+ * Experiment-2A/Prolific-F (July 2022): ----- Experiment 4
+   * Final manipulation to disambiguate causality of shift
+   * New exposure setup: all subjects get two blocks of exposure, the first shifted with pen in mouth and the second typical with pen in hand.
+   * 2 x 2 of bias (S or SH, between subjects), and pen location in test (hand or mouth, within-subject)
+   * Did not include e.g. a condition where the talker's speech is still shifted when she removes the pen from her mouth, or where the speech is typical with pen in mouth but then becomes shifted when the pen leaves the mouth. 
+
 
 # Experiments 1a-c
-Experiment 1a was conducted between 1/20-22/2021. Experiment 1b was conducted between 3/03-04/2021. Experiment 1c was conducted between 6/03-05/2021. 
 
 ## Data import
 
@@ -195,11 +216,6 @@ d.test <-
   format_more()
 
 rm(d.test.A, d.test.B, d.test.C)
-
-
-# Acoustic parameters
-exposure.acoustics <- read_csv("../data/acoustics/acoustic_information_exposure_items.csv")
-test.acoustics <- read_csv("../data/acoustics/acoustic_information_test_items.csv")
 ```
 
 ## Materials: Selection of acoustic continuum steps
@@ -210,45 +226,13 @@ The intention for Experiment 1a was to employ the exact same acoustic steps as i
 ## Procedure: Further details on exit survey
 <!-- TO DO SHAWN: could you fill in more information about the questions we asked, including a full list of questions? -->
 
-For Experiment 1b, we made minor changes to the survey. We removed one question about audio quality which asked participants to rate the quality of their audio equipment as "bad", "good", "professional", etc. Previous analyses in our lab have found that the subjective nature of this question makes it hard to interpret. And, in order to encourage the participants to answer survey questions truthfully, we emphasized that they would get compensated independent of their answers, and that truthful answers would greatly help us with the interpretation of results. <!-- TO DO: please check whether this is all correct. I belive we have detailed notes about these changes both in an RMD file I created back then, and in the Javascript / survey code itself. -->
+For Experiment 1b, we made minor changes to the survey. We removed one question about audio quality which asked participants to rate the quality of their audio equipment as "bad", "good", "professional", etc. Previous analyses in our lab have found that the subjective nature of this question makes it hard to interpret. And, in order to encourage the participants to answer survey questions truthfully, we emphasized that they would get compensated independent of their answers, and that truthful answers would greatly help us with the interpretation of results. <!-- TO DO: please check whether this is all correct. I believe we have detailed notes about these changes both in an RMD file I created back then, and in the Javascript / survey code itself. -->
 
-For Experiment 1c, we revised our questions about internet connectivity. Specifically, we changed the two questions that asked about video or sound issues during the experiment. We clarified that these questions were asking solely about technical issues, rather than any oddities between the alignment of the video and audio (as separate questions already assessed that aspect). The revised questions were introduced by the following statement: "The videos and sounds in this experiment were manipulated by aligning the same video with different sound sources. As a consequence, you might have noticed some 'jumps' or slightly odd-looking moments in the video. Here we are interested in *potential technical issues with the internet connection* beyond any oddities you might have noticed about how the video and sound aligned." (emphasis in original) Then two questions assessed whether the videos or sounds failed to load or stopped and restarted playing during exposure. As these revised questions explicitly mentioned that the videos and sounds had been manipulated, they were moved towards the end of the survey, so that they followed any questions that inquired about the pronunciation of the talker in the video (recall that participants could not go back to previously answered questions). <!-- TO DO: please check whether this is all correct. I belive we have detailed notes about these changes both in an RMD file I created back then, and in the Javascript / survey code itself. -->
+For Experiment 1c, we revised our questions about internet connectivity. Specifically, we changed the two questions that asked about video or sound issues during the experiment. We clarified that these questions were asking solely about technical issues, rather than any oddities between the alignment of the video and audio (as separate questions already assessed that aspect). The revised questions were introduced by the following statement: "The videos and sounds in this experiment were manipulated by aligning the same video with different sound sources. As a consequence, you might have noticed some 'jumps' or slightly odd-looking moments in the video. Here we are interested in *potential technical issues with the internet connection* beyond any oddities you might have noticed about how the video and sound aligned." (emphasis in original) Then two questions assessed whether the videos or sounds failed to load or stopped and restarted playing during exposure. As these revised questions explicitly mentioned that the videos and sounds had been manipulated, they were moved towards the end of the survey, so that they followed any questions that inquired about the pronunciation of the talker in the video (recall that participants could not go back to previously answered questions). <!-- TO DO: please check whether this is all correct. I believe we have detailed notes about these changes both in an RMD file I created back then, and in the Javascript / survey code itself. -->
 
 ## Exclusions
 
 ```{r exclusions, fig.width=4*fig.base_width, fig.height=fig.base_height }
-run_exclusions <- function(data, experiment) {
-  data %<>% filter(Experiment %in% experiment)
-  print(
-    data %>% 
-      distinct(Experiment, ParticipantID, Exclude_Participant.Reason) %>% 
-      group_by(Experiment, Exclude_Participant.Reason) %>% 
-      tally() %>% 
-      group_by(Experiment) %>%
-      mutate(Percent = percent(n / sum(n))))
-  
-  exclusionPlot(data)
-  
-  data %<>% 
-    excludeData()
-  
-  message(
-    "\nData submitted for analysis contains ", 
-    nrow(data %>% filter(is.na(Response.ASHI))),
-    " missing observations (",
-    percent(nrow(data %>% filter(is.na(Response.ASHI))) / nrow(data)),
-    "), leaving ",
-    nrow(data %>% filter(!is.na(Response.ASHI))),
-    " observations from ",
-    data %>% filter(!is.na(Response.ASHI)) %>% pull(ParticipantID) %>% unique() %>% length(),
-    " participants from ",
-    data %>% filter(!is.na(Response.ASHI)) %>% pull(Experiment) %>% unique() %>% length(),
-    " experiment(s).")
-  
-  data %>%
-    filter(!is.na(Response.ASHI))
-}
-
 d.test.Exp1 <-
   d.test %>% 
   run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
@@ -259,269 +243,6 @@ d.test %<>%
 ```
 
 ## Analyses
-
-```{r}
-# Prep for analysis
-prep_for_analysis <- function(data) {
-  require(rlang)
-  
-  data %<>%
-    { if (length(unique(.$Experiment)) == 2) {
-      mutate(
-        .,
-        Experiment = 
-          "contrasts<-"(factor(Experiment), , cbind(c(-.5, .5)))) 
-    } else if (length(unique(.$Experiment)) > 1) {
-      mutate(
-        .,
-        Experiment = 
-          "contrasts<-"(factor(Experiment), , contr.sum(length(unique(Experiment))) * .5)) 
-    } else . } %>%
-    { if (all(!is.na(.$Condition.Test.Pen), !is.na(.$Condition.Test.OriginalLabel))) 
-      mutate(
-        .,
-        Condition.Test.Pen = 
-          "contrasts<-"(factor(Condition.Test.Pen), , cbind("M" = c(-0.5, 0.5))),
-        Condition.Test.OriginalLabel = 
-          "contrasts<-"(factor(Condition.Test.OriginalLabel), , cbind("SH" = c(-0.5, 0.5)))) else . } %>%
-    mutate(Block = Block - 1) %>%
-    select(Experiment, 
-           Condition.Test.OriginalLabel, Condition.Test.Pen, Block, Condition.Test.Audio, 
-           ParticipantID, Response.ASHI) 
-  
-  if (length(unique(data$Experiment)) == 2)
-    dimnames(contrasts(data$Experiment))[[2]] = sort(unique(data$Experiment))[2]
-    
-  return(data)
-}
-
-fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% experiment) T else F) {
-  my_formula <- if (audio_only) {
-    bf(Response.ASHI ~
-         1 + mo(Block) * mo(Condition.Test.Audio) +
-         (1 + mo(Condition.Test.Audio) | ParticipantID))
-  } else {
-    bf(paste(
-      "Response.ASHI ~",
-      "1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio)",
-      if (length(unique(experiment)) > 1) "* Experiment +" else "+",
-      "(1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)"))
-  }
-  
-  m <- brm(
-    my_formula,
-    data = 
-      data %>%
-      filter(Experiment %in% experiment) %>% 
-      prep_for_analysis(),
-    family = "bernoulli",
-    prior = my_priors,
-    sample_prior = "yes",
-    backend = "cmdstanr",
-    chains = 4, 
-    warmup = if (length(unique(data$Experiment)) > 1) 2000 else 1000,
-    iter = if (length(unique(data$Experiment)) > 1) 3000 else 2000,
-    control = list(adapt_delta = if (length(unique(data$Experiment)) > 1) .95 else .8),
-    cores = min(parallel::detectCores(), 4), 
-    threads = threading(threads = 4),
-    file = paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-"))
-  
-  return(m)
-}
-
-my_hypotheses <- function(m, experiment, plot = F) { 
-  format <-  
-    . %>%
-    rename(BF = Evid.Ratio) %>%
-    mutate(
-      Experiment = experiment,
-      across(
-        c("Estimate", "Est.Error", starts_with("CI"), "Post.Prob"),
-        ~ signif(.x, 3)),
-      BF = ifelse(is.infinite(BF), paste(">", ndraws(m)), as.character(round(BF, 1)))) %>% 
-    relocate(Experiment, everything())
-
-  # mo() operators imply that the effects of the other variables are assessed at the reference level of the
-  # monotonic predictor. For Block, this is exactly what we want: evaluation of effects in the first Block.
-  # However, for the continuum, we'd like to assess effects in the middle of the continuum. This is taken 
-  # into account below.
-  l <- list(
-    { h.pen <- hypothesis(
-      m, 
-      c(
-        # There are 5 continuum steps above the baseline, so we add 2.5 * the interaction of continuum and the 
-        # effect of interest to the effect of interest. (a more precise estimate could be obtained by following
-        # Figure 1 in Bürkner & Charpentier, which takes into account the specific simo estimates).
-        "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
-        "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
-        "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0",
-        "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0"),
-      class = NULL) } %>%
-      .[["hypothesis"]] %>% 
-      mutate(Hypothesis = c(
-        "Pen location Mouth -> fewer ASHI-responses",
-        "Pen effect increases for more ASHI-like acoustic input",
-        "Pen effect increases for visually ASHI-biased input",
-        "Pen effect increases even more when acoustic and visual input is ASHHI-biased")) %>%
-      format() %>%
-      kable(caption = "Effects of pen location."),
-    { h.cues <- hypothesis(
-      m, 
-      c("bsp_moCondition.Test.Audio > 0", 
-        "b_Condition.Test.OriginalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH > 0",
-        "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"), 
-      class = NULL, scope = "standard") } %>%
-      .[["hypothesis"]] %>% 
-      mutate(Hypothesis = c(
-        "Acoustic continuum more ASHI-like -> more ASHI-responses",
-        "Visual bias ASHI -> more ASHI-responses",
-        "Acoustic and visual bias effects are independent")) %>% 
-      format() %>%
-      kable(caption = "Effects of acoustic continuum and visual bias."),
-    { h.block <- hypothesis(
-      m, 
-      c(
-        "bsp_moBlock:Condition.Test.PenM + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.PenM = 0",
-        "bsp_moBlock:moCondition.Test.Audio = 0", 
-        "bsp_moBlock:Condition.Test.OriginalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"),
-      class = NULL) } %>%
-      .[["hypothesis"]] %>% 
-      mutate(Hypothesis = c(
-        "Pen effect is stable over blocks",
-        "Continuum effect is stable over blocks",
-        "Visual bias effect is stable over blocks")) %>%
-      format() %>%
-      kable(caption = "Changes across blocks."))
-  
-  if (plot) {
-    plot(h.pen)
-    plot(h.cues)
-    plot(h.block)
-  }
-  return(l)
-}
-
-plot_model_predictions <- function(m) {
-  plot(conditional_effects(m, method = "posterior_linpred"), ask = F)
-}
-
-plot_model_predictions_for_paper <- function(m) {
-  conditional_effects(
-    m, 
-    method = "posterior_linpred")
-}
-
-plot_data <- function(data, experiment, background_experiment = NULL) {
-  require(dplyr)
-  require(ggplot2)
-  require(cowplot)
-  
-  shared_stats <- function(data = NULL, color = "black", dodge = .5) 
-    list(
-      stat_summary(
-        data = data, fun = mean, geom = "line", 
-        position = position_dodge(dodge), alpha = .5, color = color),
-      stat_summary(
-        data = data, fun = mean, geom = "point", 
-        position = position_dodge(dodge), size = 1, color = color),
-      stat_summary(
-        data = data, fun.data = mean_cl_boot, geom = "linerange", 
-        position = position_dodge(dodge), linetype = 1, alpha = .65, color = color))
-  shared_formatting <- 
-    list(
-      scale_y_continuous('Proportion "ASHI"-responses'),
-      scale_shape_manual(
-        "Pen location", 
-        breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = shapes.test.pen_locations),
-      scale_linetype_manual(
-        "Pen location", 
-        breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = linetypes.test.pen_locations),
-      facet_wrap(~ Experiment, ncol = 1))
-  
-  aggregate <- function(data, ..., e = experiment) {
-    groups = enquos(...)
-    data %>%
-      filter(Experiment %in% e) %>%
-      mutate(Experiment = gsub("CISP-", "Exp ", Experiment)) %>%
-      droplevels() %>%
-      mutate(Condition.Test.Pen = ifelse(Condition.Test.Pen == "audio-only", "H", as.character(Condition.Test.Pen))) %>%
-      group_by(!!! groups) %>%
-      summarise(Response.ASHI = mean(Response.ASHI)) 
-  }
-  
-  p <- list()
-  p[[1]] <- 
-    data %>% 
-    aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio) %>%
-    ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, shape = Condition.Test.Pen, linetype = Condition.Test.Pen)) +
-    scale_x_continuous(
-      'Acoustic continuum', 
-      breaks = as.integer(append(range(data$Condition.Test.Audio), mean(range(data$Condition.Test.Audio))))) +
-    shared_stats() +
-    shared_formatting + 
-    coord_cartesian(xlim = range(data$Condition.Test.Audio), ylim = c(.1, .9))
-  
-  if (!is.null(background_experiment))
-    p[[1]] <- 
-    p[[1]] + 
-    shared_stats(
-        data = data %>%
-          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
-                    e = background_experiment) %>% 
-          ungroup() %>%
-          select(-Experiment) %>%
-          crossing(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        dodge = 1, 
-        color = "gray75")
-  
-    p[[2]] <- 
-    data %>%
-    aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel) %>%
-    ggplot(aes(x = Condition.Test.OriginalLabel, y = Response.ASHI, 
-               shape = Condition.Test.Pen, linetype = Condition.Test.Pen,
-               group = Condition.Test.Pen)) +
-    shared_stats(dodge = .25) +
-    shared_formatting + 
-    scale_x_discrete('Visual bias') +
-    # scale_color_manual(
-    #   'Visual bias', 
-    #   breaks = levels.test.visual_labels, labels = labels.test.visual_labels, values = colors.test.visual_labels) +
-    coord_cartesian(ylim = c(.1, .9)) +
-    theme(legend.position = "none")
-  
-  if (!is.null(background_experiment) & !("LJ18-NORM" %in% background_experiment))
-    p[[2]] <- 
-    p[[2]] + 
-      shared_stats(
-        data = data %>%
-          aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
-                    e = background_experiment) %>% 
-          ungroup() %>%
-          select(-Experiment) %>%
-          crossing(Experiment = gsub("CISP-", "Exp ", experiment)), 
-        dodge = .5, 
-        color = "gray75")
-
-  # p[[3]] <- 
-  #   data %>%
-  #   aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, Condition.Test.OriginalLabel) %>%
-  #   ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, color = Condition.Test.OriginalLabel, 
-  #              shape = Condition.Test.Pen, linetype = Condition.Test.Pen)) +
-  #   scale_x_continuous('Acoustic continuum', limits = range(data$Condition.Test.Audio)) +
-  #   scale_color_manual(
-  #     'Visual bias', 
-  #     breaks = levels.test.visual_labels, labels = labels.test.visual_labels, values = colors.test.visual_labels) +
-  #   shared_components +
-  #   coord_cartesian(xlim = range(data$Condition.Test.Audio))
-  #   theme(legend.position = "none")
-  
-  cowplot::plot_grid(
-    plotlist = p, 
-    align = "hv", axis = "btrl", 
-    ncol = length(p), labels = paste0(LETTERS[1:length(p)], ")"),
-    rel_widths = c(.7, .3), rel_heights = 1.5)
-}
-```
 
 ```{r}
 p <- plot_data(d.test, experiment = c("CISP-1a", "CISP-1b", "CISP-1c"), background_experiment = "LJ18-NORM")
@@ -569,7 +290,7 @@ summary(m.Exp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x,
 plot_model_predictions(m.Exp1c)
 ```
 ### Liu and Jaeger (2018)
-For comparison, we also analyzed Liu and Jaeger's norming experiment with the same analysis approach employed in the present study.
+For comparison, we also analyzed the "baseline" experiment from Liu and Jaeger (2018, Experiment 1a-b) with the same analysis approach employed in the present study. Like all previous work in this line of research, this baseline experiment employed audio-only test stimuli. Unlike our Experiments 1a-c, Liu and Jaeger's control experiment contained an exposure phase (with only typical fricative pronunications). We further note that none of Experiments 1a-c employed the exact same continuum steps as Liu and Jaeger (2018). It is known that the selection of acoustic continuum steps that participants experience in an experiment can affect their categorization responses: even the exact same continuum step can be categorized differently depending on the other steps included in the experiment (Yamata & Tohkura, 1992). These factors limit the extent to which our Experiments 1a-c can be directly compared to Liu and Jaeger's audio-only experiment. We thus focus only on the magnitude of the acoustic effects in Liu and Jaeger, compared to the present experiments.
 
 ```{r}
 d.test.LJ18 <- 
@@ -628,8 +349,6 @@ d.test.LJ18 %>%
 
 # Experiments 2 and 2b
 We conducted two experiments that were designed to test whether listeners need to see the effects of the pen on the articulators *during the production of the fricative*, or whether the presence of a pen during the production of a fricative is sufficient to cause the effects observed in Experiments 1a-c. To this end, Experiments 2 and 2b introduced a black box that occluded the talker's mouth during the articulation of the fricative (see main text for details). The two experiments were identical except that Experiment 2b introduced an additional task intended to assure that participants paid attention to the videos (rather than just the audio). This change in procedure from Experiment 2 to 2b was intended to address an alternative explanation for the results of Experiment 2. As reported below, Experiment 2 did not find the effects of pen location that were present in Experiments 1a-c. This raised the question as to whether participants in Experiment 2 failed to pay attention to the video (unlike in Experiments 1a-c). The additional task in Experiment 2b addressed this possibility.
-
-Experiment 2 was conducted between 7/14-15/2021. Experiment 2b was conducted between 7/23-24/2021.
 
 ## Data import
 
@@ -739,7 +458,7 @@ d.test.Exp2 %>%
     breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = shapes.test.pen_locations)
 ```
 
-Next, we turn to participants categorization responses---i.e., whether participants heard *asi* or *ashi*. Figure \@ref(fig:results-exp2b) summarizes participants' categorization responses. Compared to Experiment 2, participants in Experiment 2b exhibited noticeably weaker effects of the acoustic continuum (more shallow slope in Figure \@ref(fig:results-exp2b)a). This suggests a trade-off introduced by the secondary task in Experiment 2b: either because participants focused more on the visual input, or because the categorization response was delivered *after* the response to the visual stimulus (SPACE press), participants' responses were less affected by the acoustic continuum. Critically, however, Experiment 2b replicates all effects found in Experiment 2. It is worth noting though that, in line with the idea of a trade-off, the effects of pen location and the visual bias were more pronounced in Experiment 2b, compared to 2. 
+Next, we turn to participants categorization responses---i.e., whether participants heard *asi* or *ashi*. Figure \@ref(fig:results-exp2b) summarizes participants' categorization responses. Compared to Experiment 2, participants in Experiment 2b exhibited noticeably weaker effects of the acoustic continuum (more shallow slope in Figure \@ref(fig:results-exp2b)a). This suggests a trade-off introduced by the secondary task in Experiment 2b: either because participants focused more on the visual input, or because the categorization response was delivered *after* the response to the visual stimulus (SPACE press), participants' responses were less affected by the acoustic continuum. Critically, however, Experiment 2b replicates all effects found in Experiment 2. 
 
 (ref:results-exp2b) Summary of participants’ responses in Experiments 2b, depending on pen location and acoustic continuum step (Panel A) or visual bias (Panel B). For comparison, the results from Experiment 2 are shown in the background. The two experiments were identical except for the secondary task introduced in Experiment 2b.
 
@@ -764,7 +483,7 @@ plot_model_predictions(m.Exp2b)
 ```
 
 # Experiment 3
-Experiment 3 was conducted
+Experiment 3 was conducted XXX
 
 ## Data import
 
@@ -796,8 +515,23 @@ Our catch trial procedure also differed somewhat from LJ18. In LJ18, participant
 d.test.Exp3 %<>% run_exclusions(c("CISP-3"))
 ```
 
-## Acoustic Analyses
+# Acoustic Analyses (NOTES)
+Potential approach to modeling consequences of pen in exposure
+
+ 1. Get acoustic feature of the typical and atypical stims from our fricative database, both for exposure and test stimuli. Use only the main cue (CoG?). Could you do this?
+ 2. Fit the same regression I've used to analyze Exp 1a-c to the combined data of Exp1-ac with one change: instead of using mo(Condition.Test.Audio), use the phonetic cue (CoG?) as a predictor (either linear or as a monotonic spline, s(cue, bs = "mpi"). This will give us categorization functions for the pen in the hand and in the mouth. I can do this.
+ 3. For each exposure token (typical, atypical, pen in mouth or hand), this model can be used to predict p(response = "sh" | cue, pen location), using predict(model, newdata = exposure_tibble_with_cue_and_pen_values). I can do this.
+ 4. Get the perceived 'CoG' (or rather the CoG+pen percept) after the pen is taken into account. This can be done by inverting the model from step 3. Basically, for pen-in-the-mouth stimuli we would determine the CoG for which a pen-in-the-hand would have yielded the same p(sh) as the actual CoG of the stimulus combined with the fact that it was produced with a pen-in-the-mouth. 
+
+  intercept_pim + slope.pim * CoG = intercept_pih + slope_pih * CoG_perceived <-->
+  (intercept_pim + slope.pim * CoG  -  intercept_pih) / slope_pih = CoG_perceived
+
+ 5. This CoG_perceived would be the input e.g., belief-updating. In the simplest case, one would use the lexical endorsements of each participant as the ground truth and then update based on 1) those labels, 2) the CoG_perceived, 3) some initial estimate of the prior beliefs about s and sh along CoG, and 4) some range of kappa_0 and nu_0 {1, 10, 100}.
+
 ```{r}
+# Acoustic parameters
+exposure.acoustics <- read_csv("../data/acoustics/acoustic_information_exposure_items.csv")
+test.acoustics <- read_csv("../data/acoustics/acoustic_information_test_items.csv")
 
 CISP_Exp_CoG <- exposure.acoustics %>%
   filter(study == "Liu-Jaeger-2018",
