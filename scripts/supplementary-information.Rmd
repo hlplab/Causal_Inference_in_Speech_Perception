@@ -195,12 +195,17 @@ d.test <-
   format_more()
 
 rm(d.test.A, d.test.B, d.test.C)
+
+
+# Acoustic parameters
+exposure.acoustics <- read_csv("../data/acoustics/acoustic_information_exposure_items.csv")
+test.acoustics <- read_csv("../data/acoustics/acoustic_information_test_items.csv")
 ```
 
 ## Materials: Selection of acoustic continuum steps
 As described in the main text, we aimed to maximize the power to detect effects---like that oc the pen in the mouth---along the *asi-ashi* continuum. Specifically, we aimed to select one step that, across all other manipulations, would yield approximated 25% *ashi* responses, four steps that would yield close to 50% *ashi* responses, and one step that would yield 75% *ashi* responses.
 
-The intention for Experiment 1a was to employ the exact same acoustic steps as in @liu-jaeger2018: 12, 14, 15, 16, 17, and 19, where higher numbers indicate acoustically more ashi-like steps. However, a labelling mistake resulted in the steps being internally named with higher numbers indicating proportion of asi, rather than ashi. The actual steps that were used in Experiment 1a were 13, 15, 16, 17, 18, 20 unintentionally shifting the test continuum 1 step towards the ashi end, compared to @liu-jaeger2018. As we report below, Experiment 1a yielded overall more asi than ashi responses. Experiment 1b thus attempted to expand the test stimuli towards the ashi end of the continuum. However, as we still had not discovered the labeling mistake, we ended up expanding the continuum even further towards the asi end instead, with steps 10, 13, 14, 15, 16, 20. At this point, we identified the labeling mistake. Experiment 1c employed steps 13, 18, 19, 20, 21, and 26. We emphasize that the location of the test steps is not critical for Experiments 1a-c.
+The intention for Experiment 1a was to employ the exact same acoustic steps as in @liu-jaeger2018: 12, 14, 15, 16, 17, and 19, where higher numbers indicate acoustically more ashi-like steps. However, a labelling mistake resulted in the steps being internally named with higher numbers indicating proportion of asi, rather than ashi. The actual steps that were used in Experiment 1a were 13, 15, 16, 17, 18, 20 unintentionally shifting the test continuum 1 step towards the ashi end, compared to @liu-jaeger2018. As we report below, Experiment 1a yielded overall more asi than ashi responses. Experiment 1b thus attempted to expand the test stimuli towards the ashi end of the continuum. However, as we still had not discovered the labeling mistake, we ended up expanding the continuum even further towards the asi end instead, with steps 10, 13, 14, 15, 16, 20. At this point, we identified the labeling mistake. Experiment 1c employed steps 13, 17, 18, 19, 20, and 24. We emphasize that the location of the test steps is not critical for Experiments 1a-c.
 
 ## Procedure: Further details on exit survey
 <!-- TO DO SHAWN: could you fill in more information about the questions we asked, including a full list of questions? -->
@@ -791,4 +796,60 @@ Our catch trial procedure also differed somewhat from LJ18. In LJ18, participant
 d.test.Exp3 %<>% run_exclusions(c("CISP-3"))
 ```
 
-## Analysis
+## Acoustic Analyses
+```{r}
+
+CISP_Exp_CoG <- exposure.acoustics %>%
+  filter(study == "Liu-Jaeger-2018",
+         fricative %in% c("S", "SH")) %>%
+  select(word, fricative, shift_percent, cue_raw_M1) %>%
+  mutate(bias = case_when(
+    fricative == "S" & shift_percent == 0 ~ "SH",
+    fricative == "S" & shift_percent == 50 ~ "S",
+    fricative == "SH" & shift_percent == 0 ~ "S",
+    fricative == "SH" & shift_percent == 50 ~ "SH")) %>%
+  rename(CoG = cue_raw_M1)
+
+CISP_Test_CoG <- test.acoustics %>%
+  select(word, cue_raw_M1) %>%
+  rename(CoG = cue_raw_M1)
+
+CoG_Exp_measurements <- CISP_Exp_CoG %>%
+  group_by(fricative, shift_percent) %>%
+  summarise(mean = mean(CoG),
+            sd = sd(CoG))
+
+rm(exposure.acoustics, 
+   test.acoustics)
+
+# Some visualizations for sanity checks
+# Exposure_graph <- CISP_CoG %>%
+#   filter(fricative != "?SSH") %>%
+#   ggplot(aes(x = CoG,
+#              color = fricative)) +
+#   geom_density() +
+#   facet_wrap(~bias) +
+#   theme_bw()
+# Exposure_graph
+# 
+# Test_graph <- CISP_Test_CoG %>%
+#   ggplot(aes(x = as.numeric(word),
+#              y = CoG,
+#              label = word)) +
+#   geom_label() +
+#   theme_bw()
+# Test_graph
+
+
+## VALUES to use
+# CoG for all test steps (ASHI-high)
+CISP_Test_CoG
+
+# CoG for all exposure items
+CISP_Exp_CoG
+
+# Means and SDs for exposure item types
+CoG_Exp_measurements
+```
+
+
