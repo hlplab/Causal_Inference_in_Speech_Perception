@@ -1,0 +1,9 @@
+workerid,proliferate.condition,social3,error
+78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,one,
+71,condition=H&label=S&respKeyExp=1&respKeyTest=1,multiple,
+70,condition=H&label=S&respKeyExp=1&respKeyTest=0,noone,
+74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,noone,
+73,condition=H&label=S&respKeyExp=0&respKeyTest=1,noone,
+72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,noone,
+65,condition=H&label=S&respKeyExp=0&respKeyTest=0,noone,
+66,condition=H&label=S&respKeyExp=0&respKeyTest=0,multiple,

@@ -1,0 +1,9 @@
+workerid,proliferate.condition,ssh1,error
+78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,no,
+71,condition=H&label=S&respKeyExp=1&respKeyTest=1,yes,
+70,condition=H&label=S&respKeyExp=1&respKeyTest=0,yes,
+74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,yes,
+73,condition=H&label=S&respKeyExp=0&respKeyTest=1,yes,
+72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,no,
+65,condition=H&label=S&respKeyExp=0&respKeyTest=0,yes,
+66,condition=H&label=S&respKeyExp=0&respKeyTest=0,no,

@@ -1,0 +1,9 @@
+workerid,proliferate.condition,userDateTime,error
+78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,"Thu, 07 Apr 2022 21:30:31 GMT",
+71,condition=H&label=S&respKeyExp=1&respKeyTest=1,"Thu, 07 Apr 2022 20:21:19 GMT",
+70,condition=H&label=S&respKeyExp=1&respKeyTest=0,"Thu, 07 Apr 2022 20:25:11 GMT",
+74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,"Thu, 07 Apr 2022 20:33:20 GMT",
+73,condition=H&label=S&respKeyExp=0&respKeyTest=1,"Thu, 07 Apr 2022 20:24:37 GMT",
+72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,"Thu, 07 Apr 2022 20:49:57 GMT",
+65,condition=H&label=S&respKeyExp=0&respKeyTest=0,"Thu, 07 Apr 2022 19:47:33 GMT",
+66,condition=H&label=S&respKeyExp=0&respKeyTest=0,"Thu, 07 Apr 2022 20:17:43 GMT",

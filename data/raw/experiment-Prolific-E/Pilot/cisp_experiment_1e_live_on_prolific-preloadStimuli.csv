@@ -1,0 +1,9 @@
+workerid,proliferate.condition,preloadStimuli,error
+78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,T,
+71,condition=H&label=S&respKeyExp=1&respKeyTest=1,T,
+70,condition=H&label=S&respKeyExp=1&respKeyTest=0,T,
+74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,T,
+73,condition=H&label=S&respKeyExp=0&respKeyTest=1,T,
+72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,T,
+65,condition=H&label=S&respKeyExp=0&respKeyTest=0,T,
+66,condition=H&label=S&respKeyExp=0&respKeyTest=0,T,

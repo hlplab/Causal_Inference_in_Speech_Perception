@@ -1,0 +1,9 @@
+workerid,proliferate.condition,label,error
+78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,SH,
+71,condition=H&label=S&respKeyExp=1&respKeyTest=1,S,
+70,condition=H&label=S&respKeyExp=1&respKeyTest=0,S,
+74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,SH,
+73,condition=H&label=S&respKeyExp=0&respKeyTest=1,S,
+72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,SH,
+65,condition=H&label=S&respKeyExp=0&respKeyTest=0,S,
+66,condition=H&label=S&respKeyExp=0&respKeyTest=0,S,

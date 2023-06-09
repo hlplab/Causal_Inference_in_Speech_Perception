@@ -1,0 +1,9 @@
+workerid,proliferate.condition,userDateTimeOffset,error
+78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,300,
+71,condition=H&label=S&respKeyExp=1&respKeyTest=1,420,
+70,condition=H&label=S&respKeyExp=1&respKeyTest=0,420,
+74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,240,
+73,condition=H&label=S&respKeyExp=0&respKeyTest=1,240,
+72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,240,
+65,condition=H&label=S&respKeyExp=0&respKeyTest=0,420,
+66,condition=H&label=S&respKeyExp=0&respKeyTest=0,240,

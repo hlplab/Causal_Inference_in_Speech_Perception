@@ -1,0 +1,9 @@
+workerid,proliferate.condition,practEnforcePerfection,error
+78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,F,
+71,condition=H&label=S&respKeyExp=1&respKeyTest=1,F,
+70,condition=H&label=S&respKeyExp=1&respKeyTest=0,F,
+74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,F,
+73,condition=H&label=S&respKeyExp=0&respKeyTest=1,F,
+72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,F,
+65,condition=H&label=S&respKeyExp=0&respKeyTest=0,F,
+66,condition=H&label=S&respKeyExp=0&respKeyTest=0,F,

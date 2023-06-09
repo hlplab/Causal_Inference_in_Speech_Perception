@@ -1,0 +1,9 @@
+workerid,proliferate.condition,pronun,error
+78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,nonaccented,
+71,condition=H&label=S&respKeyExp=1&respKeyTest=1,"normal,nonaccented,relaxed",
+70,condition=H&label=S&respKeyExp=1&respKeyTest=0,"slow,nonaccented,relaxed,serious",
+74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,normal,
+73,condition=H&label=S&respKeyExp=0&respKeyTest=1,"slow,nonaccented,relaxed",
+72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,"normal,nonaccented,relaxed",
+65,condition=H&label=S&respKeyExp=0&respKeyTest=0,"normal,nonaccented,relaxed",
+66,condition=H&label=S&respKeyExp=0&respKeyTest=0,normal,

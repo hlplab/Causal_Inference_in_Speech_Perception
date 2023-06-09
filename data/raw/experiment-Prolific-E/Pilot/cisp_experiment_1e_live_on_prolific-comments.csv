@@ -1,0 +1,9 @@
+workerid,proliferate.condition,comments,error
+78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,,
+71,condition=H&label=S&respKeyExp=1&respKeyTest=1,none,
+70,condition=H&label=S&respKeyExp=1&respKeyTest=0,None,
+74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,it was pretty fun and easy.,
+73,condition=H&label=S&respKeyExp=0&respKeyTest=1,,
+72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,,
+65,condition=H&label=S&respKeyExp=0&respKeyTest=0,,
+66,condition=H&label=S&respKeyExp=0&respKeyTest=0,,

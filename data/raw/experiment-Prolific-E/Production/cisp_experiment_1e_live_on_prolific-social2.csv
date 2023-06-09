@@ -1,0 +1,14 @@
+workerid,proliferate.condition,social2,error
+386,condition=H&label=SH&respKeyExp=0&respKeyTest=1,more than 1,
+461,condition=H&label=SH&respKeyExp=0&respKeyTest=1,never,
+282,condition=H&label=SH&respKeyExp=0&respKeyTest=1,more than 10,
+313,condition=H&label=SH&respKeyExp=0&respKeyTest=1,never,
+153,condition=H&label=SH&respKeyExp=0&respKeyTest=1,never,
+104,condition=H&label=SH&respKeyExp=0&respKeyTest=1,never,
+78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,never,
+254,condition=H&label=SH&respKeyExp=0&respKeyTest=1,never,
+93,condition=H&label=SH&respKeyExp=0&respKeyTest=1,never,
+464,condition=H&label=SH&respKeyExp=0&respKeyTest=1,never,
+267,condition=H&label=SH&respKeyExp=0&respKeyTest=1,never,
+298,condition=H&label=SH&respKeyExp=0&respKeyTest=1,never,
+88,condition=H&label=SH&respKeyExp=0&respKeyTest=1,,Field social2 not present for participant!

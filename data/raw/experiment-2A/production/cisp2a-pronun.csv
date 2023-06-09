@@ -1,0 +1,18 @@
+workerid,proliferate.condition,pronun,error
+182,10,"normal,accented,relaxed",
+318,10,"normal,nonaccented,relaxed",
+362,5,"normal,nonaccented,relaxed",
+240,5,relaxed,
+288,5,"normal,nonaccented,relaxed",
+272,5,"slow,high,nonaccented,relaxed,serious",
+312,5,"normal,high,nonaccented,relaxed",
+209,5,fast,
+232,5,"low,relaxed",
+264,5,"normal,relaxed",
+178,5,"nonaccented,relaxed",
+342,5,"normal,accented,relaxed",
+256,5,"normal,nonaccented,relaxed",
+201,5,"nonaccented,relaxed",
+225,5,"nonaccented,relaxed",
+304,5,"nonaccented,relaxed,serious",
+360,5,,Field pronun not present for participant!

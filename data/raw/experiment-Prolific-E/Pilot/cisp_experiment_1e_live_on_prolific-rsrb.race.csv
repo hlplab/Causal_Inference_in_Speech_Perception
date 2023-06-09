@@ -1,0 +1,9 @@
+workerid,proliferate.condition,rsrb.race,error
+78,condition=H&label=SH&respKeyExp=0&respKeyTest=1,white;,
+71,condition=H&label=S&respKeyExp=1&respKeyTest=1,white;,
+70,condition=H&label=S&respKeyExp=1&respKeyTest=0,black;,
+74,condition=H&label=SH&respKeyExp=1&respKeyTest=0,white;,
+73,condition=H&label=S&respKeyExp=0&respKeyTest=1,white;,
+72,condition=H&label=SH&respKeyExp=0&respKeyTest=0,white;,
+65,condition=H&label=S&respKeyExp=0&respKeyTest=0,asian;,
+66,condition=H&label=S&respKeyExp=0&respKeyTest=0,black;,
