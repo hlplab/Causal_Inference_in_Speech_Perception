@@ -103,10 +103,10 @@ format_more <-
     Talker.PronunciationProperties = pronun,
     Talker.SpeechDescription = speaker) %>%
   add_exclusions() %>%
-  mutate(
-    Condition.Exposure.Pen = NA,
-    Condition.Exposure.LexicalLabel = NA,
-    Response.ASHI = ifelse(Response == "ASHI", 1, 0)) %>%
+  # Adding missing columns for test-only experiments
+  { if (!("Condition.Exposure.Pen" %in% names(.))) mutate(., Condition.Exposure.Pen = NA) else . } %>%
+  { if (!("Condition.Exposure.LexicalLabel" %in% names(.))) mutate(., Condition.Exposure.LexicalLabel = NA) else . } %>%
+  mutate(Response.ASHI = ifelse(Response == "ASHI", 1, 0)) %>%
   select(
     Experiment, ParticipantID, starts_with("Participant."),
     Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, 
@@ -289,7 +289,7 @@ summary(m.Exp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x,
 
 plot_model_predictions(m.Exp1c)
 ```
-### Liu and Jaeger (2018)
+### Liu and Jaeger (2018, Experiment 1a-b)
 For comparison, we also analyzed the "baseline" experiment from Liu and Jaeger (2018, Experiment 1a-b) with the same analysis approach employed in the present study. Like all previous work in this line of research, this baseline experiment employed audio-only test stimuli. Unlike our Experiments 1a-c, Liu and Jaeger's control experiment contained an exposure phase (with only typical fricative pronunications). We further note that none of Experiments 1a-c employed the exact same continuum steps as Liu and Jaeger (2018). It is known that the selection of acoustic continuum steps that participants experience in an experiment can affect their categorization responses: even the exact same continuum step can be categorized differently depending on the other steps included in the experiment (Yamata & Tohkura, 1992). These factors limit the extent to which our Experiments 1a-c can be directly compared to Liu and Jaeger's audio-only experiment. We thus focus only on the magnitude of the acoustic effects in Liu and Jaeger, compared to the present experiments.
 
 ```{r}
@@ -389,7 +389,7 @@ This motivated our switch to the Prolific crowdsourcing experiments for subseque
 ```{r}
 d.test.Exp2 %<>% run_exclusions(c("CISP-2", "CISP-2b"))
 ```
-
+## Analyses
 ### Experiment 2
 
 ```{r}
@@ -416,28 +416,202 @@ plot_model_predictions(m.Exp2)
 
 ```{r results='markup'}
 m.Exp2vsExp1c <- fit_test_model(data = bind_rows(d.test.Exp1, d.test.Exp2), experiment = c("CISP-1c", "CISP-2"))
-# bind_rows(d.test.Exp1, d.test.Exp2) %>% filter(Experiment %in% c("CISP-1c", "CISP-2")) %>% prep_for_analysis() %>% pull(Experiment)
+# bind_rows(d.test.Exp1, d.test.Exp2) %>% filter(Experiment %in% c("CISP-1c", "CISP-2")) %>% prep_for_analysis() %>% group_by(Experiment, Block, ParticipantID) %>% tally() %>% summarise(mean.n = mean(n), sd.n = sd(n))
 
 # Experiment 2 is coded as 1 vs. Experiment 1c coded as -1
 # Does Experiment 2 have more ASHI responses (in the middle of the continuum), as would be expected if pen location
 # was not due to occlusion (since pen-in-mouth reduced ASHI responses)? YES, somewhat
-hypothesis(m.Exp2vsExp1c, "b_Experiment1 + 2.5 * bsp_moCondition.Test.Audio:Experiment1 > 0", class = NULL)
-# Is there still an affect of pen across the two experiments? YES, kinda.
+hypothesis(m.Exp2vsExp1c, "b_ExperimentCISPM2 + 2.5 * bsp_moCondition.Test.Audio:ExperimentCISPM2 > 0", class = NULL)
+hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:ExperimentCISPM2 > 0", class = NULL, robust = T)
+# Is there still an effect of pen across the two experiments? YES, kinda.
 hypothesis(m.Exp2vsExp1c, "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL)
-# And, is that effect of pen reduced (less negative) in Experiment 2 than in Experiment 1c? NOT REALLY?!?!
-hypothesis(m.Exp2vsExp1c, "b_Condition.Test.PenM:Experiment1 > 0", class = NULL)
-hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Experiment1 > 0", class = NULL)
+# Is there still an interaction between pen and acoustic/visual evidence across the two experiments? YES, but very weak
 hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL)
-hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Condition.Test.PenM:Experiment1 > 0", class = NULL)
+hypothesis(m.Exp2vsExp1c, "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0", class = NULL)
+# And, are those effects of pen reduced (less negative) in Experiment 2 than in Experiment 1c? NOT REALLY?!?!
+hypothesis(m.Exp2vsExp1c, "b_Condition.Test.PenM:ExperimentCISPM2 > 0", class = NULL, robust = T)
+hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Condition.Test.PenM:ExperimentCISPM2 > 0", class = NULL, robust = T)
+hypothesis(m.Exp2vsExp1c, "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM:ExperimentCISPM2 > 0", class = NULL, robust = T)
+hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM:ExperimentCISPM2 > 0", class = NULL, robust = T)
+```
 
+```{r}
 summary(m.Exp2vsExp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
-conditional_effects(m.Exp2vsExp1c, 
-                    effects = "Condition.Test.Audio:Condition.Test.Pen",
-                    conditions = tibble(Experiment = c("CISP-1c", "CISP-2"),
-                                        Block = 5), 
-                    robust = T, 
-                    method = "posterior_linpred")
-summary(m.Exp2vsExp1c)$fixed
+ce <- 
+  conditional_effects(
+    m.Exp2vsExp1c, 
+    effects = "Condition.Test.Audio:Condition.Test.Pen",
+    conditions = make_conditions(
+      x = bind_rows(d.test.Exp1, d.test.Exp2) %>% 
+        filter(Experiment %in% c("CISP-1c", "CISP-2")), 
+      vars = c("Experiment", "Condition.Test.OriginalLabel")) %>%
+      mutate(Block = 0), 
+    robust = T, 
+    method = "posterior_linpred")
+plot(ce, facet_args = list(ncol = 2))
+
+
+ce <- 
+  conditional_effects(
+    m.Exp2vsExp1c, 
+    effects = "Condition.Test.Audio:Condition.Test.Pen",
+    conditions = make_conditions(
+      x = bind_rows(d.test.Exp1, d.test.Exp2) %>% 
+        filter(Experiment %in% c("CISP-1c", "CISP-2")), 
+      vars = c("Experiment")) %>%
+      mutate(
+        Block = 0,
+        Condition.Test.OriginalLabel = "SH",
+        cond__ = ifelse(Experiment == "CISP-1c", "no occluder", "occluder")), 
+    robust = T, 
+    method = "posterior_linpred")
+plot(ce, facet_args = list(ncol = 2)) 
+last_plot() + 
+  scale_color_discrete("Pen", breaks = c("H", "M"), labels = c("hand", "mouth")) + 
+  scale_fill_discrete("Pen", breaks = c("H", "M"), labels = c("hand", "mouth")) +
+  scale_x_discrete("Acoustic evidence") +
+  scale_y_continuous("log-odds of ASHI-response")
+```
+
+```{r}
+prep_temp <- function(data) {
+  require(rlang)
+  
+  data %<>%
+      mutate(
+        Experiment = 
+          "contrasts<-"(factor(Experiment), , cbind(c(-.5, .5))), 
+        Condition.Test.Pen = 
+          "contrasts<-"(factor(Condition.Test.Pen), , cbind("M" = c(-0.5, 0.5))),
+        Block = Block - 1) %>%
+    select(Experiment, 
+           Condition.Test.OriginalLabel, Condition.Test.Pen, Block, Condition.Test.Audio, 
+           ParticipantID, Response.ASHI) 
+  
+  if (length(unique(data$Experiment)) == 2)
+    dimnames(contrasts(data$Experiment))[[2]] = sort(unique(data$Experiment))[2]
+  
+  return(data)
+}
+
+# Alternative way of specifying the model
+m <- brm(
+    bf(Response.ASHI ~ 1 + mo(Block) * mo(Condition.Test.Audio) * Condition.Test.OriginalLabel * Condition.Test.Pen * Experiment),
+    data = 
+      bind_rows(d.test.Exp1, d.test.Exp2) %>%
+      filter(Experiment %in% c("CISP-1c", "CISP-2")) %>% 
+      prep_for_analysis(),
+    family = "bernoulli",
+    prior = my_priors %>% filter(class == "b"),
+    sample_prior = "yes",
+    backend = "cmdstanr",
+    chains = 4, 
+    warmup = 2000,
+    iter = 3000,
+    control = list(adapt_delta = .95),
+    cores = min(parallel::detectCores(), 4), 
+    threads = threading(threads = 4))
+
+# Population-Level Effects: 
+#                                                             Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept                                                      -1.24      0.09    -1.42    -1.06 1.00     4646     3253
+# Condition.Test.PenM                                            -0.15      0.14    -0.41     0.14 1.00     3225     3141
+# ExperimentCISPM2                                               -0.14      0.14    -0.40     0.16 1.00     3002     2800 <----?
+# Condition.Test.PenM:ExperimentCISPM2                            0.18      0.29    -0.39     0.74 1.00     3226     3025 <---- +
+# moCondition.Test.Audio                                          0.25      0.01     0.23     0.27 1.00     4340     3616
+# moCondition.Test.Audio:Condition.Test.PenM                     -0.04      0.02    -0.09     0.00 1.00     3164     2739
+# moCondition.Test.Audio:ExperimentCISPM2                         0.00      0.02    -0.04     0.05 1.00     3069     2710
+# moCondition.Test.Audio:Condition.Test.PenM:ExperimentCISPM2     0.07      0.05    -0.03     0.15 1.00     3225     2851 <---- ++
+
+# Population-Level Effects: 
+#                                                                     Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept                                                              -1.12      0.14    -1.38    -0.84 1.00     1884     2595
+# Condition.Test.PenM                                                    -0.26      0.21    -0.69     0.16 1.00     2218     3118
+# ExperimentCISPM2                                                        0.10      0.22    -0.32     0.56 1.00     1966     2463 <---- ?
+# Condition.Test.PenM:ExperimentCISPM2                                    0.49      0.47    -0.46     1.40 1.00     1681     2489 <---- +
+# moBlock                                                                -0.05      0.04    -0.14     0.02 1.00     1635     2631
+# moCondition.Test.Audio                                                  0.22      0.02     0.18     0.26 1.00     2087     2827
+# moBlock:moCondition.Test.Audio                                          0.01      0.01     0.00     0.03 1.00     1807     3020
+# moBlock:Condition.Test.PenM                                             0.04      0.07    -0.09     0.18 1.00     1987     2735
+# moCondition.Test.Audio:Condition.Test.PenM                             -0.04      0.04    -0.11     0.03 1.00     1868     2777
+# moBlock:ExperimentCISPM2                                               -0.09      0.07    -0.23     0.05 1.00     1922     2078
+# moCondition.Test.Audio:ExperimentCISPM2                                 0.00      0.04    -0.07     0.07 1.00     1883     2480
+# moBlock:moCondition.Test.Audio:Condition.Test.PenM                      0.00      0.01    -0.02     0.02 1.00     1862     2484
+# moBlock:moCondition.Test.Audio:ExperimentCISPM2                        -0.00      0.01    -0.02     0.02 1.00     1791     2058
+# moBlock:Condition.Test.PenM:ExperimentCISPM2                           -0.13      0.16    -0.44     0.19 1.00     1485     2061
+# moCondition.Test.Audio:Condition.Test.PenM:ExperimentCISPM2             0.07      0.08    -0.08     0.22 1.00     1557     2457 <---- ++
+# moBlock:moCondition.Test.Audio:Condition.Test.PenM:ExperimentCISPM2     0.00      0.03    -0.05     0.05 1.00     1419     2406
+
+# Population-Level Effects: 
+#                                                                                                    Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept                                                                                             -1.14      0.11    -1.36    -0.92 1.00     1574     2507
+# Condition.Test.PenM                                                                                   -0.09      0.18    -0.45     0.26 1.00     1312     1778
+# Condition.Test.OriginalLabelSH                                                                         0.17      0.16    -0.15     0.46 1.00     1586     2289
+# ExperimentCISPM2                                                                                       0.22      0.15    -0.07     0.52 1.00     1520     2034 <----?
+# Condition.Test.PenM:Condition.Test.OriginalLabelSH                                                    -0.30      0.30    -0.89     0.29 1.00     1512     2090
+# Condition.Test.PenM:ExperimentCISPM2                                                                   0.16      0.32    -0.49     0.78 1.00     1200     1947 <---- +
+# Condition.Test.OriginalLabelSH:ExperimentCISPM2                                                       -0.26      0.30    -0.85     0.36 1.00     1627     2112
+# Condition.Test.PenM:Condition.Test.OriginalLabelSH:ExperimentCISPM2                                    0.63      0.65    -0.64     1.90 1.00     1068     2185 <---- ++
+# moBlock                                                                                               -0.06      0.03    -0.12    -0.00 1.00     1477     2169
+# moCondition.Test.Audio                                                                                 0.22      0.01     0.19     0.24 1.00     1626     2389
+# moBlock:moCondition.Test.Audio                                                                         0.01      0.00     0.00     0.02 1.00     1549     2193
+# moBlock:Condition.Test.PenM                                                                            0.04      0.05    -0.06     0.15 1.00     1165     1811
+# moCondition.Test.Audio:Condition.Test.PenM                                                            -0.03      0.03    -0.08     0.02 1.00     1309     2139
+# moBlock:Condition.Test.OriginalLabelSH                                                                -0.00      0.05    -0.10     0.10 1.00     1562     2429
+# moCondition.Test.Audio:Condition.Test.OriginalLabelSH                                                  0.00      0.02    -0.05     0.05 1.00     1560     2498
+# moBlock:ExperimentCISPM2                                                                              -0.08      0.05    -0.17     0.02 1.00     1491     2457
+# moCondition.Test.Audio:ExperimentCISPM2                                                                0.02      0.02    -0.03     0.06 1.00     1417     2369
+# moBlock:moCondition.Test.Audio:Condition.Test.PenM                                                    -0.00      0.01    -0.02     0.01 1.00     1249     1845
+# moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH                                          0.01      0.01    -0.01     0.02 1.00     1498     2396
+# moBlock:Condition.Test.PenM:Condition.Test.OriginalLabelSH                                             0.01      0.10    -0.18     0.21 1.00     1556     2163
+# moCondition.Test.Audio:Condition.Test.PenM:Condition.Test.OriginalLabelSH                             -0.04      0.05    -0.14     0.07 1.00     1475     1782
+# moBlock:moCondition.Test.Audio:ExperimentCISPM2                                                       -0.00      0.01    -0.02     0.01 1.00     1392     2322
+# moBlock:Condition.Test.PenM:ExperimentCISPM2                                                          -0.05      0.10    -0.25     0.13 1.00     1268     2290
+# moCondition.Test.Audio:Condition.Test.PenM:ExperimentCISPM2                                            0.07      0.05    -0.02     0.17 1.00     1277     2016 <---- ++
+# moBlock:Condition.Test.OriginalLabelSH:ExperimentCISPM2                                               -0.03      0.09    -0.21     0.16 1.00     1557     2066
+# moCondition.Test.Audio:Condition.Test.OriginalLabelSH:ExperimentCISPM2                                -0.03      0.05    -0.12     0.06 1.00     1643     2301
+# moBlock:moCondition.Test.Audio:Condition.Test.PenM:Condition.Test.OriginalLabelSH                      0.00      0.02    -0.03     0.03 1.00     1429     2064
+# moBlock:moCondition.Test.Audio:Condition.Test.PenM:ExperimentCISPM2                                   -0.00      0.02    -0.03     0.03 1.00     1117     2172
+# moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH:ExperimentCISPM2                         0.01      0.01    -0.02     0.03 1.00     1617     2560
+# moBlock:Condition.Test.PenM:Condition.Test.OriginalLabelSH:ExperimentCISPM2                           -0.14      0.22    -0.56     0.31 1.01      914     1786
+# moCondition.Test.Audio:Condition.Test.PenM:Condition.Test.OriginalLabelSH:ExperimentCISPM2            -0.00      0.11    -0.23     0.20 1.00      982     2174 <---- ?
+# moBlock:moCondition.Test.Audio:Condition.Test.PenM:Condition.Test.OriginalLabelSH:ExperimentCISPM2     0.01      0.04    -0.06     0.08 1.00      901     2077 
+
+# WITH RANDOM EFFECTS
+# Population-Level Effects: 
+#                                                                                                    Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
+# Intercept                                                                                             -1.79      0.16    -2.12    -1.45 1.00      591     1078
+# Condition.Test.OriginalLabelSH                                                                         0.29      0.18    -0.07     0.65 1.00     2211     2630
+# Condition.Test.PenM                                                                                   -0.19      0.24    -0.65     0.29 1.00     1953     2486
+# ExperimentCISPM2                                                                                       0.30      0.32    -0.31     0.95 1.01      551      605 <---- ?
+# Condition.Test.OriginalLabelSH:Condition.Test.PenM                                                    -0.27      0.35    -0.96     0.43 1.00     1907     2140
+# Condition.Test.OriginalLabelSH:ExperimentCISPM2                                                       -0.02      0.41    -0.80     0.79 1.00     1993     2570
+# Condition.Test.PenM:ExperimentCISPM2                                                                   0.08      0.32    -0.59     0.70 1.00     2435     2649 <---- + WEAKER
+# Condition.Test.OriginalLabelSH:Condition.Test.PenM:ExperimentCISPM2                                    0.44      0.49    -0.53     1.40 1.00     3153     2487 <---- + WEAKER
+# moBlock                                                                                               -0.00      0.16    -0.32     0.32 1.01      414     1088
+# moCondition.Test.Audio                                                                                 0.35      0.02     0.31     0.40 1.00     1967     2628
+# moBlock:Condition.Test.OriginalLabelSH                                                                -0.02      0.06    -0.13     0.10 1.00     2087     3062
+# moBlock:Condition.Test.PenM                                                                            0.03      0.30    -0.54     0.61 1.00      627      885
+# moCondition.Test.Audio:Condition.Test.OriginalLabelSH                                                 -0.02      0.04    -0.10     0.06 1.00     1853     2365
+# moCondition.Test.Audio:Condition.Test.PenM                                                            -0.03      0.03    -0.10     0.03 1.00     1990     2489
+# moBlock:moCondition.Test.Audio                                                                        -0.00      0.01    -0.02     0.02 1.00     2027     2573
+# moBlock:ExperimentCISPM2                                                                               0.01      0.16    -0.32     0.32 1.01      417     1063
+# moCondition.Test.Audio:ExperimentCISPM2                                                                0.03      0.03    -0.03     0.09 1.00     2280     2154
+# moBlock:Condition.Test.OriginalLabelSH:Condition.Test.PenM                                            -0.10      0.06    -0.21     0.01 1.00     1911     2189
+# moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM                             -0.09      0.07    -0.22     0.05 1.00     1838     2370
+# moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH                                          0.01      0.02    -0.03     0.04 1.00     1811     2385
+# moBlock:moCondition.Test.Audio:Condition.Test.PenM                                                     0.01      0.01    -0.01     0.03 1.00     1931     2936
+# moBlock:Condition.Test.OriginalLabelSH:ExperimentCISPM2                                                0.03      0.30    -0.57     0.60 1.00      632      889
+# moBlock:Condition.Test.PenM:ExperimentCISPM2                                                          -0.16      0.12    -0.39     0.06 1.00     1888     2241
+# moCondition.Test.Audio:Condition.Test.OriginalLabelSH:ExperimentCISPM2                                 0.13      0.05     0.03     0.24 1.00     3504     3034
+# moCondition.Test.Audio:Condition.Test.PenM:ExperimentCISPM2                                           -0.09      0.06    -0.20     0.03 1.00     1963     2249 <---- SWITCHED DIRECTION!!!
+# moBlock:moCondition.Test.Audio:ExperimentCISPM2                                                       -0.01      0.05    -0.11     0.10 1.00     1078     1328
+# moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM                     -0.01      0.01    -0.02     0.01 1.00     1901     2440
+# moBlock:Condition.Test.OriginalLabelSH:Condition.Test.PenM:ExperimentCISPM2                            0.02      0.11    -0.21     0.23 1.00     1800     2370
+# moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM:ExperimentCISPM2             0.05      0.10    -0.14     0.23 1.00     2319     2229 <----
+# moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH:ExperimentCISPM2                        -0.02      0.02    -0.06     0.03 1.00     2733     2586
+# moBlock:moCondition.Test.Audio:Condition.Test.PenM:ExperimentCISPM2                                    0.04      0.02    -0.01     0.08 1.00     1530     1823
+# moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM:ExperimentCISPM2    -0.01      0.05    -0.11     0.10 1.00     1030     1312
 ```
 
 ### Experiment 2b
@@ -513,6 +687,29 @@ Our catch trial procedure also differed somewhat from LJ18. In LJ18, participant
 
 ```{r}
 d.test.Exp3 %<>% run_exclusions(c("CISP-3"))
+```
+
+## Analysis
+
+```{r}
+p <- 
+  plot_data(
+    data = bind_rows(d.test.Exp3, d.test.Exp1),
+    experiment = "CISP-3") #, background_experiment = "CISP-1c")
+plot(p)
+
+ggsave(
+  p,
+  file = "../figures/Experiment 3.png", 
+  width = fig.base_width * 3,
+  height = fig.base_height * 2 + .5)
+```
+
+```{r results='markup'}
+m.Exp3 <- fit_test_model(d.test.Exp3, experiment = "CISP-3")
+my_hypotheses(m.Exp3, experiment = "Exp 3") %>% map(print) -> TEMP
+summary(m.Exp3)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
+plot_model_predictions(m.Exp2)
 ```
 
 # Acoustic Analyses (NOTES)

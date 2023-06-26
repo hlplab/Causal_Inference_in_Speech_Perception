@@ -808,6 +808,14 @@ prep_for_analysis <- function(data) {
         Experiment = 
           "contrasts<-"(factor(Experiment), , contr.sum(length(unique(Experiment))) * .5)) 
     } else . } %>%
+    { if (length(unique(data$Condition.Exposure.LexicalLabel)) > 1) {
+      mutate(
+        .,
+        Condition.Exposure.Pen = 
+          "contrasts<-"(factor(Condition.Exposure.Pen), , cbind("M" = c(-0.5, 0.5))),
+        Condition.Exposure.LexicalLabel = 
+          "contrasts<-"(factor(Condition.Exposure.LexicalLabel), , cbind("SH" = c(-0.5, 0.5))))
+    } else . } %>%
     { if (all(!is.na(.$Condition.Test.Pen), !is.na(.$Condition.Test.OriginalLabel))) 
       mutate(
         .,
@@ -817,6 +825,7 @@ prep_for_analysis <- function(data) {
           "contrasts<-"(factor(Condition.Test.OriginalLabel), , cbind("SH" = c(-0.5, 0.5)))) else . } %>%
     mutate(Block = Block - 1) %>%
     select(Experiment, 
+           Condition.Exposure.LexicalLabel, Condition.Exposure.Pen,
            Condition.Test.OriginalLabel, Condition.Test.Pen, Block, Condition.Test.Audio, 
            ParticipantID, Response.ASHI) 
   
@@ -827,6 +836,9 @@ prep_for_analysis <- function(data) {
 }
 
 fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% experiment) T else F) {
+  multiple_experiments <- length(unique(data$Experiment)) > 1
+  exposure_experiment <- length(unique(data$Condition.Exposure.LexicalLabel)) > 1
+  
   my_formula <- if (audio_only) {
     bf(Response.ASHI ~
          1 + mo(Block) * mo(Condition.Test.Audio) +
@@ -834,8 +846,10 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
   } else {
     bf(paste(
       "Response.ASHI ~",
-      "1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio)",
-      if (length(unique(experiment)) > 1) "* Experiment +" else "+",
+      "1 +", 
+      if (exposure_experiment) "Condition.Exposure.LexicalLabel * Condition.Exposure.Pen *" else "",
+      "Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio)",
+      if (multiple_experiments) "* Experiment +" else "+",
       "(1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)"))
   }
   
@@ -850,9 +864,9 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
     sample_prior = "yes",
     backend = "cmdstanr",
     chains = 4, 
-    warmup = if (length(unique(data$Experiment)) > 1) 2000 else 1000,
-    iter = if (length(unique(data$Experiment)) > 1) 3000 else 2000,
-    control = list(adapt_delta = if (length(unique(data$Experiment)) > 1) .95 else .8),
+    warmup = if (multiple_experiments | exposure_experiment) 2000 else 1000,
+    iter = if (multiple_experiments | exposure_experiment) 3000 else 2000,
+    control = list(adapt_delta = if (multiple_experiments | exposure_experiment) .95 else .8),
     cores = min(parallel::detectCores(), 4), 
     threads = threading(threads = 4),
     file = paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-"))
@@ -861,6 +875,7 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
 }
 
 my_hypotheses <- function(m, experiment, plot = F) { 
+  exposure_experiment <- length(unique(data$Condition.Exposure.LexicalLabel)) > 1
   format <-  
     . %>%
     rename(BF = Evid.Ratio) %>%
@@ -876,8 +891,9 @@ my_hypotheses <- function(m, experiment, plot = F) {
   # monotonic predictor. For Block, this is exactly what we want: evaluation of effects in the first Block.
   # However, for the continuum, we'd like to assess effects in the middle of the continuum. This is taken 
   # into account below.
+  h <- list()
   l <- list(
-    { h.pen <- hypothesis(
+    { h[["pen"]] <- hypothesis(
       m, 
       c(
         # There are 5 continuum steps above the baseline, so we add 2.5 * the interaction of continuum and the 
@@ -896,7 +912,7 @@ my_hypotheses <- function(m, experiment, plot = F) {
         "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
       format() %>%
       kable(caption = "Effects of pen location."),
-    { h.cues <- hypothesis(
+    { h[["cues"]] <- hypothesis(
       m, 
       c("bsp_moCondition.Test.Audio > 0", 
         "b_Condition.Test.OriginalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH > 0",
@@ -909,7 +925,7 @@ my_hypotheses <- function(m, experiment, plot = F) {
         "Acoustic and visual bias effects are independent")) %>% 
       format() %>%
       kable(caption = "Effects of acoustic continuum and visual bias."),
-    { h.block <- hypothesis(
+    { h[["block"]] <- hypothesis(
       m, 
       c(
         "bsp_moBlock:Condition.Test.PenM + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.PenM = 0",
@@ -924,11 +940,25 @@ my_hypotheses <- function(m, experiment, plot = F) {
       format() %>%
       kable(caption = "Changes across blocks."))
   
-  if (plot) {
-    plot(h.pen)
-    plot(h.cues)
-    plot(h.block)
+  if (exposure_experiment) {
+    l[["label"]] <- 
+      { h[["label"]] <- hypothesis(
+        m, 
+        c(
+          "b_Condition.Exposure.LexicalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH > 0",
+          "b_Condition.Exposure.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.PenM < 0", 
+          "b_Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM < 0"),
+        class = NULL) } %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "More SH responses after SH-biased exposure",
+        "Less SH responses after pen exposure",
+        "XXX")) %>%
+      format() %>%
+      kable(caption = "Effects of exposure.")
   }
+  
+  if (plot) for (H in h) plot(H)
   return(l)
 }
 
@@ -965,17 +995,47 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
   require(ggplot2)
   require(cowplot)
   
-  shared_stats <- function(data = NULL, color = "black", dodge = .5) 
-    list(
-      stat_summary(
-        data = data, fun = mean, geom = "line", 
-        position = position_dodge(dodge), alpha = .5, color = color),
-      stat_summary(
-        data = data, fun = mean, geom = "point", 
-        position = position_dodge(dodge), size = 1, color = color),
-      stat_summary(
-        data = data, fun.data = mean_cl_boot, geom = "linerange", 
-        position = position_dodge(dodge), linetype = 1, alpha = .65, color = color))
+  data %<>% filter(Experiment %in% append(experiment, background_experiment))
+  exposure_experiment <- length(unique(data[data$Experiment == experiment,]$Condition.Exposure.LexicalLabel)) > 1
+  if (!is.null(background_experiment)) exposure_background_experiment <- length(unique(data[data$Experiment == background_experiment,]$Condition.Exposure.LexicalLabel)) > 1
+  # If experiment is exposure experiment but background experiment is not, make the background 
+  # experiment data available for each facet of the experiment data.
+  if (!is.null(background_experiment) & exposure_experiment) {
+    if (!exposure_background_experiment) 
+      data %<>%
+      filter(Experiment == experiment) %>%
+      bind_rows(
+        data %>%
+          filter(Experiment == background_experiment) %>%
+          select(-Condition.Exposure.Pen) %>%
+          crossing(Condition.Exposure.Pen = unique(data[data$Experiment == experiment,]$Condition.Exposure.Pen)))
+  }
+  
+  shared_stats <- function(data = NULL, color = "black", dodge = .5, treat_as_exposure_experiment = exposure_experiment) {
+    if (treat_as_exposure_experiment) {
+      list(
+        stat_summary(
+          data = data, fun = mean, geom = "line", 
+          position = position_dodge(dodge), alpha = .5),
+        stat_summary(
+          data = data, fun = mean, geom = "point", 
+          position = position_dodge(dodge), size = 1),
+        stat_summary(
+          data = data, fun.data = mean_cl_boot, geom = "linerange", 
+          position = position_dodge(dodge), linetype = 1, alpha = .65))
+    } else {
+      list(
+        stat_summary(
+          data = data, fun = mean, geom = "line", 
+          position = position_dodge(dodge), alpha = .5, color = color),
+        stat_summary(
+          data = data, fun = mean, geom = "point", 
+          position = position_dodge(dodge), size = 1, color = color),
+        stat_summary(
+          data = data, fun.data = mean_cl_boot, geom = "linerange", 
+          position = position_dodge(dodge), linetype = 1, alpha = .65, color = color))
+    }
+  }
   shared_formatting <- 
     list(
       scale_y_continuous('Proportion "ASHI"-responses'),
@@ -986,6 +1046,17 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
         "Pen location", 
         breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = linetypes.test.pen_locations),
       facet_wrap(~ Experiment, ncol = 1))
+  
+  .groups <- c("Experiment", "ParticipantID", "Condition.Test.Pen")
+  if (exposure_experiment) {
+    message("Detected more than one exposure condition. Treating this as an exposure experiment.")
+    .groups = append(.groups, c("Condition.Exposure.LexicalLabel", "Condition.Exposure.Pen"))
+    shared_formatting[[length(shared_formatting) + 1]] <- 
+    scale_color_manual("Label",
+      breaks = levels.exposure.lexical_labels,
+      values = colors.exposure.lexical_labels,
+      aesthetics = c("color", "fill"))
+  }
   
   aggregate <- function(data, ..., e = experiment) {
     groups = enquos(...)
@@ -1001,7 +1072,7 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
   p <- list()
   p[[1]] <- 
     data %>% 
-    aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio) %>%
+    aggregate(!!! syms(.groups), Condition.Test.Audio) %>%
     ggplot(aes(x = Condition.Test.Audio, y = Response.ASHI, shape = Condition.Test.Pen, linetype = Condition.Test.Pen)) +
     scale_x_continuous(
       'Acoustic continuum', 
@@ -1010,22 +1081,30 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
     shared_formatting + 
     coord_cartesian(xlim = range(data$Condition.Test.Audio), ylim = c(.1, .9))
   
+  # Potentially move to shared_formatting
+  if (exposure_experiment) 
+    p[[1]] <- 
+    p[[1]] + 
+    aes(color = Condition.Exposure.LexicalLabel, fill = Condition.Exposure.LexicalLabel) +
+    facet_wrap(~ Condition.Exposure.Pen, nrow = 2)
+  
   if (!is.null(background_experiment))
     p[[1]] <- 
     p[[1]] + 
     shared_stats(
       data = data %>%
-        aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.Audio, 
+        aggregate(!!! syms(.groups), Condition.Test.Audio, 
                   e = background_experiment) %>% 
         ungroup() %>%
         select(-Experiment) %>%
         crossing(Experiment = gsub("CISP-", "Exp ", experiment)), 
       dodge = 1, 
-      color = "gray75")
+      color = "gray75",
+      treat_as_exposure_experiment = exposure_background_experiment)
   
   p[[2]] <- 
     data %>%
-    aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel) %>%
+    aggregate(!!! syms(.groups), Condition.Test.OriginalLabel) %>%
     ggplot(aes(x = Condition.Test.OriginalLabel, y = Response.ASHI, 
                shape = Condition.Test.Pen, linetype = Condition.Test.Pen,
                group = Condition.Test.Pen)) +
@@ -1038,18 +1117,26 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
     coord_cartesian(ylim = c(.1, .9)) +
     theme(legend.position = "none")
   
+  if (exposure_experiment) 
+    p[[2]] <- 
+    p[[2]] + 
+    aes(color = Condition.Exposure.LexicalLabel, fill = Condition.Exposure.LexicalLabel, 
+        group = interaction(Condition.Exposure.LexicalLabel, Condition.Test.Pen)) +
+    facet_wrap(~ Condition.Exposure.Pen, nrow = 2)
+
   if (!is.null(background_experiment) & !("LJ18-NORM" %in% background_experiment))
     p[[2]] <- 
     p[[2]] + 
     shared_stats(
       data = data %>%
-        aggregate(Experiment, ParticipantID, Condition.Test.Pen, Condition.Test.OriginalLabel, 
+        aggregate(!!! syms(.groups), Condition.Test.OriginalLabel, 
                   e = background_experiment) %>% 
         ungroup() %>%
         select(-Experiment) %>%
         crossing(Experiment = gsub("CISP-", "Exp ", experiment)), 
       dodge = .5, 
-      color = "gray75")
+      color = "gray75",
+      treat_as_exposure_experiment = exposure_background_experiment)
   
   # p[[3]] <- 
   #   data %>%
