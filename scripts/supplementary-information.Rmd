@@ -42,6 +42,7 @@ header-includes:
 ```{r, include=FALSE}
 library(tidyverse)
 library(magrittr)    # pipes
+library(ggtext)      # markdown formatting for text elements
 library(lubridate)   # date conversion, etc.
 
 library(brms)        # Bayesian GL(M)Ms
@@ -437,6 +438,13 @@ hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Condition.Test.OriginalLab
 
 ```{r}
 summary(m.Exp2vsExp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
+
+condition_effects_formatting <- 
+  list(  
+    scale_color_discrete("Pen", breaks = c("H", "M"), labels = c("hand", "mouth")), 
+    scale_fill_discrete("Pen", breaks = c("H", "M"), labels = c("hand", "mouth")),
+    scale_x_continuous("Acoustic evidence"),
+    scale_y_continuous("log-odds of ASHI-response"))
 ce <- 
   conditional_effects(
     m.Exp2vsExp1c, 
@@ -445,18 +453,23 @@ ce <-
       x = bind_rows(d.test.Exp1, d.test.Exp2) %>% 
         filter(Experiment %in% c("CISP-1c", "CISP-2")), 
       vars = c("Experiment", "Condition.Test.OriginalLabel")) %>%
-      mutate(Block = 0), 
+      mutate(
+        Block = 0,
+        cond__ = paste0(
+          ifelse(Experiment == "CISP-1c", "Exp 1c (no occluder)", "Exp 2 (occluder)"),
+          ":Visual label=", Condition.Test.OriginalLabel)), 
     robust = T, 
     method = "posterior_linpred")
-plot(ce, facet_args = list(ncol = 2))
-
+p <- plot(ce, facet_args = list(ncol = 2), plot = F) 
+p[[1]] + condition_effects_formatting
 
 ce <- 
   conditional_effects(
     m.Exp2vsExp1c, 
     effects = "Condition.Test.Audio:Condition.Test.Pen",
     conditions = make_conditions(
-      x = bind_rows(d.test.Exp1, d.test.Exp2) %>% 
+      x = 
+        bind_rows(d.test.Exp1, d.test.Exp2) %>% 
         filter(Experiment %in% c("CISP-1c", "CISP-2")), 
       vars = c("Experiment")) %>%
       mutate(
@@ -465,12 +478,8 @@ ce <-
         cond__ = ifelse(Experiment == "CISP-1c", "no occluder", "occluder")), 
     robust = T, 
     method = "posterior_linpred")
-plot(ce, facet_args = list(ncol = 2)) 
-last_plot() + 
-  scale_color_discrete("Pen", breaks = c("H", "M"), labels = c("hand", "mouth")) + 
-  scale_fill_discrete("Pen", breaks = c("H", "M"), labels = c("hand", "mouth")) +
-  scale_x_discrete("Acoustic evidence") +
-  scale_y_continuous("log-odds of ASHI-response")
+p <- plot(ce, facet_args = list(ncol = 2), plot = FALSE) 
+p[[1]] + condition_effects_formatting
 ```
 
 ```{r}
@@ -495,22 +504,22 @@ prep_temp <- function(data) {
 }
 
 # Alternative way of specifying the model
-m <- brm(
-    bf(Response.ASHI ~ 1 + mo(Block) * mo(Condition.Test.Audio) * Condition.Test.OriginalLabel * Condition.Test.Pen * Experiment),
-    data = 
-      bind_rows(d.test.Exp1, d.test.Exp2) %>%
-      filter(Experiment %in% c("CISP-1c", "CISP-2")) %>% 
-      prep_for_analysis(),
-    family = "bernoulli",
-    prior = my_priors %>% filter(class == "b"),
-    sample_prior = "yes",
-    backend = "cmdstanr",
-    chains = 4, 
-    warmup = 2000,
-    iter = 3000,
-    control = list(adapt_delta = .95),
-    cores = min(parallel::detectCores(), 4), 
-    threads = threading(threads = 4))
+# m <- brm(
+#     bf(Response.ASHI ~ 1 + mo(Block) * mo(Condition.Test.Audio) * Condition.Test.OriginalLabel * Condition.Test.Pen * Experiment),
+#     data = 
+#       bind_rows(d.test.Exp1, d.test.Exp2) %>%
+#       filter(Experiment %in% c("CISP-1c", "CISP-2")) %>% 
+#       prep_for_analysis(),
+#     family = "bernoulli",
+#     prior = my_priors %>% filter(class == "b"),
+#     sample_prior = "yes",
+#     backend = "cmdstanr",
+#     chains = 4, 
+#     warmup = 2000,
+#     iter = 3000,
+#     control = list(adapt_delta = .95),
+#     cores = min(parallel::detectCores(), 4), 
+#     threads = threading(threads = 4))
 
 # Population-Level Effects: 
 #                                                             Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
@@ -708,8 +717,95 @@ ggsave(
 ```{r results='markup'}
 m.Exp3 <- fit_test_model(d.test.Exp3, experiment = "CISP-3")
 my_hypotheses(m.Exp3, experiment = "Exp 3") %>% map(print) -> TEMP
+```
+
+```{r}
 summary(m.Exp3)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
-plot_model_predictions(m.Exp2)
+plot_model_predictions(m.Exp3)
+
+condition_effects_formatting <- 
+  list(  
+    scale_color_discrete("Exposure bias", breaks = c("SH", "S"), labels = c("SH", "S")), 
+    scale_fill_discrete("Exposure bias", breaks = c("SH", "S"), labels = c("SH", "S")),
+    scale_linetype_discrete("Pen", breaks = c("H", "M"), labels = c("hand", "mouth")),    
+    scale_x_continuous("Acoustic evidence"),
+    scale_y_continuous("log-odds of ASHI-response"),
+    theme(strip.text = element_markdown()))
+ce <- 
+  conditional_effects(
+    m.Exp3, 
+    effects = "Condition.Test.Audio:Condition.Exposure.LexicalLabel",
+    conditions = make_conditions(
+      x = d.test.Exp3, 
+      vars = c("Condition.Exposure.Pen")) %>%
+      mutate(
+        Block = 0,
+        cond__ = ifelse(Condition.Exposure.Pen == "M", "pen-in-**mouth** during critical exposure", "pen-in-**hand** during critical exposure")), 
+    robust = T, 
+    method = "posterior_linpred")
+p <- plot(ce, facet_args = list(ncol = 2), plot = F) 
+p[[1]] + condition_effects_formatting
+
+ce <- 
+  conditional_effects(
+    m.Exp3, 
+    effects = "Condition.Test.Audio:Condition.Exposure.LexicalLabel",
+    conditions = make_conditions(
+      x = d.test.Exp3, 
+      vars = c("Condition.Exposure.Pen", "Condition.Test.Pen")) %>%
+      mutate(
+        Block = 0,
+        cond__ = paste(
+          ifelse(Condition.Exposure.Pen == "M", "pen-in-**mouth** during critical exposure", "pen-in-**hand** during critical exposure"), 
+          ifelse(Condition.Test.Pen == "M", "pen-in-**mouth** during test", "pen-in-**hand** during test"),
+          sep = "  & ")), 
+    robust = T, 
+    method = "posterior_linpred")
+p <- plot(ce, facet_args = list(ncol = 2), plot = F) 
+p[[1]] + condition_effects_formatting
+```
+# Experiment 4
+Experiment 4 was conducted XXX
+
+## Data import
+
+```{r}
+rm(d.Exp3)
+load("../data/Experiment-4-before-exclusions.RData") 
+d.Exp4 <- 
+  d.Exp3 %>%
+  mutate(
+    Experiment = "CISP-4",
+    Condition.Test.Keybindings = NA,                                  # TO DO: delete after unifying data format
+    ParticipantID = paste(Experiment, ParticipantID, sep = ".")) %>%
+  format_more()
+
+d.exposure.Exp4 <- d.Exp4 %>% filter(Phase == "exposure") %>% excludeData()
+d.test.Exp4 <- d.Exp4 %>% filter(Phase == "test")
+
+rm(d.Exp4)
+```
+
+## Exclusions
+
+```{r}
+d.test.Exp4 %<>% run_exclusions(c("CISP-4"))
+```
+
+## Analysis
+
+```{r}
+p <- 
+  plot_data(
+    data = bind_rows(d.test.Exp4),
+    experiment = "CISP-4") #, background_experiment = "CISP-1c")
+plot(p)
+
+ggsave(
+  p,
+  file = "../figures/Experiment 4.png", 
+  width = fig.base_width * 3,
+  height = fig.base_height * 2 + .5)
 ```
 
 # Acoustic Analyses (NOTES)

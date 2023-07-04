@@ -875,7 +875,7 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
 }
 
 my_hypotheses <- function(m, experiment, plot = F) { 
-  exposure_experiment <- length(unique(data$Condition.Exposure.LexicalLabel)) > 1
+  exposure_experiment <- length(unique(m$data$Condition.Exposure.LexicalLabel)) > 1
   format <-  
     . %>%
     rename(BF = Evid.Ratio) %>%
@@ -892,8 +892,29 @@ my_hypotheses <- function(m, experiment, plot = F) {
   # However, for the continuum, we'd like to assess effects in the middle of the continuum. This is taken 
   # into account below.
   h <- list()
-  l <- list(
-    { h[["pen"]] <- hypothesis(
+  l <- list()
+  if (exposure_experiment) {
+    l[["exposure.label"]] <- 
+      { h[["exposure.label"]] <- hypothesis(
+        m, 
+        c(
+          "b_Condition.Exposure.LexicalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH > 0",
+          "b_Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM < 0",
+          "b_Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM:Condition.Test.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM:Condition.Test.PenM > 0"),
+#          "b_Condition.Exposure.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.PenM < 0"),
+        class = NULL) } %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "More SH responses after SH-biased exposure",
+        "Reduced effect of SH-bias when pen-in-mouth during critical exposure",
+        "Enhanced effect of SH-bias when pen location matches in exposure & test")) %>%
+#        "Less SH responses after pen-in-mouth exposure")) %>%
+      format() %>%
+      kable(caption = "Effects of exposure.")
+  }
+  
+  l[["test.pen"]] <- 
+    { h[["test.pen"]] <- hypothesis(
       m, 
       c(
         # There are 5 continuum steps above the baseline, so we add 2.5 * the interaction of continuum and the 
@@ -911,8 +932,10 @@ my_hypotheses <- function(m, experiment, plot = F) {
         "Pen effect increases for visually ASHI-biased input",
         "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
       format() %>%
-      kable(caption = "Effects of pen location."),
-    { h[["cues"]] <- hypothesis(
+      kable(caption = "Effects of pen location.")
+  
+  l[["test.cues"]] <- 
+    { h[["test.cues"]] <- hypothesis(
       m, 
       c("bsp_moCondition.Test.Audio > 0", 
         "b_Condition.Test.OriginalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH > 0",
@@ -924,39 +947,25 @@ my_hypotheses <- function(m, experiment, plot = F) {
         "Visual bias ASHI -> more ASHI-responses",
         "Acoustic and visual bias effects are independent")) %>% 
       format() %>%
-      kable(caption = "Effects of acoustic continuum and visual bias."),
-    { h[["block"]] <- hypothesis(
+      kable(caption = "Effects of acoustic continuum and visual bias.")
+  
+  l[["test.block"]] <- 
+    { h[["test.block"]] <- hypothesis(
       m, 
       c(
+        if (exposure_experiment) "bsp_moBlock:Condition.Exposure.LexicalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH < 0" else NULL,
         "bsp_moBlock:Condition.Test.PenM + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.PenM = 0",
         "bsp_moBlock:moCondition.Test.Audio = 0", 
         "bsp_moBlock:Condition.Test.OriginalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"),
       class = NULL) } %>%
       .[["hypothesis"]] %>% 
       mutate(Hypothesis = c(
+        if (exposure_experiment) "Effect of SH-biased exposure reduces over blocks" else NULL,
         "Pen effect is stable over blocks",
         "Continuum effect is stable over blocks",
         "Visual bias effect is stable over blocks")) %>%
       format() %>%
-      kable(caption = "Changes across blocks."))
-  
-  if (exposure_experiment) {
-    l[["label"]] <- 
-      { h[["label"]] <- hypothesis(
-        m, 
-        c(
-          "b_Condition.Exposure.LexicalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH > 0",
-          "b_Condition.Exposure.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.PenM < 0", 
-          "b_Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM < 0"),
-        class = NULL) } %>%
-      .[["hypothesis"]] %>% 
-      mutate(Hypothesis = c(
-        "More SH responses after SH-biased exposure",
-        "Less SH responses after pen exposure",
-        "XXX")) %>%
-      format() %>%
-      kable(caption = "Effects of exposure.")
-  }
+      kable(caption = "Changes across blocks.")
   
   if (plot) for (H in h) plot(H)
   return(l)
@@ -1010,6 +1019,9 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
           select(-Condition.Exposure.Pen) %>%
           crossing(Condition.Exposure.Pen = unique(data[data$Experiment == experiment,]$Condition.Exposure.Pen)))
   }
+  if (exposure_experiment)
+    data %<>%
+    mutate(Condition.Exposure.Pen = plyr::mapvalues(Condition.Exposure.Pen, c("M", "H"), c("pen-in-**mouth** during critical exposure", "pen-in-**hand** during critical exposure")))
   
   shared_stats <- function(data = NULL, color = "black", dodge = .5, treat_as_exposure_experiment = exposure_experiment) {
     if (treat_as_exposure_experiment) {
@@ -1045,7 +1057,8 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
       scale_linetype_manual(
         "Pen location", 
         breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = linetypes.test.pen_locations),
-      facet_wrap(~ Experiment, ncol = 1))
+      facet_wrap(~ Experiment, ncol = 1),
+      theme(strip.text = element_markdown()))
   
   .groups <- c("Experiment", "ParticipantID", "Condition.Test.Pen")
   if (exposure_experiment) {
@@ -1102,6 +1115,10 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
       color = "gray75",
       treat_as_exposure_experiment = exposure_background_experiment)
   
+  # shorter facet labels for visual label plot
+  if (exposure_experiment)
+    data %<>%
+    mutate(Condition.Exposure.Pen = plyr::mapvalues(Condition.Exposure.Pen, c("pen-in-**mouth** during critical exposure", "pen-in-**hand** during critical exposure"), c("pen-in-**mouth**", "pen-in-**hand**")))
   p[[2]] <- 
     data %>%
     aggregate(!!! syms(.groups), Condition.Test.OriginalLabel) %>%
