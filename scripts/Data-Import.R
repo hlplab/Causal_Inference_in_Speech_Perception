@@ -120,6 +120,6 @@ CISP_data <- rbind(d.Exp1a, d.Exp1b, d.Exp1c,
                    d.Exp2a, d.Exp2b,
                    d.Exp3, d.Exp4)
 
-write_csv(CISP_data, "CISP_data.csv")
+write_csv(CISP_data, "../../../Causal_Inference_in_Speech_Perception/data/CISP_data.csv")
 
 

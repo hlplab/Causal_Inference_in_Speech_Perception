@@ -91,6 +91,9 @@ knitr::knit_hooks$set(warning = color_block('orange'))
 ```
 
 ```{r functions to consolidate}
+
+###TODO snc 7-9-23: I believe this can be deleted now, as it's been integrated into the normal
+### format_data() within Constants.R
 format_more <- 
   . %>%
   # Potentially move these into the format function
@@ -173,26 +176,15 @@ We conducted five test-only and six exposure-test experiments for this project. 
 ## Data import
 
 ```{r}
-load("../data/Experiment-NORM-A-before-exclusions.RData") 
-d.Exp1a <- 
-  d.test.A %>%
-  mutate(
-    Experiment = "CISP-1a",
-    ParticipantID = paste(Experiment, ParticipantID, sep = "."))
- 
-load("../data/Experiment-NORM-B-before-exclusions.RData") 
-d.Exp1b <- 
-  d.test.B %>%
-  mutate(
-    Experiment = "CISP-1b",
-    ParticipantID = paste(Experiment, ParticipantID, sep = "."))
+d.CISP.ALL <-
+  read.csv("../data/CISP_data.csv") %>%
+  mutate(Experiment = factor(paste("CISP", Experiment, sep = "-")),
+         ParticipantID = as_factor(ParticipantID))
 
-load("../data/Experiment-NORM-C-before-exclusions.RData") 
-d.Exp1c <- 
-  d.test.C %>%
-  mutate(
-    Experiment = "CISP-1c",
-    ParticipantID = paste(Experiment, ParticipantID, sep = "."))
+d.CISP.Exp1 <- d.CISP.ALL %>%
+  filter(Experiment %in% c("CISP-1a",
+                           "CISP-1b",
+                           "CISP-1c"))
 
 d.LJ18.test <- 
   read.csv("../data/Liu Jaeger 2018/Liu-Jaeger-2018-test-1-s2.0-S0010027718300118-mmc2.csv") %>%
@@ -212,11 +204,7 @@ d.LJ18.test <-
     Trial = Trial + 1,
     across(c(Condition.Test.Pen, Condition.Test.OriginalLabel), factor))
 
-d.test <- 
-  bind_rows(d.Exp1a, d.Exp1b, d.Exp1c, d.LJ18.test) %>%
-  format_more()
-
-rm(d.test.A, d.test.B, d.test.C)
+d.test <- bind_rows(d.CISP.Exp1, d.LJ18.test)
 ```
 
 ## Materials: Selection of acoustic continuum steps
@@ -352,29 +340,14 @@ d.test.LJ18 %>%
 We conducted two experiments that were designed to test whether listeners need to see the effects of the pen on the articulators *during the production of the fricative*, or whether the presence of a pen during the production of a fricative is sufficient to cause the effects observed in Experiments 1a-c. To this end, Experiments 2 and 2b introduced a black box that occluded the talker's mouth during the articulation of the fricative (see main text for details). The two experiments were identical except that Experiment 2b introduced an additional task intended to assure that participants paid attention to the videos (rather than just the audio). This change in procedure from Experiment 2 to 2b was intended to address an alternative explanation for the results of Experiment 2. As reported below, Experiment 2 did not find the effects of pen location that were present in Experiments 1a-c. This raised the question as to whether participants in Experiment 2 failed to pay attention to the video (unlike in Experiments 1a-c). The additional task in Experiment 2b addressed this possibility.
 
 ## Data import
-
 ```{r}
-load("../data/Experiment-NORM-D-before-exclusions.RData") #named d.test.D
-load("../data/Experiment-NORM-E-before-exclusions.RData") #named d.test.E
-
-d.Exp2 <- 
-  d.test.D %>%
-  mutate(
-    Experiment = "CISP-2",
-    ParticipantID = paste(Experiment, ParticipantID, sep = "."))
- 
-d.Exp2b <- 
-  d.test.E %>%
-  mutate(Participant.Age = as.double(Participant.Age)) %>%
-  mutate(
-    Experiment = "CISP-2b",
-    ParticipantID = paste(Experiment, ParticipantID, sep = "."))
-
-d.test.Exp2 <- 
-  bind_rows(d.Exp2, d.Exp2b) %>%
-  format_more()
-
-rm(d.test.D, d.test.E)
+d.test.Exp2 <- d.CISP.ALL %>%
+  filter(Experiment %in% c("CISP-2a",
+                           "CISP-2b")) %>%
+  # Make CISP-2a the default CISP-2 for visualizations below
+  mutate(Experiment = case_when(
+    Experiment == "CISP-2a" ~ "CISP-2",
+    T ~ Experiment))
 ```
 
 ## Procedure
@@ -671,20 +644,14 @@ Experiment 3 was conducted XXX
 ## Data import
 
 ```{r}
-rm(d.Exp2)
-load("../data/Experiment-3-before-exclusions.RData") 
-d.Exp3 <- 
-  d.Exp2 %>%
-  mutate(
-    Experiment = "CISP-3",
-    Condition.Test.Keybindings = NA,                                  # TO DO: delete after unifying data format
-    ParticipantID = paste(Experiment, ParticipantID, sep = ".")) %>%
-  format_more()
+d.exposure.Exp3 <- d.CISP.ALL %>% 
+  filter(Experiment == "CISP-3",
+         Phase == "exposure") %>% 
+  excludeData()
 
-d.exposure.Exp3 <- d.Exp3 %>% filter(Phase == "exposure") %>% excludeData()
-d.test.Exp3 <- d.Exp3 %>% filter(Phase == "test")
-
-rm(d.Exp2)
+d.test.Exp3 <- d.CISP.ALL %>% 
+  filter(Experiment == "CISP-3",
+         Phase == "test")
 ```
 
 ## Procedure: Comparison to Liu and Jaeger (2018)
@@ -770,20 +737,17 @@ Experiment 4 was conducted XXX
 ## Data import
 
 ```{r}
-rm(d.Exp3)
-load("../data/Experiment-4-before-exclusions.RData") 
-d.Exp4 <- 
-  d.Exp3 %>%
-  mutate(
-    Experiment = "CISP-4",
-    Condition.Test.Keybindings = NA,                                  # TO DO: delete after unifying data format
-    ParticipantID = paste(Experiment, ParticipantID, sep = ".")) %>%
-  format_more()
+d.exposure.Exp4 <- d.CISP.ALL %>% 
+  filter(Experiment == "CISP-4",
+         # Don't include participants from a pilot study which included PIH exposure
+         Condition.Exposure.Pen == "M",
+         Phase == "exposure") %>% 
+  excludeData()
 
-d.exposure.Exp4 <- d.Exp4 %>% filter(Phase == "exposure") %>% excludeData()
-d.test.Exp4 <- d.Exp4 %>% filter(Phase == "test")
-
-rm(d.Exp4)
+d.test.Exp4 <- d.CISP.ALL %>% 
+  filter(Experiment == "CISP-4",
+         Condition.Exposure.Pen == "M",
+         Phase == "test")
 ```
 
 ## Exclusions
