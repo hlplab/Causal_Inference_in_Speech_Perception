@@ -43,6 +43,7 @@ header-includes:
 library(tidyverse)
 library(magrittr)    # pipes
 library(ggtext)      # markdown formatting for text elements
+library(ggforce)     # facet matrix
 library(lubridate)   # date conversion, etc.
 
 library(brms)        # Bayesian GL(M)Ms
@@ -112,7 +113,7 @@ format_more <-
     Experiment, ParticipantID, starts_with("Participant."),
     Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, 
     Condition.Test.Audio, Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Keybindings,
-    Phase, Block, Trial, ItemID, 
+    Phase, Block, Trial, ItemID, Item.Word, Item.Type,
     Response, Response.ASHI, Response.RT, Response.CatchTrial,
     starts_with("Talker"),
     starts_with("Duration"),
@@ -424,11 +425,12 @@ m.Exp2vsExp1c <- fit_test_model(data = bind_rows(d.test.Exp1, d.test.Exp2), expe
 # was not due to occlusion (since pen-in-mouth reduced ASHI responses)? YES, somewhat
 hypothesis(m.Exp2vsExp1c, "b_ExperimentCISPM2 + 2.5 * bsp_moCondition.Test.Audio:ExperimentCISPM2 > 0", class = NULL)
 hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:ExperimentCISPM2 > 0", class = NULL, robust = T)
+## These tests are less informative (but nicely unsurprising)
 # Is there still an effect of pen across the two experiments? YES, kinda.
-hypothesis(m.Exp2vsExp1c, "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL)
+# hypothesis(m.Exp2vsExp1c, "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL)
 # Is there still an interaction between pen and acoustic/visual evidence across the two experiments? YES, but very weak
-hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL)
-hypothesis(m.Exp2vsExp1c, "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0", class = NULL)
+# hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL)
+# hypothesis(m.Exp2vsExp1c, "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0", class = NULL)
 # And, are those effects of pen reduced (less negative) in Experiment 2 than in Experiment 1c? NOT REALLY?!?!
 hypothesis(m.Exp2vsExp1c, "b_Condition.Test.PenM:ExperimentCISPM2 > 0", class = NULL, robust = T)
 hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Condition.Test.PenM:ExperimentCISPM2 > 0", class = NULL, robust = T)
@@ -448,7 +450,9 @@ condition_effects_formatting <-
 ce <- 
   conditional_effects(
     m.Exp2vsExp1c, 
-    effects = "Condition.Test.Audio:Condition.Test.Pen",
+    effects = "Condition.Test.Audio:Condition.Test.Pen", 
+    # adding random effects NULL (or not: set to NA)
+    re_formula = NA,
     conditions = make_conditions(
       x = bind_rows(d.test.Exp1, d.test.Exp2) %>% 
         filter(Experiment %in% c("CISP-1c", "CISP-2")), 
@@ -467,6 +471,8 @@ ce <-
   conditional_effects(
     m.Exp2vsExp1c, 
     effects = "Condition.Test.Audio:Condition.Test.Pen",
+    # adding random effects NULL (or not: set to NA)
+    re_formula = NA,
     conditions = make_conditions(
       x = 
         bind_rows(d.test.Exp1, d.test.Exp2) %>% 
@@ -772,8 +778,10 @@ Experiment 4 was conducted XXX
 ```{r}
 rm(d.Exp3)
 load("../data/Experiment-4-before-exclusions.RData") 
+
 d.Exp4 <- 
   d.Exp3 %>%
+  filter(Condition.Exposure.Pen == "M") %>%
   mutate(
     Experiment = "CISP-4",
     Condition.Test.Keybindings = NA,                                  # TO DO: delete after unifying data format
@@ -782,8 +790,6 @@ d.Exp4 <-
 
 d.exposure.Exp4 <- d.Exp4 %>% filter(Phase == "exposure") %>% excludeData()
 d.test.Exp4 <- d.Exp4 %>% filter(Phase == "test")
-
-rm(d.Exp4)
 ```
 
 ## Exclusions
@@ -805,7 +811,7 @@ ggsave(
   p,
   file = "../figures/Experiment 4.png", 
   width = fig.base_width * 3,
-  height = fig.base_height * 2 + .5)
+  height = fig.base_height + .5)
 ```
 
 # Acoustic Analyses (NOTES)
@@ -822,26 +828,79 @@ Potential approach to modeling consequences of pen in exposure
  5. This CoG_perceived would be the input e.g., belief-updating. In the simplest case, one would use the lexical endorsements of each participant as the ground truth and then update based on 1) those labels, 2) the CoG_perceived, 3) some initial estimate of the prior beliefs about s and sh along CoG, and 4) some range of kappa_0 and nu_0 {1, 10, 100}.
 
 ```{r}
-# Acoustic parameters
-exposure.acoustics <- read_csv("../data/acoustics/acoustic_information_exposure_items.csv")
-test.acoustics <- read_csv("../data/acoustics/acoustic_information_test_items.csv")
+CISP_acoustics <- 
+  bind_rows(
+    read_csv("../data/acoustics/acoustic_information_exposure_items.csv") %>%
+      filter(study == "Liu-Jaeger-2018",
+             fricative %in% c("S", "SH")) %>%
+      arrange(word, fricative, shift_percent) %>%
+      group_by(word) %>%
+      mutate(across(starts_with("sound_"), ~ last(.x))),
+    read_csv("../data/acoustics/acoustic_information_test_items.csv") %>% 
+      filter(fricative == "?SSH") %>%
+      mutate(
+        sound_preceeding = "XXX", # <--- fill in correct IPA
+        sound_following = "IY1", # <--- I think this is correct but please check
+        word = as.character(word))) %>%
+  mutate(shift_percent = as.numeric(shift_percent)) 
 
-CISP_Exp_CoG <- exposure.acoustics %>%
-  filter(study == "Liu-Jaeger-2018",
-         fricative %in% c("S", "SH")) %>%
-  select(word, fricative, shift_percent, cue_raw_M1) %>%
-  mutate(bias = case_when(
-    fricative == "S" & shift_percent == 0 ~ "SH",
-    fricative == "S" & shift_percent == 50 ~ "S",
-    fricative == "SH" & shift_percent == 0 ~ "S",
-    fricative == "SH" & shift_percent == 50 ~ "SH")) %>%
-  rename(CoG = cue_raw_M1)
+d.Exp4 %<>%
+  mutate(
+    Item.Word = case_when(
+      Phase == "exposure" ~ toupper(Item.Word), 
+      Phase == "test" ~as.character(Condition.Test.Audio),
+      T ~ NA_character_),
+    Item.ShiftPercent = case_when(
+      Item.Type == "shifted" ~ 50, 
+      Item.Type == "typical" ~ 0,
+      Item.Type == "filler" ~ 0, )) %>%
+  left_join(
+    CISP_acoustics, 
+    by = join_by(
+      Item.Word == word,
+      Item.ShiftPercent == shift_percent))
 
-CISP_Test_CoG <- test.acoustics %>%
+d.Exp4 %>%
+  ggplot(aes(x = cue_raw_M1)) +
+  geom_histogram(aes(fill = fricative), alpha = .5) +
+  facet_wrap(Condition.Exposure.LexicalLabel ~ Trial > 60)
+
+d.Exp4 %>%
+  ungroup() %>%
+  filter(Phase == "exposure", Item.Type != "filler") %>%
+  select(Condition.Exposure.LexicalLabel, fricative, Item.Type, starts_with("cue_raw_M")) %>%
+  distinct() %>%
+  ggplot(
+    aes(x = .panel_x, y = .panel_y,
+        color = fricative, fill = fricative, shape = Item.Type, linetype = Item.Type)) +
+  geom_point(
+    data = . %>% filter(Condition.Exposure.LexicalLabel == "SH"),
+    alpha = .5) +
+  geom_smooth(
+    data = . %>% filter(Condition.Exposure.LexicalLabel == "SH"),
+    alpha = .5) +
+  geom_point(
+     data = . %>% filter(Condition.Exposure.LexicalLabel == "S"),
+     alpha = .5) +
+  geom_smooth(
+    data = . %>% filter(Condition.Exposure.LexicalLabel == "S"),
+    alpha = .5) +
+  geom_autodensity(alpha = .5, position = "identity") +
+  facet_matrix(
+    vars(starts_with("cue_raw_M")),
+    layer.lower = c(1, 2),
+    layer.upper = c(3, 4),
+    layer.diag = 5)
+```
+
+```{r}
+CISP_Test_CoG <- 
+  test.acoustics %>%
   select(word, cue_raw_M1) %>%
   rename(CoG = cue_raw_M1)
 
-CoG_Exp_measurements <- CISP_Exp_CoG %>%
+CoG_Exp_measurements <-
+  CISP_Exp_CoG %>%
   group_by(fricative, shift_percent) %>%
   summarise(mean = mean(CoG),
             sd = sd(CoG))

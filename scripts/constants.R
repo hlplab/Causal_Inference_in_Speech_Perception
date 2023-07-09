@@ -962,7 +962,7 @@ my_hypotheses <- function(m, experiment, plot = F) {
       mutate(Hypothesis = c(
         if (exposure_experiment) "Effect of SH-biased exposure reduces over blocks" else NULL,
         "Pen effect is stable over blocks",
-        "Continuum effect is stable over blocks",
+        "Acoustic effect is stable over blocks",
         "Visual bias effect is stable over blocks")) %>%
       format() %>%
       kable(caption = "Changes across blocks.")
