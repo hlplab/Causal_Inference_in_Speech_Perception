@@ -122,15 +122,17 @@ formatData <- function(.data, experiment) {
                # variables that are constant and UNinformative across all row
                assignmentstatus, hitstatus, reviewstatus, numavailable, numpending, numcomplete, annotation,
                # variables that are NAs across all rows
-               assignmentapprovaltime, assignmentrejecttime, deadline, feedback, reject, turkSubmitTo)) %>%
+               assignmentapprovaltime, assignmentrejecttime, deadline, feedback, reject)) %>%
         rename_all(~gsub("^(Answer.)", "", .x)) %>%
         rename(Assignment.Accept.DateTime.UTC = assignmentaccepttime,
-               Assignment.Submit.DateTime.UTC = assignmentsubmittime)
+               Assignment.Submit.DateTime.UTC = assignmentsubmittime) %>%
+        mutate(Platform = "MTurk")
       } else {
           # if hittypeid doesn't exist, this is a prolific file, and should be formatted as such
         rename(., 
                assignmentid = experiment_id,
-               ParticipantID = workerid)
+               ParticipantID = workerid) %>%
+          mutate(Platform = "Prolific")
       }} %>%
     # Remove variables that are no longer needed
     select(-any_of(c(      
@@ -256,7 +258,7 @@ formatData <- function(.data, experiment) {
     # read in item information about words during exposure.
     left_join(
       # load information about items
-      read_csv("../materials/video/Mapping_filename_to_word.csv") %>%
+      read_csv("../../materials/Video/Mapping_filename_to_word.csv") %>%
         dplyr::rename(
           Item.Word = Word,
           ItemID = StrippedName)) %>%
@@ -379,9 +381,37 @@ formatData <- function(.data, experiment) {
     select(
       -starts_with("CHECK"),
       -starts_with("REMOVE")) %>%
+    # format_more() starts here!
+    rename_with(~ gsub("Answer.", "", .x)) %>%
+    rename(
+      Participant.AudioType = audio_type,
+      Participant.AudioStall = audio_stall,
+      Participant.VideoStall = video_stall,
+      Talker.Sex = sex,
+      Talker.PronunciationShift = ssh2,
+      Talker.PronunciationProperties = pronun,
+      Talker.SpeechDescription = speaker) %>%
+    ### IMPORTANT: new formatdata() includes add_exclusions()!
+    add_exclusions() %>%
+    # Adding missing columns for test-only experiments
+    { if (!("Condition.Exposure.Pen" %in% names(.))) mutate(., Condition.Exposure.Pen = NA) else . } %>%
+    { if (!("Condition.Exposure.LexicalLabel" %in% names(.))) mutate(., Condition.Exposure.LexicalLabel = NA) else . } %>%
+    mutate(Response.ASHI = ifelse(Response == "ASHI", 1, 0)) %>%
+    select(
+      Experiment, ParticipantID, starts_with("Participant."),
+      Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, 
+      Condition.Test.Audio, Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Keybindings,
+      Phase, Block, Trial, Task, ItemID, 
+      Response, Response.ASHI, Response.RT, Response.CatchTrial,
+      Platform,
+      starts_with("Talker"),
+      starts_with("Duration"),
+      starts_with("Exclude")) %>%
     arrange(Experiment, ParticipantID, Phase, Block, Trial) %>%
     sortVars()
-  
+  #TODO make variable names more transparent (e.g. Experiment.Platform)
+  #TODO if we find any more columns we need, just add "Experiment." or "Participant."
+
   return(.data)
 }
 
@@ -391,7 +421,7 @@ anonymize_workers <- function(data, experiment) {
   data %>%
     mutate(
       # This ID is unique for each instance of a participant
-      ParticipantID = as.numeric(factor(paste(assignmentsubmittime, workerid, AssignmentID))),
+      ParticipantID = as.numeric(factor(paste(assignmentsubmittime, workerid, assignmentid))),
       # This ID keeps workers distinguishable, making it possible to detect multi-takers
       WorkerID = as.numeric(factor(workerid)),
       # This exclusion variable is declared here so that we can remove worker ID afterwards
@@ -399,6 +429,7 @@ anonymize_workers <- function(data, experiment) {
       Exclude_Participant.because_of_TechnicalDifficulty = case_when(
         experiment == "NORM A" & workerid %in% c("") ~ T,
         experiment == "NORM B" & workerid %in% c("") ~ T,
+        #TODO check with Gevher, but these might be contacters whose data never made it to us
         experiment == "NORM C" & workerid %in% c("A1KECPDVNOLSAM", "A36C5GQTSJBT4E", "A3EMMZZSXREI60", "A35UAZ5IKU14XW") ~ T,
         experiment == "NORM D" & workerid %in% c("") ~ T,
         experiment == "NORM E" & workerid %in% c("") ~ T,
@@ -408,7 +439,7 @@ anonymize_workers <- function(data, experiment) {
         # ANS6GA4YPWHPR: (batch 3) was using Chrome on Win 10 but the main instruction page didn't let her proceed. She tried again but couldn't due to accepting the HIT once.
         # A22TLF121MRXT1: (batch 3) was using Win 10 Pro, reported that the page became unresponsive after ~8 trials of videos, had to refresh the page and was advised to email us.
         # A3G5OWGKHW6OL5: (batch 1) accidentally refreshed the page
-        # A2ND52KJ1AIYEK: (batch 2) reported that the main instruction pae was broken and wouldn't let them proceed.
+        # A2ND52KJ1AIYEK: (batch 2) reported that the main instruction page was broken and wouldn't let them proceed.
         experiment == "B" & workerid %in% c("ARQR5NIFA1AJ", "A1FQDFM7BJ8GTR", "ANS6GA4YPWHPR", "A22TLF121MRXT1", "A3G5OWGKHW6OL5", "A2ND52KJ1AIYEK") ~ T,
         experiment == "C" & workerid %in% c("") ~ T,
         T ~ F)) %>%
@@ -499,18 +530,23 @@ prepVars <- function(.data) {
   return(.data)
 }
 
-
 add_exclusions <- function(data, exclude_based_on_catch_trials = T) {
   # Get rid of any pre-existing exclusion variables, except for exclusion for technical reasons
   data %<>%
-    select(-starts_with("Exclude_Participant"))#, Exclude_Participant.because_of_TechnicalDifficulty)
-  # # Multiple HITs
-  # data %<>%
-  #   # Remove all but chronologically first instance of experiments by the same participant
-  #   group_by(Experiment, WorkerID) %>%
-  #   mutate(
-  #     Exclude_Participant.because_of_MultipleExperiments = ifelse(Assignment.Submit.DateTime.UTC > min(Assignment.Submit.DateTime.UTC), T, F)) %>%
-  #   ungroup() 
+    select(-starts_with("Exclude_Participant"), Exclude_Participant.because_of_TechnicalDifficulty)
+  # Multiple HITs
+  data %<>%
+    # Remove all but chronologically first instance of experiments by the same participant
+    group_by(Experiment, WorkerID, Platform) %>%
+    mutate(
+      Exclude_Participant.because_of_MultipleExperiments = ifelse(Platform == "MTurk",
+        ifelse(Assignment.Submit.DateTime.UTC > min(Assignment.Submit.DateTime.UTC), T, F),
+        ifelse(userDateTime > min(userDateTime), T, F))) %>%
+    ungroup()
+   # this will not catch workers who take part in multiple *different* experiments
+   # (once each of, e.g. Exp1b and later Exp2a.) We mitigated this possibility via blocking
+   # WorkerIDs within each platform (MTurk and Prolific) such that the same workerID could not
+   # take part in subsequent studies. 
   
   # Lexical decision accuracy
   data %<>%
@@ -545,7 +581,7 @@ add_exclusions <- function(data, exclude_based_on_catch_trials = T) {
         na.rm = T),
       Accuracy.CatchTrials.onNonCatchTrial = mean(
         case_when(
-          Phase != "exposure" ~ NA_real_,
+          #Phase != "exposure" ~ NA_real_,
           Item.isCatchTrial ~ NA_real_,
           Item.isCatchTrial == Response.CatchTrial ~ 1,
           Item.isCatchTrial != Response.CatchTrial ~ 0,
@@ -553,10 +589,12 @@ add_exclusions <- function(data, exclude_based_on_catch_trials = T) {
         na.rm = T)) %>%
     ungroup() %>%
     mutate(
-      Exclude_Participant.because_of_CatchTrials = ifelse(
-        Accuracy.CatchTrials.onCatchTrial > .8 & Accuracy.CatchTrials.onNonCatchTrial > .9,
-        FALSE,
-        TRUE))
+      Exclude_Participant.because_of_CatchTrials = case_when(
+        Accuracy.CatchTrials.onCatchTrial >= .8 & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
+        ## If Accuracy.CatchTrials.onCatchTrial is NaN, then there were no catch trials
+        ## in entire experiment (this is expected of 1a-c, 2a-b). 
+        is.na(Accuracy.CatchTrials.onCatchTrial) & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
+        T ~ TRUE))
   
   # Exclude based on RTs
   data %<>%
@@ -618,8 +656,8 @@ add_exclusions <- function(data, exclude_based_on_catch_trials = T) {
       mutate(., Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal = F) else . } %>%
     mutate(
       Exclude_Participant.Reason = case_when(
-        #Exclude_Participant.because_of_TechnicalDifficulty ~ "Technical difficulty",
-        #Exclude_Participant.because_of_MultipleExperiments ~ "Repeat participant",
+        Exclude_Participant.because_of_TechnicalDifficulty ~ "Technical difficulty",
+        Exclude_Participant.because_of_MultipleExperiments ~ "Repeat participant",
         Exclude_Participant.because_of_IgnoredInstructions ~ "No headphones",
         Exclude_Participant.because_of_CatchQuestion ~ "Catch question or trials",
         exclude_based_on_catch_trials & Exclude_Participant.because_of_CatchTrials ~ "Catch question or trials",
