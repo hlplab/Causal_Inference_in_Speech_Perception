@@ -86,8 +86,9 @@ source("constants.R")
 We import the formatted data frames from Norming Experiments A and B, as well as Experiment A and Experiment 1 from Liu & Jaeger 2018
 
 ```{r}
-#rm(list = ls())
+rm(list = ls())
 
+# Experiment 1a-c
 load("../data/Experiment-NORM-A-before-exclusions.RData") #named d.test.A
 d.Exp1a <- d.test.A %>%
   mutate(Experiment = "CISP-1a")
@@ -100,22 +101,23 @@ load("../data/Experiment-NORM-C-before-exclusions.RData") #named d.test.C
 d.Exp1c <- d.test.C %>%
   mutate(Experiment = "CISP-1c")
 
-d.Exp1 <- bind_rows(d.Exp1a, d.Exp1b, d.Exp1c) %>%
+# Experiment 2a-b
+load("../data/Experiment-NORM-D-before-exclusions.RData") #named d.test.D
+d.Exp2a <- d.test.D %>%
+  mutate(Experiment = "CISP-2a")
+
+load("../data/Experiment-NORM-E-before-exclusions.RData") #named d.test.E
+d.Exp2b <- d.test.E %>%
+  mutate(Experiment = "CISP-2b",
+         # One participant responded "Female" in answer to Participant.Age??
+         # should be tracked down at some point...
+         Participant.Age = as.double(Participant.Age))
+
+
+d.Exp1and2 <- bind_rows(d.Exp1a, d.Exp1b, d.Exp1c,
+                      d.Exp2a, d.Exp2b) %>%
   rename(Participant.AudioType = Answer.audio_type,
-         Talker.Sex = Answer.sex) %>%
-  add_exclusions()
-
-rm(d.test.A, d.test.B, d.test.C,
-   d.Exp1a, d.Exp1b, d.Exp1c)
-
-# load("../data/Experiment-NORM-D-before-exclusions.RData") #named d.test.D
-# d.NormD.test <- d.test.D
-# 
-# load("../data/Experiment-NORM-E-before-exclusions.RData") #named d.test.E
-# d.NormE.test <- d.test.E %>%
-#   mutate(Participant.Age = as.double(Participant.Age))
-
-d.LJ18.test <- read.csv("../data/Liu Jaeger 2018/Liu-Jaeger-2018-test-1-s2.0-S0010027718300118-mmc2.csv")
+         Talker.Sex = Answer.sex)
 
 ##MTurk Experiments we don't really care about
 # load("../data/Experiment-A-before-exclusions.RData") #named d.A
@@ -130,19 +132,27 @@ d.LJ18.test <- read.csv("../data/Liu Jaeger 2018/Liu-Jaeger-2018-test-1-s2.0-S00
 # d.ExpC <- d.C.unexcluded %>%
 #   mutate(Experiment = "ExpC")
 
-load("../data/Experiment-2-before-exclusions.RData") #named d.Exp2
-d.Exp2 %<>%
+load("../data/Experiment-3-before-exclusions.RData") #named d.Exp2
+# can't be renamed to d.Exp3 because the load of Exp4 would overwrite
+CISP.Exp3 <- d.Exp2 %>%
   rename(Participant.AudioType = audio_type,
          Talker.Sex = sex) %>%
-  add_exclusions() %>%
-  mutate(Experiment = "CISP-2")
-
-load("../data/Experiment-3-before-exclusions.RData") #named d.Exp3
-d.Exp3 %<>%
-  rename(Participant.AudioType = audio_type,
-         Talker.Sex = sex) %>%
-  add_exclusions() %>%
   mutate(Experiment = "CISP-3")
+
+load("../data/Experiment-4-before-exclusions.RData") #named d.Exp3
+d.Exp4 <- d.Exp3 %>%
+  rename(Participant.AudioType = audio_type,
+         Talker.Sex = sex) %>%
+  mutate(Experiment = "CISP-4")
+
+# Now we can safely rename
+d.Exp3 <- CISP.Exp3
+
+d.LJ18.test <- read.csv("../data/Liu Jaeger 2018/Liu-Jaeger-2018-test-1-s2.0-S0010027718300118-mmc2.csv")
+
+rm(d.test.A, d.test.B, d.test.C, d.test.D, d.test.E,
+   d.Exp1a, d.Exp1b, d.Exp1c, d.Exp2a, d.Exp2b,
+   d.Exp2, CISP.Exp3)
 ```
 
 
