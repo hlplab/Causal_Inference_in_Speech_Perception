@@ -60,6 +60,9 @@ d.Exp1b <- read_tsv("./experiment-NORM-B/production/experiment-NORM-B-URLPARAMS-
          Experiment_internal = "NORM B")
 
 d.Exp1c <- read_tsv("./experiment-NORM-C/production/experiment-NORM-C-URLPARAMS-results.tab") %>%
+  # This dataset only includes 63 participants. One additional participant was recruited, but
+  # due to technical difficulties never submitted data. They are counted in the exclusion table
+  # as a "technical difficulties" exclusion
   formatData(experiment = "NORM C") %>%
   mutate(Experiment = "1c",
          Experiment_internal = "NORM C")
@@ -70,9 +73,14 @@ d.Exp2a <- read_tsv("./experiment-NORM-D/production/experiment-NORM-D-URLPARAMS-
          Experiment_internal = "NORM D")
 
 d.Exp2b <- read_tsv("./experiment-NORM-E/production/experiment-NORM-E-URLPARAMS-results.tab") %>%
-  formatData(experiment = "NORM E") %>%
+  # For Experiment 2b (internally named NORM E), we recoded catch trials to be
+  # the presence or absence of a pen in the mouth. For this reason, we don't
+  # exclude participants based on this criterion for that experiment.
+  formatData(experiment = "NORM E",
+             exclude_based_on_catch_trials = F) %>%
   mutate(Experiment = "2b",
          Experiment_internal = "NORM E")
+  
 
 # For experiments run on Prolific and Proliferate, a .csv for each column of data is returned
 # these experiments therefore require binding first, before formatting

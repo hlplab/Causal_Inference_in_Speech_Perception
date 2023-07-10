@@ -80,7 +80,7 @@ simplifyAnswer <- function(x) {
 }
 
 ## create functions for mturk
-formatData <- function(.data, experiment) {
+formatData <- function(.data, experiment, exclude_based_on_catch_trials = T) {
   require(tidyverse)
   require(assertthat)
   require(lubridate)
@@ -381,7 +381,6 @@ formatData <- function(.data, experiment) {
     select(
       -starts_with("CHECK"),
       -starts_with("REMOVE")) %>%
-    # format_more() starts here!
     rename_with(~ gsub("Answer.", "", .x)) %>%
     rename(
       Participant.AudioType = audio_type,
@@ -391,8 +390,7 @@ formatData <- function(.data, experiment) {
       Talker.PronunciationShift = ssh2,
       Talker.PronunciationProperties = pronun,
       Talker.SpeechDescription = speaker) %>%
-    ### IMPORTANT: new formatdata() includes add_exclusions()!
-    add_exclusions() %>%
+    add_exclusions(exclude_based_on_catch_trials = exclude_based_on_catch_trials) %>%
     # Adding missing columns for test-only experiments
     { if (!("Condition.Exposure.Pen" %in% names(.))) mutate(., Condition.Exposure.Pen = NA) else . } %>%
     { if (!("Condition.Exposure.LexicalLabel" %in% names(.))) mutate(., Condition.Exposure.LexicalLabel = NA) else . } %>%
@@ -591,6 +589,7 @@ add_exclusions <- function(data, exclude_based_on_catch_trials = T) {
     ungroup() %>%
     mutate(
       Exclude_Participant.because_of_CatchTrials = case_when(
+        !exclude_based_on_catch_trials ~ FALSE,
         Accuracy.CatchTrials.onCatchTrial >= .8 & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
         ## If Accuracy.CatchTrials.onCatchTrial is NaN, then there were no catch trials
         ## in entire experiment (this is expected of 1a-c, 2a-b). 
