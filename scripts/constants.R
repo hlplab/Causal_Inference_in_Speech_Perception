@@ -718,6 +718,11 @@ exclusionPlot <- function(data) {
       values = c(16, 15, 17, 10, 3, 4, 8, 9, 13)) +
     facet_wrap(~ Experiment, nrow = 1)
   
+  n.experiment <- length(unique(data$Experiment))
+  ggsave(p,
+         filename = paste0("../figures/exclusions-", paste(unique(data$Experiment), collapse = "-"), ".png"),
+         width = unit(n.experiment * 2.5, "cm"), height = unit(2.5 + 1, "cm"))
+  
   plot(p)
 }
 
