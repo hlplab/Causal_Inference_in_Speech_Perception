@@ -415,37 +415,6 @@ formatData <- function(.data, experiment, exclude_based_on_catch_trials = T) {
 }
 
 
-
-anonymize_workers <- function(data, experiment) {
-  data %>%
-    mutate(
-      # This ID is unique for each instance of a participant
-      ParticipantID = as.numeric(factor(paste(assignmentsubmittime, workerid, assignmentid))),
-      # This ID keeps workers distinguishable, making it possible to detect multi-takers
-      WorkerID = as.numeric(factor(workerid)),
-      # This exclusion variable is declared here so that we can remove worker ID afterwards
-      # 
-      Exclude_Participant.because_of_TechnicalDifficulty = case_when(
-        experiment == "NORM A" & workerid %in% c("") ~ T,
-        experiment == "NORM B" & workerid %in% c("") ~ T,
-        #TODO check with Gevher, but these might be contacters whose data never made it to us
-        experiment == "NORM C" & workerid %in% c("A1KECPDVNOLSAM", "A36C5GQTSJBT4E", "A3EMMZZSXREI60", "A35UAZ5IKU14XW") ~ T,
-        experiment == "NORM D" & workerid %in% c("") ~ T,
-        experiment == "NORM E" & workerid %in% c("") ~ T,
-        experiment == "A" & workerid %in% c("") ~ T,
-        # ARQR5NIFA1AJ: (batch 3) accidentally went out ("minimised screen") and came back
-        # A1FQDFM7BJ8GTR: (batch 3) completed it before, amazon advised them to email us for potential rejection
-        # ANS6GA4YPWHPR: (batch 3) was using Chrome on Win 10 but the main instruction page didn't let her proceed. She tried again but couldn't due to accepting the HIT once.
-        # A22TLF121MRXT1: (batch 3) was using Win 10 Pro, reported that the page became unresponsive after ~8 trials of videos, had to refresh the page and was advised to email us.
-        # A3G5OWGKHW6OL5: (batch 1) accidentally refreshed the page
-        # A2ND52KJ1AIYEK: (batch 2) reported that the main instruction page was broken and wouldn't let them proceed.
-        experiment == "B" & workerid %in% c("ARQR5NIFA1AJ", "A1FQDFM7BJ8GTR", "ANS6GA4YPWHPR", "A22TLF121MRXT1", "A3G5OWGKHW6OL5", "A2ND52KJ1AIYEK") ~ T,
-        experiment == "C" & workerid %in% c("") ~ T,
-        T ~ F)) %>%
-    select(-workerid)
-}
-
-
 sortVars <- function(.data) {
   .data %>% 
     relocate(
@@ -466,67 +435,6 @@ sortVars <- function(.data) {
       starts_with("Hit"),
       starts_with("Answer"),
       everything())
-}
-
-
-prepVars <- function(.data) {
-  .data %<>%
-    { if ("exposure" %in% .$Phase)
-      mutate(
-        ., 
-        Item.WordStatus = factor(Item.WordStatus, levels = c("non-word", "word")),
-        Item.Type = factor(Item.Type, levels = levels.Item.Type),
-        Item.TypeSimplified = factor(
-          case_when(
-            Item.Type %in% c("typical", "shifted") ~ "critical",
-            Item.Type == "filler" ~ "filler",
-            T ~ NA_character_), levels = c("filler", "critical")),
-        Item.TypeCritical = factor(
-          case_when(
-            Item.Type %in% c("typical", "shifted") ~ as.character(Item.Type),
-            T ~ NA_character_), levels = c("typical", "shifted")),
-        Condition.Exposure.Pen = factor(
-          Condition.Exposure.Pen, 
-          levels = levels.exposure.pen_locations, 
-          labels = labels.exposure.pen_locations),
-        Condition.Exposure.LexicalLabel = factor(
-          Condition.Exposure.LexicalLabel, 
-          levels = levels.exposure.lexical_labels,
-          labels = labels.exposure.lexical_labels)) else . } %>%
-    group_by(Experiment) %>%
-    mutate(
-      Response = factor(Response, levels = levels.response),
-      cCondition.Test.Audio = scale_Gelman(Condition.Test.Audio),
-      Condition.Test.Pen = factor(
-        Condition.Test.Pen, 
-        levels = levels.test.pen_locations,
-        labels = labels.test.pen_locations),
-      Condition.Test.OriginalLabel = factor(
-        Condition.Test.OriginalLabel, 
-        levels = levels.test.visual_labels,
-        labels = labels.test.visual_labels)) %>%
-    ungroup()
-  
-  if ("exposure" %in% .data$Phase) {
-    contrasts(.data$Item.WordStatus) = cbind(" (word vs. non-word)" = c(-.5, .5))
-    contrasts(.data$Item.Type) = cbind(" (filler vs. critical)" = c(.5, -.25, -.25), " (typical vs. shifted)" = c(0, .5, -.5))
-    contrasts(.data$Item.TypeSimplified) = cbind(" (critical vs. filler)" = c(-.5, .5))
-    contrasts(.data$Item.TypeCritical) = cbind(" (shifted vs. typical)" = c(-.5, .5))
-  }
-  
-  if (length(unique(.data$Condition.Exposure.LexicalLabel)) > 1) {
-    if (all(c("no_exposure", "SH", "S") %in% unique(.data$Condition.Exposure.LexicalLabel))) {
-      contrasts(.data$Condition.Exposure.LexicalLabel) = cbind("_EXPOSUREvsNONE" = c(-.5, .25, .25), "SHvsS" = c(0, -.5, .5)) 
-    } else if (all(c("SH", "S") %in% unique(.data$Condition.Exposure.LexicalLabel))) {
-      contrasts(.data$Condition.Exposure.LexicalLabel) = cbind("_SH" = c(-.5, .5))
-    } 
-  }
-  
-  if (length(unique(.data$Condition.Exposure.Pen)) > 1) contrasts(.data$Condition.Exposure.Pen) = cbind("_MOUTH" = c(-.5, .5))
-  if (length(unique(.data$Condition.Test.OriginalLabel)) > 1) contrasts(.data$Condition.Test.OriginalLabel) = cbind("_SH" = c(-.5, .5))
-  if (length(unique(.data$Condition.Test.Pen)) > 1) contrasts(.data$Condition.Test.Pen) = cbind("_MOUTH" = c(-.5, .5))
-
-  return(.data)
 }
 
 add_exclusions <- function(data, exclude_based_on_catch_trials = T) {
@@ -708,13 +616,13 @@ exclusionPlot <- function(data) {
     scale_color_manual(
       "Reason for exclusion",
       breaks = c("none", 
-                 "Technical difficulty", "Repeat participant", "No headphones", "Catch question or trials", "Lexical decision accuracy", "Swapped response keys", "Reaction time", "Too many missing trials"),
-      values = c("black", rep("red", 8))) +
+                 "Technical difficulty", "Repeat participant", "No headphones", "Catch question", "Catch trials", "Lexical decision accuracy", "Swapped response keys", "Reaction time", "Too many missing trials"),
+      values = c("black", rep("red", 9))) +
     scale_shape_manual(
       "Reason for exclusion",
       breaks = c("none", 
-                 "Technical difficulty", "Repeat participant", "No headphones", "Catch question or trials", "Lexical decision accuracy", "Swapped response keys", "Reaction time", "Too many missing trials"),
-      values = c(16, 15, 17, 10, 3, 4, 8, 9, 13)) +
+                 "Technical difficulty", "Repeat participant", "No headphones", "Catch question", "Catch trials", "Lexical decision accuracy", "Swapped response keys", "Reaction time", "Too many missing trials"),
+      values = c(16, 15, 17, 14, 10, 3, 4, 8, 9, 13)) +
     facet_wrap(~ Experiment, nrow = 1)
   
   n.experiment <- length(unique(data$Experiment))
@@ -729,7 +637,7 @@ exclusionPlot <- function(data) {
 excludeData <- function(data) {
   data %<>%
     filter(
-      Exclude_Participant.Reason == "none",
+      Exclude_Participant.Reason == "none" | Experiment == "LJ18-NORM",
       !Exclude_Trial.because_of_RT | Experiment == "LJ18-NORM")
   
   return(data)
@@ -879,6 +787,7 @@ prep_for_analysis <- function(data) {
 }
 
 fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% experiment) T else F) {
+  data %<>% filter(Experiment %in% experiment)
   multiple_experiments <- length(unique(data$Experiment)) > 1
   exposure_experiment <- length(unique(data$Condition.Exposure.LexicalLabel)) > 1
   
@@ -899,8 +808,7 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
   m <- brm(
     my_formula,
     data = 
-      data %>%
-      filter(Experiment %in% experiment) %>% 
+      data %>% 
       prep_for_analysis(),
     family = "bernoulli",
     prior = my_priors,
@@ -909,7 +817,7 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
     chains = 4, 
     warmup = if (multiple_experiments | exposure_experiment) 2000 else 1000,
     iter = if (multiple_experiments | exposure_experiment) 3000 else 2000,
-    control = list(adapt_delta = if (multiple_experiments | exposure_experiment) .95 else .8),
+    control = list(adapt_delta = if (multiple_experiments | exposure_experiment) .95 else .9),
     cores = min(parallel::detectCores(), 4), 
     threads = threading(threads = 4),
     file = paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-"))
