@@ -406,7 +406,8 @@ formatData <- function(.data, experiment) {
       Platform,
       starts_with("Talker"),
       starts_with("Duration"),
-      starts_with("Exclude")) %>%
+      starts_with("Exclude"),
+      starts_with("Item.")) %>%
     arrange(Experiment, ParticipantID, Phase, Block, Trial) %>%
     sortVars()
   #TODO make variable names more transparent (e.g. Experiment.Platform)

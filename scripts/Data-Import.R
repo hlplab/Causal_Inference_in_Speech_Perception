@@ -19,9 +19,27 @@ rm(list = ls())
 setwd("../../../../GitHub/Causal_Inference_in_Speech_Perception/scripts/")
 source("constants.R")
 
-setwd("../../../GitHub/Causal_inference_in_speech/data/raw/")
+# Acoustic info (will be bound to perception data)
+# get the exposure and test acoustics into one file
+CISP_acoustics <- 
+  bind_rows(
+    read_csv("../data/acoustics/acoustic_information_exposure_items.csv") %>%
+      filter(study == "Liu-Jaeger-2018",
+             fricative %in% c("S", "SH")) %>%
+      arrange(word, fricative, shift_percent) %>%
+      group_by(word) %>%
+      mutate(across(starts_with("sound_"), ~ last(.x))),
+    read_csv("../data/acoustics/acoustic_information_test_items.csv") %>% 
+      filter(fricative == "?SSH") %>%
+      mutate(
+        sound_preceeding = "AH0",
+        sound_following = "IY1",
+        word = as.character(word))) %>%
+  mutate(shift_percent = as.numeric(shift_percent)) 
 
 ### Raw data import from private repo
+setwd("../../../GitHub/Causal_inference_in_speech/data/raw/")
+
 # includes initial formatting
 # and now includes add_exclusions() within formatdata()
 
@@ -116,10 +134,23 @@ d.Exp4 %<>%
          Duration.Assignment = "Not Captured")
 
 ### Binding and export
+# Includes binding with acoustic data
 CISP_data <- rbind(d.Exp1a, d.Exp1b, d.Exp1c,
                    d.Exp2a, d.Exp2b,
-                   d.Exp3, d.Exp4)
+                   d.Exp3, d.Exp4) %>%
+  mutate(
+    Item.Word = case_when(
+      Phase == "exposure" ~ toupper(Item.Word), 
+      Phase == "test" ~as.character(Condition.Test.Audio),
+      T ~ NA_character_),
+    Item.ShiftPercent = case_when(
+      Item.Type == "shifted" ~ 50, 
+      Item.Type == "typical" ~ 0,
+      Item.Type == "filler" ~ 0, )) %>%
+  left_join(
+    CISP_acoustics, 
+    by = join_by(
+      Item.Word == word,
+      Item.ShiftPercent == shift_percent))
 
 write_csv(CISP_data, "../../../Causal_Inference_in_Speech_Perception/data/CISP_data.csv")
-
-
