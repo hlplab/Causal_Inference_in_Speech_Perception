@@ -774,11 +774,7 @@ prep_for_analysis <- function(data) {
           "contrasts<-"(factor(Condition.Test.Pen), , cbind("M" = c(-0.5, 0.5))),
         Condition.Test.OriginalLabel = 
           "contrasts<-"(factor(Condition.Test.OriginalLabel), , cbind("SH" = c(-0.5, 0.5)))) else . } %>%
-    mutate(Block = Block - 1) %>%
-    select(Experiment, 
-           Condition.Exposure.LexicalLabel, Condition.Exposure.Pen,
-           Condition.Test.OriginalLabel, Condition.Test.Pen, Block, Condition.Test.Audio, 
-           ParticipantID, Response.ASHI) 
+    mutate(Block = Block - 1) 
   
   if (length(unique(data$Experiment)) == 2)
     dimnames(contrasts(data$Experiment))[[2]] = sort(unique(data$Experiment))[2]
@@ -786,16 +782,12 @@ prep_for_analysis <- function(data) {
   return(data)
 }
 
-fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% experiment) T else F) {
+fit_test_model <- function(data, experiment, formula = NULL, file = NULL) {
   data %<>% filter(Experiment %in% experiment)
-  multiple_experiments <- length(unique(data$Experiment)) > 1
+  multiple_experiments <- length(unique(data$Experiment)) > 1 
   exposure_experiment <- length(unique(data$Condition.Exposure.LexicalLabel)) > 1
   
-  my_formula <- if (audio_only) {
-    bf(Response.ASHI ~
-         1 + mo(Block) * mo(Condition.Test.Audio) +
-         (1 + mo(Condition.Test.Audio) | ParticipantID))
-  } else {
+  formula <- if (is.null(formula)) {
     bf(paste(
       "Response.ASHI ~",
       "1 +", 
@@ -803,10 +795,10 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
       "Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio)",
       if (multiple_experiments) "* Experiment +" else "+",
       "(1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)"))
-  }
+  } else formula
   
   m <- brm(
-    my_formula,
+    formula,
     data = 
       data %>% 
       prep_for_analysis(),
@@ -820,23 +812,25 @@ fit_test_model <- function(data, experiment, audio_only = if ("LJ18-NORM" %in% e
     control = list(adapt_delta = if (multiple_experiments | exposure_experiment) .95 else .9),
     cores = min(parallel::detectCores(), 4), 
     threads = threading(threads = 4),
-    file = paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-"))
+    file = if (is.null(file)) paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-") else file)
   
   return(m)
 }
 
+format_hypothesis_tables <- function(table, experiment) {
+  table %>%
+  rename(BF = Evid.Ratio) %>%
+  mutate(
+    Experiment = experiment,
+    across(
+      c("Estimate", "Est.Error", starts_with("CI"), "Post.Prob"),
+      ~ signif(.x, 3)),
+    BF = ifelse(is.infinite(BF), paste(">", ndraws(m)), as.character(round(BF, 1)))) %>% 
+  relocate(Experiment, everything())
+}
+
 my_hypotheses <- function(m, experiment, plot = F) { 
   exposure_experiment <- length(unique(m$data$Condition.Exposure.LexicalLabel)) > 1
-  format <-  
-    . %>%
-    rename(BF = Evid.Ratio) %>%
-    mutate(
-      Experiment = experiment,
-      across(
-        c("Estimate", "Est.Error", starts_with("CI"), "Post.Prob"),
-        ~ signif(.x, 3)),
-      BF = ifelse(is.infinite(BF), paste(">", ndraws(m)), as.character(round(BF, 1)))) %>% 
-    relocate(Experiment, everything())
   
   # mo() operators imply that the effects of the other variables are assessed at the reference level of the
   # monotonic predictor. For Block, this is exactly what we want: evaluation of effects in the first Block.
@@ -859,8 +853,8 @@ my_hypotheses <- function(m, experiment, plot = F) {
         "More SH responses after SH-biased exposure",
         "Reduced effect of SH-bias when pen-in-mouth during critical exposure",
         "Enhanced effect of SH-bias when pen location matches in exposure & test")) %>%
-#        "Less SH responses after pen-in-mouth exposure")) %>%
-      format() %>%
+      #        "Less SH responses after pen-in-mouth exposure")) %>%
+      format_hypothesis_tables(experiment) %>%
       kable(caption = "Effects of exposure.")
   }
   
@@ -876,14 +870,14 @@ my_hypotheses <- function(m, experiment, plot = F) {
         "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0",
         "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0"),
       class = NULL) } %>%
-      .[["hypothesis"]] %>% 
-      mutate(Hypothesis = c(
-        "Pen location Mouth -> fewer ASHI-responses",
-        "Pen effect increases for more ASHI-like acoustic input",
-        "Pen effect increases for visually ASHI-biased input",
-        "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
-      format() %>%
-      kable(caption = "Effects of pen location.")
+    .[["hypothesis"]] %>% 
+    mutate(Hypothesis = c(
+      "Pen location Mouth -> fewer ASHI-responses",
+      "Pen effect increases for more ASHI-like acoustic input",
+      "Pen effect increases for visually ASHI-biased input",
+      "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
+    format_hypothesis_tables(experiment) %>%
+    kable(caption = "Effects of pen location.")
   
   l[["test.cues"]] <- 
     { h[["test.cues"]] <- hypothesis(
@@ -892,13 +886,13 @@ my_hypotheses <- function(m, experiment, plot = F) {
         "b_Condition.Test.OriginalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH > 0",
         "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"), 
       class = NULL, scope = "standard") } %>%
-      .[["hypothesis"]] %>% 
-      mutate(Hypothesis = c(
-        "Acoustic continuum more ASHI-like -> more ASHI-responses",
-        "Visual bias ASHI -> more ASHI-responses",
-        "Acoustic and visual bias effects are independent")) %>% 
-      format() %>%
-      kable(caption = "Effects of acoustic continuum and visual bias.")
+    .[["hypothesis"]] %>% 
+    mutate(Hypothesis = c(
+      "Acoustic continuum more ASHI-like -> more ASHI-responses",
+      "Visual bias ASHI -> more ASHI-responses",
+      "Acoustic and visual bias effects are independent")) %>% 
+    format_hypothesis_tables(experiment) %>%
+    kable(caption = "Effects of acoustic continuum and visual bias.")
   
   l[["test.block"]] <- 
     { h[["test.block"]] <- hypothesis(
@@ -909,14 +903,14 @@ my_hypotheses <- function(m, experiment, plot = F) {
         "bsp_moBlock:moCondition.Test.Audio = 0", 
         "bsp_moBlock:Condition.Test.OriginalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"),
       class = NULL) } %>%
-      .[["hypothesis"]] %>% 
-      mutate(Hypothesis = c(
-        if (exposure_experiment) "Effect of SH-biased exposure reduces over blocks" else NULL,
-        "Pen effect is stable over blocks",
-        "Acoustic effect is stable over blocks",
-        "Visual bias effect is stable over blocks")) %>%
-      format() %>%
-      kable(caption = "Changes across blocks.")
+    .[["hypothesis"]] %>% 
+    mutate(Hypothesis = c(
+      if (exposure_experiment) "Effect of SH-biased exposure reduces over blocks" else NULL,
+      "Pen effect is stable over blocks",
+      "Acoustic effect is stable over blocks",
+      "Visual bias effect is stable over blocks")) %>%
+    format_hypothesis_tables(experiment) %>%
+    kable(caption = "Changes across blocks.")
   
   if (plot) for (H in h) plot(H)
   return(l)

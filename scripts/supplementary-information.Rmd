@@ -44,6 +44,7 @@ library(tidyverse)
 library(magrittr)    # pipes
 library(ggtext)      # markdown formatting for text elements
 library(ggforce)     # facet matrix
+library(plotly)      # 3D plots
 library(lubridate)   # date conversion, etc.
 
 library(brms)        # Bayesian GL(M)Ms
@@ -169,12 +170,10 @@ d.test.Exp1 <-
 d.LJ18.test <-
   read.csv("../data/Liu Jaeger 2018/Liu-Jaeger-2018-test-1-s2.0-S0010027718300118-mmc2.csv") %>%
   # Filter to norming experiment
-  filter(
-    Condition == 'Filler') %>%
+  filter(Condition == 'Filler') %>%
   mutate(
     Experiment = factor('LJ18-NORM'),
     ParticipantID = as.factor(paste0("LJ18.", Subject)),
-    Condition.Test.Audio = Step,
     Condition.Test.Pen = "audio-only",
     Condition.Test.OriginalLabel = NA,
     Response = factor(case_when(Response == "SH" ~ "ASHI", Response == "S" ~ "ASI")),
@@ -186,11 +185,11 @@ d.LJ18.test <-
     # blocks for LJ18 to be blocks of 12 trials.
     Block = Trial %/% 12 + 1,
     Trial = Trial + 1,
-    WorkerID = ParticipantID,
-    Platform = "MTurk",
-    Assignment.Submit.DateTime.UTC = NA,
+    Experiment.Platform = "MTurk",
     Exclude_Participant.because_of_TechnicalDifficulty = FALSE,
-    across(c(Condition.Test.Pen, Condition.Test.OriginalLabel), factor))
+    across(c(Condition.Test.Pen, Condition.Test.OriginalLabel), factor)) %>%
+    rename(WorkerID = ParticipantID, Condition.Test.Audio = Step, Item.Filename = Filename, Response.RT = RT) %>%
+  select(-c(X, Label, Condition, Subject, WorkerID))
 
 d.test <- bind_rows(d.test.Exp1, d.LJ18.test)
 ```
@@ -216,9 +215,12 @@ d.test.Exp1 <-
   run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
 
 # To also make sure exclusions have been applied LJ18
-d.test %>%
+d.test %<>%
   excludeData() %>%
   filter(!is.na(Response.ASHI))
+
+# mean(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
+# sd(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
 ```
 
 ## Analyses
@@ -276,7 +278,13 @@ d.test.LJ18 <-
   d.test %>%
   run_exclusions(experiment = "LJ18-NORM")
 
-m.LJ18 <- fit_test_model(d.test.LJ18, "LJ18-NORM")
+m.LJ18 <- fit_test_model(
+  d.test.LJ18, 
+  experiment = "LJ18-NORM", 
+  formula = bf(Response.ASHI ~
+                 1 + mo(Block) * mo(Condition.Test.Audio) +
+                 (1 + mo(Condition.Test.Audio) | ParticipantID)))
+
 my_LJ18_hypothesis <- function(m, experiment = "LJ18-NORM") {
   format <-  
     . %>%
@@ -325,6 +333,85 @@ d.test.LJ18 %>%
     geom = "pointrange",
     color = "black") +
   scale_fill_grey()
+```
+### Acoustic analysis
+
+```{r}
+d.test.Exp1.byItem %>%
+  distinct(Condition.Test.Audio, cue_raw_M1, cue_raw_M2, cue_raw_M3) %>%
+  plotly::plot_ly(x = ~cue_raw_M1, y = ~ cue_raw_M2, z = ~ cue_raw_M3, size = ~ as.numeric(Condition.Test.Audio),
+                  line = list(width = 1), marker = list())
+
+d <- 
+  d.test.Exp1 %>%
+  filter(Experiment != "LJ18-NORM") 
+d.byItem <- 
+  d %>%
+  group_by(ItemID, Condition.Test.Audio, Condition.Test.OriginalLabel, Condition.Test.Pen) %>%
+  summarise(
+    Response.ASHI.mean = mean(Response.ASHI, na.rm = T),
+    Response.ASHI.n = sum(Response.ASHI, na.rm = T),
+    Response.ASI.n = sum(!is.na(Response.ASHI)) - Response.ASHI.n,
+    across(starts_with("cue"), first)) %>%
+  ungroup() %>%
+  # Remove all cues with any NAs
+  select(where(~ ! any(is.na(.x))))
+
+# Which cues are seen as predictive of participants' responses in stepwise model reduction over ordinary logistic regression?
+# (fails to take into account overconfidence about subjects)
+cues <- str_match(names(d.byItem), "cue.*")
+cues <- cues[!is.na(cues)]
+m <- glm(paste("cbind(Response.ASHI.n, Response.ASI.n) ~", paste(cues, collapse = "+")), data = d.byItem, family = binomial)
+summary(m)
+m <- step(m, direction = "both")
+summary(m)
+
+library(rms)
+m.lrm <- lrm(formula = as.formula(paste("Response.ASHI ~", paste(cues, collapse = "+"))), 
+              data = d %>% filter(Experiment != "LJ18-NORM"), 
+              x = T, y = T, linear.predictors = T, se.fit = T, tol = 1e-24)
+validate(m.lrm, bw = T, eps = 1e-24)
+
+
+# Principal component analysis
+p <- prcomp(x = d.byItem %>% select(Condition.Test.Audio, starts_with("cue")) %>% arrange(Condition.Test.Audio) %>% select(starts_with("cue")) %>% distinct())
+summary(p)
+biplot(p)
+
+# Add PCA components to data and visualize how the different cues load onto the first component (which captures >85% of the variability across cues)
+d %<>% bind_cols(predict(p, newdata = d))
+d.byItem %<>% bind_cols(predict(p, newdata = d.byItem))
+d.byItem %>%
+  select(Condition.Test.Audio, starts_with("cue_raw"), PC1) %>%
+  distinct() %>%
+  ggplot(
+    aes(x = .panel_x, y = .panel_y)) +
+  geom_point(aes(color = Condition.Test.Audio), alpha = .5) +
+  geom_smooth(alpha = .5) +
+  geom_autodensity(alpha = .5, position = "identity") +
+  scale_color_viridis_b() +
+  facet_matrix(
+    vars(starts_with("cue_raw"), starts_with("PC")),
+    layer.lower = 1,
+    layer.upper = 2,
+    layer.diag = 3)
+
+cues <- str_match(names(d.byItem), "PC.*")
+cues <- cues[!is.na(cues)]
+m.pca <- glm(paste("cbind(Response.ASHI.n, Response.ASI.n) ~", paste(cues, collapse = "+")), data = d.byItem, family = binomial)
+summary(m.pca)
+m.pca <- step(m.pca, direction = "both")
+summary(m.pca)
+
+# run regression predicting pen effect interacting with PCA of cues to determine w
+
+
+summary(glm(paste("Response.ASHI ~ (", paste(names(summary(m.pca)$coef[,1])[-1], collapse = "+"), ") * Condition.Test.Pen * Condition.Test.OriginalLabel"), data = d, family = binomial))
+summary(glm(paste("Response.ASHI ~ scale(PC1) * Condition.Test.Pen * Condition.Test.OriginalLabel"), data = d, family = binomial))
+m <- fit_test_model(
+  data = d %>% mutate(PC1 = factor(PC1, levels = as.character(sort(unique(d$PC1))), order = T)), 
+  experiment = c("CISP-1a", "CISP-1b", "CISP-1c"), 
+  formula = bf(Response.ASHI ~ Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(PC1) + (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(PC1) | ParticipantID)))
 ```
 
 # Experiments 2 and 2b
@@ -384,32 +471,11 @@ my_hypotheses(m.Exp2, experiment = "Exp 2") %>% map(print) -> TEMP
 plot_model_predictions(m.Exp2)
 ```
 
-### Comparison of Experiment 2a against Experiment 1c
-
-```{r results='markup'}
-m.Exp2vsExp1c <- fit_test_model(data = bind_rows(d.test.Exp1, d.test.Exp2), experiment = c("CISP-1c", "CISP-2"))
-# bind_rows(d.test.Exp1, d.test.Exp2) %>% filter(Experiment %in% c("CISP-1c", "CISP-2")) %>% prep_for_analysis() %>% group_by(Experiment, Block, ParticipantID) %>% tally() %>% summarise(mean.n = mean(n), sd.n = sd(n))
-
-# Experiment 2 is coded as 1 vs. Experiment 1c coded as -1
-# Does Experiment 2 have more ASHI responses (in the middle of the continuum), as would be expected if pen location
-# was not due to occlusion (since pen-in-mouth reduced ASHI responses)? YES, somewhat
-hypothesis(m.Exp2vsExp1c, "b_ExperimentCISPM2 + 2.5 * bsp_moCondition.Test.Audio:ExperimentCISPM2 > 0", class = NULL)
-hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:ExperimentCISPM2 > 0", class = NULL, robust = T)
-## These tests are less informative (but nicely unsurprising)
-# Is there still an effect of pen across the two experiments? YES, kinda.
-# hypothesis(m.Exp2vsExp1c, "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL)
-# Is there still an interaction between pen and acoustic/visual evidence across the two experiments? YES, but very weak
-# hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0", class = NULL)
-# hypothesis(m.Exp2vsExp1c, "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0", class = NULL)
-# And, are those effects of pen reduced (less negative) in Experiment 2 than in Experiment 1c? 
-hypothesis(m.Exp2vsExp1c, "b_Condition.Test.PenM:ExperimentCISPM2 > 0", class = NULL, robust = T)
-hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Condition.Test.PenM:ExperimentCISPM2 > 0", class = NULL, robust = T)
-hypothesis(m.Exp2vsExp1c, "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM:ExperimentCISPM2 > 0", class = NULL, robust = T)
-hypothesis(m.Exp2vsExp1c, "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM:ExperimentCISPM2 > 0", class = NULL, robust = T)
-```
+### Comparison of Experiment 2 against Experiment 1c
+The following graphs show the predictions for the effect of pen location in both Experiments 2 and 1c, based on a model fit to the data from both experiments (while allowing Experiment to interact with all other predictors):
 
 ```{r}
-summary(m.Exp2vsExp1c)$fixed %>% filter(map2(`l-95% CI`, `u-95% CI`, ~ !between(0, .x, .y)) %>% unlist())
+m.Exp2vsExp1c <- fit_test_model(data = bind_rows(d.test.Exp1, d.test.Exp2), experiment = c("CISP-1c", "CISP-2"))
 
 condition_effects_formatting <-
   list(  
@@ -436,27 +502,67 @@ ce <-
     method = "posterior_linpred")
 p <- plot(ce, facet_args = list(ncol = 2), plot = F)
 p[[1]] + condition_effects_formatting
-
-ce <-
-  conditional_effects(
-    m.Exp2vsExp1c,
-    effects = "Condition.Test.Audio:Condition.Test.Pen",
-    # adding random effects NULL (or not: set to NA)
-    re_formula = NA,
-    conditions = make_conditions(
-      x =
-        bind_rows(d.test.Exp1, d.test.Exp2) %>%
-        filter(Experiment %in% c("CISP-1c", "CISP-2")),
-      vars = c("Experiment")) %>%
-      mutate(
-        Block = 0,
-        Condition.Test.OriginalLabel = "SH",
-        cond__ = ifelse(Experiment == "CISP-1c", "no occluder", "occluder")),
-    robust = T,
-    method = "posterior_linpred")
-p <- plot(ce, facet_args = list(ncol = 2), plot = FALSE)
-p[[1]] + condition_effects_formatting
 ```
+
+If the effects of pen location in Experiments 1a-c were due to the pen visually occluding otherwise available visual cues to articulatorily relevant evidence, then both pen locations in Experiment 2 should yield *ashi*-responses similar to the pen-in-mouth condition of Experiment 1c (which used the exact same audio-visual stimuli as Experiment 2, except without a visual occluder). To test this hypothesis, we combined the data from Experiments 1c and 2, and coded both pen locations of Experiment 2 as a single new pen location ("occluded"). We then analyzed this combined data in the exact same way as Experiments 1c and 2, except that pen location now was a 3-way sliding difference-coded factor, testing (1) whether the occluded condition (Experiment 2) elicited fewer *ashi* responses than the pen-in-hand condition of Experiment 1c (as predicted by the occlusion hypothesis) and (2) whether the pen-in-mouth condition of Experiment 1c yielded fewer *ashi* responses than the occluded condition (as predicted if occlusion does *not* explain all of the effects of pen location in Experiments 1a-c).
+
+```{r}
+m.Exp2vsExp1c <- fit_test_model(
+    data = 
+      bind_rows(d.test.Exp1, d.test.Exp2) %>%
+      prep_for_analysis() %>%
+      mutate(
+        Condition.Test.Pen = 
+          factor(
+            ifelse(Experiment == "CISP-2", "O", as.character(Condition.Test.Pen)),
+            levels = c("H", "O", "M")),
+        Condition.Test.Pen = 
+          "contrasts<-"(factor(Condition.Test.Pen), , 
+                        cbind("OvsH" = c(-2/3, 1/3, 1/3), "MvsO" = c(-1/3, -1/3, 2/3)))),
+    experiment = c("CISP-1c", "CISP-2"),
+    formula = bf(Response.ASHI ~ 1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio) + 
+                   (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)),
+    file = "../models/Exp-CISP-2-vs-CISP-1c-occlusion-test")
+```
+
+Overall, the results of this analysis do not provide any notable evidence for the occlusion hypothesis while providing strong evidence for the compensation hypothesis. In the middle of the acoustic continuum, *ashi*-responses were *more* likely in Experiment 2, compared to even the pen-in-hand condition of Experiment 1c (BF = 2). This is the opposite of what would be expected if the main effects of pen location in Experiments 1a-c were due to visual occlusion. There also was strong evidence that the pen-in-mouth condition of Experiment 1c resulted in fewer *ashi*-responses than in Experiment 2 (BF = 73.1). 
+
+The only way in which the visual occluder in Experiment 2 resembled the pen-in-mouth condition in Experiment 1c was in terms of their interaction with visual evidence to the articulation of "sh": both the black rectangle in Experiment 2 and the pen-in-the-mouth in Experiment 1c reduced the effect of visually *ashi*-like stimuli, compared to the pen-in-hand condition (see third row of the two tables). These two effects were almost identical (comparison of occluder vs. pen-in-hand condition: BF = 14.2; comparison of pen-in-mouth vs. occluder condition: BF = .9). This result is not particularly surprising given that the black rectangle completely occluded any direct visual evidence of "s" vs. "sh" articulation. 
+
+```{r results='markup'}
+hypothesis(m.Exp2vsExp1c, 
+           c("b_Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenOvsH < 0", 
+             "bsp_moCondition.Test.Audio:Condition.Test.PenOvsH < 0", 
+             "b_Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH < 0",
+             "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH< 0"), class = NULL, robust = T) %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "Pen location Mouth -> fewer ASHI-responses",
+        "Pen effect increases for more ASHI-like acoustic input",
+        "Pen effect increases for visually ASHI-biased input",
+        "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
+      format_hypothesis_tables("Exp 2 vs. 1c") %>%
+      kable(caption = "Effects of pen location: occlusion vs. hand")
+
+hypothesis(m.Exp2vsExp1c, 
+           c("b_Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenMvsO < 0",
+             "bsp_moCondition.Test.Audio:Condition.Test.PenMvsO < 0", 
+             "b_Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0", 
+             "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0"), class = NULL, robust = T) %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "Pen location Mouth -> fewer ASHI-responses",
+        "Pen effect increases for more ASHI-like acoustic input",
+        "Pen effect increases for visually ASHI-biased input",
+        "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
+      format_hypothesis_tables("Exp 2 vs. 1c") %>%
+      kable(caption = "Effects of pen location: mouth vs. occlusion")
+
+# hypothesis(m.Exp2vsExp1c, 
+#            c("b_Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + b_Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0"), class = NULL, robust = T) 
+```
+
+
 
 ### Experiment 2b
 We first analyzed participants' accuracy in detecting when the pen was in talker's mouth, in which case participants were supposed to press SPACE. When the pen was in the talker's mouth, participants were only slightly above chance (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b", Condition.Test.Pen == "M") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))` accurate). When the pen was in the talker's hand, participants were much more accurate (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b", Condition.Test.Pen == "H") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))`). This asymmetry is not particularly surprising: correct detection of the pen in the mouth required a key press, whereas correct detection that the pen was not in the mouth (but rather in the hand) required no action at all. Critically, participants' overall accuracy was above chance (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))`). Overall, this suggests that participants could detect the pen presence above chance, while also suggesting that participants experienced the task to be difficult.
@@ -535,6 +641,122 @@ d.test.Exp3 %<>% run_exclusions(c("CISP-3"))
 ```
 
 ## Analysis
+
+### Exposure
+
+```{r}
+d.exposure.Exp3 %>%
+  ggplot(aes(x = cue_raw_M1)) +
+  geom_histogram(aes(fill = fricative), alpha = .5) +
+  facet_wrap(~ Condition.Exposure.LexicalLabel)
+
+d.exposure.Exp3 %>%
+  mutate(Response.WordStatusCorrect = ifelse(as.character(Response) == as.character(Item.WordStatus), 1, 0)) %>%
+  group_by(ParticipantID, Condition.Exposure.LexicalLabel, Condition.Exposure.Pen, Item.Type) %>%
+  summarise(Accuracy = mean(Response.WordStatusCorrect, na.rm = T)) %>%
+  ggplot(aes(x = Item.Type, y = Accuracy, color = Condition.Exposure.LexicalLabel)) +
+  geom_line(aes(group = ParticipantID), alpha = .3) + 
+  stat_summary(fun.data = mean_cl_boot, geom = "pointrange", position = position_dodge(.3)) +
+  facet_wrap(~ Condition.Exposure.Pen)
+
+d.exposure.Exp3.byItem <- 
+  d.exposure.Exp3 %>%
+  mutate(Response.WordStatusCorrect = ifelse(as.character(Response) == as.character(Item.WordStatus), 1, 0)) %>%
+  filter(Item.Type != "filler") %>%
+  group_by(ItemID, Condition.Exposure.LexicalLabel, Condition.Exposure.Pen, Item.Type) %>%
+  summarise(
+    Accuracy = mean(Response.WordStatusCorrect, na.rm = T),
+    across(starts_with("cue"), first)) %>%
+  arrange(ItemID, Condition.Exposure.LexicalLabel, Condition.Exposure.Pen) %>%
+  group_by(ItemID, Condition.Exposure.LexicalLabel, Item.Type) %>%
+  summarise(
+    Accuracy.PIM_advantage = Accuracy[2] - Accuracy[1],
+    across(starts_with("cue"), first)) %>%
+  ungroup() %>%
+  mutate(Item.Fricative = case_when(
+    Item.Type == "shifted" ~ Condition.Exposure.LexicalLabel,
+    Item.Type == "typical" & Condition.Exposure.LexicalLabel == "S"  ~ "SH",
+    Item.Type == "typical" & Condition.Exposure.LexicalLabel == "SH"  ~ "S",
+    T ~ NA_character_))
+
+d.exposure.Exp3.byItem %>%
+  ggplot(aes(x = Item.Type, y = Accuracy.PIM_advantage, color = Condition.Exposure.LexicalLabel)) +
+  geom_point(aes(size = cue_raw_M1), alpha = .3) + 
+  geom_line(aes(group = ItemID), alpha = .3)
+
+d.exposure.Exp3.byItem %>%
+  mutate(size = ifelse(Item.Type == "typical", 1, 5)) %>%
+  plotly::plot_ly(x = ~cue_raw_M1, y = ~ cue_raw_M2, z = ~ Accuracy.PIM_advantage, 
+                  color = ~ Item.Fricative, size = ~ size,
+                  line = list(width = 1), marker = list(), name = ~ ItemID)
+
+d.exposure.Exp3.byItem %>%
+  mutate(size = ifelse(Item.Type == "typical", 1, 5)) %>%
+  plotly::plot_ly(x = ~cue_raw_M1, y = ~ Accuracy.PIM_advantage, 
+                  color = ~ Item.Fricative, size = ~ size,
+                  line = list(width = 1), marker = list(), name = ~ ItemID)
+
+d.exposure.Exp3.byItem %<>% 
+  mutate(
+    across(starts_with("Item"), factor),
+    across(starts_with("cue_raw"), scale))
+contrasts(d.exposure.Exp3.byItem$Item.Fricative) <- cbind("Svs.SH" = c(1, -1))
+contrasts(d.exposure.Exp3.byItem$Item.Type) <- cbind("shifted" = c(1, -1))
+summary(lm(Accuracy.PIM_advantage ~ Item.Fricative * Item.Type, data = d.exposure.Exp3.byItem))
+# Does not improve overall fit: summary(lm(Accuracy.PIM_advantage ~ cue_raw_M1 * cue_raw_M2 + Item.Fricative * Item.Type, data = d.exposure.Exp3.byItem))
+```
+
+```{r}
+d.exposure.Exp3 %>%
+  ungroup() %>%
+  filter(Phase == "exposure", Item.Type != "filler") %>%
+  select(Condition.Exposure.LexicalLabel, fricative, Item.Type, starts_with("cue_raw_M")) %>%
+  distinct() %>%
+  ggplot(
+    aes(x = .panel_x, y = .panel_y,
+        color = fricative, fill = fricative, shape = Item.Type, linetype = Item.Type)) +
+  geom_point(
+    data = . %>% filter(Condition.Exposure.LexicalLabel == "SH"),
+    alpha = .5) +
+  geom_point(
+     data = . %>% filter(Condition.Exposure.LexicalLabel == "S"),
+     alpha = .5) +
+  geom_autodensity(alpha = .5, position = "identity") +
+  facet_matrix(
+    vars(starts_with("cue_raw_M")),
+    layer.lower = c(1),
+    layer.upper = c(2),
+    layer.diag = 3)
+
+d.exposure.Exp3 %>%
+  ungroup() %>%
+  filter(Phase == "exposure", Item.Type != "filler") %>%
+  select(Condition.Exposure.LexicalLabel, fricative, Item.Type, starts_with("cue_raw_M")) %>%
+  distinct() %>%
+  ggplot(
+    aes(x = .panel_x, y = .panel_y,
+        color = fricative, fill = fricative, shape = Item.Type, linetype = Item.Type)) +
+  geom_point(
+    data = . %>% filter(Condition.Exposure.LexicalLabel == "SH"),
+    alpha = .5) +
+  geom_smooth(
+    data = . %>% filter(Condition.Exposure.LexicalLabel == "SH"),
+    alpha = .5) +
+  geom_point(
+     data = . %>% filter(Condition.Exposure.LexicalLabel == "S"),
+     alpha = .5) +
+  geom_smooth(
+    data = . %>% filter(Condition.Exposure.LexicalLabel == "S"),
+    alpha = .5) +
+  geom_autodensity(alpha = .5, position = "identity") +
+  facet_matrix(
+    vars(starts_with("cue_raw_M")),
+    layer.lower = c(1, 2),
+    layer.upper = c(3, 4),
+    layer.diag = 5)
+```
+
+### Test
 
 ```{r}
 p <-
@@ -660,38 +882,6 @@ Potential approach to modeling consequences of pen in exposure
  5. This CoG_perceived would be the input e.g., belief-updating. In the simplest case, one would use the lexical endorsements of each participant as the ground truth and then update based on 1) those labels, 2) the CoG_perceived, 3) some initial estimate of the prior beliefs about s and sh along CoG, and 4) some range of kappa_0 and nu_0 {1, 10, 100}.
 
 ```{r}
-CISP_acoustics <-
-  bind_rows(
-    read_csv("../data/acoustics/acoustic_information_exposure_items.csv") %>%
-      filter(study == "Liu-Jaeger-2018",
-             fricative %in% c("S", "SH")) %>%
-      arrange(word, fricative, shift_percent) %>%
-      group_by(word) %>%
-      mutate(across(starts_with("sound_"), ~ last(.x))),
-    read_csv("../data/acoustics/acoustic_information_test_items.csv") %>%
-      filter(fricative == "?SSH") %>%
-      mutate(
-        sound_preceeding = "XXX", # <--- fill in correct IPA
-        sound_following = "IY1", # <--- I think this is correct but please check
-        word = as.character(word))) %>%
-  mutate(shift_percent = as.numeric(shift_percent))
-
-d.Exp4 %<>%
-  mutate(
-    Item.Word = case_when(
-      Phase == "exposure" ~ toupper(Item.Word),
-      Phase == "test" ~as.character(Condition.Test.Audio),
-      T ~ NA_character_),
-    Item.ShiftPercent = case_when(
-      Item.Type == "shifted" ~ 50,
-      Item.Type == "typical" ~ 0,
-      Item.Type == "filler" ~ 0, )) %>%
-  left_join(
-    CISP_acoustics,
-    by = join_by(
-      Item.Word == word,
-      Item.ShiftPercent == shift_percent))
-
 d.Exp4 %>%
   ggplot(aes(x = cue_raw_M1)) +
   geom_histogram(aes(fill = fricative), alpha = .5) +
