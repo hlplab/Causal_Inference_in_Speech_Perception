@@ -817,7 +817,7 @@ fit_test_model <- function(data, experiment, formula = NULL, file = NULL) {
   return(m)
 }
 
-format_hypothesis_tables <- function(table, experiment) {
+format_hypothesis_tables <- function(table, experiment, BF.max = 4000) {
   table %>%
   rename(BF = Evid.Ratio) %>%
   mutate(
@@ -825,7 +825,7 @@ format_hypothesis_tables <- function(table, experiment) {
     across(
       c("Estimate", "Est.Error", starts_with("CI"), "Post.Prob"),
       ~ signif(.x, 3)),
-    BF = ifelse(is.infinite(BF), paste(">", ndraws(m)), as.character(round(BF, 1)))) %>% 
+    BF = ifelse(is.infinite(BF), paste(">", BF.max), as.character(round(BF, 1)))) %>% 
   relocate(Experiment, everything())
 }
 
@@ -854,7 +854,7 @@ my_hypotheses <- function(m, experiment, plot = F) {
         "Reduced effect of SH-bias when pen-in-mouth during critical exposure",
         "Enhanced effect of SH-bias when pen location matches in exposure & test")) %>%
       #        "Less SH responses after pen-in-mouth exposure")) %>%
-      format_hypothesis_tables(experiment) %>%
+      format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
       kable(caption = "Effects of exposure.")
   }
   
@@ -876,7 +876,7 @@ my_hypotheses <- function(m, experiment, plot = F) {
       "Pen effect increases for more ASHI-like acoustic input",
       "Pen effect increases for visually ASHI-biased input",
       "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
-    format_hypothesis_tables(experiment) %>%
+    format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
     kable(caption = "Effects of pen location.")
   
   l[["test.cues"]] <- 
@@ -891,7 +891,7 @@ my_hypotheses <- function(m, experiment, plot = F) {
       "Acoustic continuum more ASHI-like -> more ASHI-responses",
       "Visual bias ASHI -> more ASHI-responses",
       "Acoustic and visual bias effects are independent")) %>% 
-    format_hypothesis_tables(experiment) %>%
+    format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
     kable(caption = "Effects of acoustic continuum and visual bias.")
   
   l[["test.block"]] <- 
@@ -909,7 +909,7 @@ my_hypotheses <- function(m, experiment, plot = F) {
       "Pen effect is stable over blocks",
       "Acoustic effect is stable over blocks",
       "Visual bias effect is stable over blocks")) %>%
-    format_hypothesis_tables(experiment) %>%
+    format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
     kable(caption = "Changes across blocks.")
   
   if (plot) for (H in h) plot(H)

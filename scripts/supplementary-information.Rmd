@@ -141,15 +141,11 @@ We conducted five test-only and six exposure-test experiments for this project. 
    * Did not include e.g. a condition where the talker's speech is still shifted when she removes the pen from her mouth, or where the speech is typical with pen in mouth but then becomes shifted when the pen leaves the mouth.
 
 
-# Experiments 1a-c
-
 ## Data import
-
 ```{r}
 d.CISP.ALL <-
   read.csv("../data/CISP_data.csv") %>%
   mutate(
-    Experiment = factor(paste("CISP", Experiment, sep = "-")),
     across(
       .cols = c(starts_with("Participant"), -Participant.Age, 
                 Phase, starts_with("Condition"), -Condition.Test.Audio, 
@@ -162,7 +158,11 @@ d.CISP.ALL <-
     across(
       .cols = c(Item.isCatchTrial, Response.CatchTrial),
       .fns = as.logical))
+```
 
+
+# Experiments 1a-c
+```{r}
 d.test.Exp1 <- 
   d.CISP.ALL %>%
   filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c"))
@@ -337,17 +337,13 @@ d.test.LJ18 %>%
 ### Acoustic analysis
 
 ```{r}
-d.test.Exp1.byItem %>%
-  distinct(Condition.Test.Audio, cue_raw_M1, cue_raw_M2, cue_raw_M3) %>%
-  plotly::plot_ly(x = ~cue_raw_M1, y = ~ cue_raw_M2, z = ~ cue_raw_M3, size = ~ as.numeric(Condition.Test.Audio),
-                  line = list(width = 1), marker = list())
-
 d <- 
   d.test.Exp1 %>%
   filter(Experiment != "LJ18-NORM") 
+
 d.byItem <- 
   d %>%
-  group_by(ItemID, Condition.Test.Audio, Condition.Test.OriginalLabel, Condition.Test.Pen) %>%
+  group_by(ItemID, Condition.Test.OriginalLabel, Condition.Test.Pen, Condition.Test.Audio) %>%
   summarise(
     Response.ASHI.mean = mean(Response.ASHI, na.rm = T),
     Response.ASHI.n = sum(Response.ASHI, na.rm = T),
@@ -356,6 +352,12 @@ d.byItem <-
   ungroup() %>%
   # Remove all cues with any NAs
   select(where(~ ! any(is.na(.x))))
+
+d.byItem %>%
+  distinct(Condition.Test.Audio, cue_raw_M1, cue_raw_M2, cue_raw_M3) %>%
+  plotly::plot_ly(x = ~cue_raw_M1, y = ~ cue_raw_M2, z = ~ cue_raw_M3, size = ~ as.numeric(Condition.Test.Audio),
+                  line = list(width = 1), marker = list())
+
 
 # Which cues are seen as predictive of participants' responses in stepwise model reduction over ordinary logistic regression?
 # (fails to take into account overconfidence about subjects)
@@ -403,9 +405,52 @@ summary(m.pca)
 m.pca <- step(m.pca, direction = "both")
 summary(m.pca)
 
+# Find best fitting shift along PC1 that removes the pen effect
+constant_shift_comparison <- function(shift, pred.name = "PC1") {
+  anova(
+    glm(paste("Response.ASHI ~ (", pred.name, ") * Condition.Test.OriginalLabel + Condition.Test.Pen * Condition.Test.OriginalLabel"), data = d %>% mutate(!! sym(pred.name) := ifelse(Condition.Test.Pen == "H", !! sym(pred.name), !! sym(pred.name) + shift)), family = binomial),
+    glm(paste("Response.ASHI ~ (", pred.name, ") * Condition.Test.Pen * Condition.Test.OriginalLabel"), data = d %>% mutate(!! sym(pred.name) := ifelse(Condition.Test.Pen == "H", !! sym(pred.name), !! sym(pred.name) + shift)), family = binomial))$Deviance[2]
+}
+
+proportional_shift <- function(data, shrink_proportion, pred.name) {
+  data %>% 
+    mutate(!! sym(pred.name) := ifelse(
+      Condition.Test.Pen == "H", 
+      !! sym(pred.name), 
+      min(!! sym(pred.name)) + (!! sym(pred.name) - min(!! sym(pred.name))) * shrink_proportion))
+}
+
+proportional_shift_comparison <- function(shrink_proportion, pred.name = "PC1") {
+  anova(
+    glm(paste("Response.ASHI ~ (", pred.name, ") * Condition.Test.OriginalLabel + Condition.Test.Pen * Condition.Test.OriginalLabel"), data = proportional_shift(d, shrink_proportion, pred.name), family = binomial),
+    glm(paste("Response.ASHI ~ (", pred.name, ") * Condition.Test.Pen * Condition.Test.OriginalLabel"), data = proportional_shift(d, shrink_proportion, pred.name), family = binomial))$Deviance[2]
+}
+
+o <- optim(par = 1, fn = proportional_shift_comparison, method = "BFGS")
+
 # run regression predicting pen effect interacting with PCA of cues to determine w
+d.byItem %>%
+  filter(ItemID != "Frame5") %>%
+  proportional_shift(shrink_proportion = o$par, pred.name = "PC1") %>%
+  group_by(Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Audio, PC1, PC9) %>%
+  summarise(Response.ASHI.mean = mean(Response.ASHI.mean)) %>%
+  plotly::plot_ly(x = ~ PC1, y = ~ PC9, z = ~ Response.ASHI.mean, size = ~ as.numeric(Condition.Test.Audio), color = ~ Condition.Test.Pen,
+                  line = list(width = 1), marker = list(), name = ~ Condition.Test.Pen, frame = ~ Condition.Test.OriginalLabel,
+                  type = "scatter3d")
+
+# run regression predicting pen effect interacting with PCA of cues to determine w
+d.byItem %>%
+  filter(ItemID != "Frame5") %>%
+  group_by(Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Audio, PC1, PC9) %>%
+  proportional_shift(shrink_proportion = o$par, pred.name = "PC1") %>%
+#  summarise(Response.ASHI.mean = mean(Response.ASHI.mean)) %>%
+  plotly::plot_ly(x = ~ PC1, y = ~ PC9, z = ~ Response.ASHI.mean, size = ~ as.numeric(Condition.Test.Audio), color = ~ Condition.Test.Pen,
+                  line = list(width = 1), marker = list(), name = ~ paste(ItemID, Condition.Test.Pen), frame = ~ Condition.Test.OriginalLabel,
+                  type = "scatter3d")
+```
 
 
+```{r}
 summary(glm(paste("Response.ASHI ~ (", paste(names(summary(m.pca)$coef[,1])[-1], collapse = "+"), ") * Condition.Test.Pen * Condition.Test.OriginalLabel"), data = d, family = binomial))
 summary(glm(paste("Response.ASHI ~ scale(PC1) * Condition.Test.Pen * Condition.Test.OriginalLabel"), data = d, family = binomial))
 m <- fit_test_model(
@@ -867,6 +912,60 @@ ggsave(
   width = fig.base_width * 3,
   height = fig.base_height + .5)
 ```
+
+
+# Experiment 5
+Experiment 5 was conducted XXX
+
+## Data import
+
+```{r}
+d.exposure.Exp5 <- 
+  d.CISP.ALL %>%
+  filter(Experiment == "CISP-5", Phase == "exposure") %>%
+  excludeData()
+
+d.test.Exp5 <- 
+  d.CISP.ALL %>%
+  filter(Experiment == "CISP-5", Phase == "test")
+```
+
+## Exclusions
+
+Experiment 5 did not include a practice phase. As such, the catch trial instructions were not cemented into listener's understanding, and catch trial performance was very poor. For subsequent studies, the procedure was adjusted to ameliorate this issue. For Experiment 5, catch trial accuracy is removed as an exclusion criterion.
+
+```{r}
+d.test.Exp5 %<>% 
+   mutate(Exclude_Participant.because_of_CatchTrials = FALSE,
+          Exclude_Participant.Reason = case_when(
+            Exclude_Participant.Reason == "Catch trials" ~ "none",
+            T ~ Exclude_Participant.Reason)) %>%
+         run_exclusions(c("CISP-5"))
+```
+
+## Analysis
+
+### Exposure
+
+Eventually will grab from Exp3
+
+### Test
+
+```{r}
+p <-
+  plot_data(
+    data = bind_rows(d.test.Exp5, d.test.Exp1),
+    experiment = "CISP-5", background_experiment = "CISP-1b")
+plot(p)
+
+ggsave(
+  p,
+  file = "../figures/Experiment 5.png",
+  width = fig.base_width * 3,
+  height = fig.base_height * 2 + .5)
+```
+
+
 
 # Acoustic Analyses (NOTES)
 Potential approach to modeling consequences of pen in exposure
