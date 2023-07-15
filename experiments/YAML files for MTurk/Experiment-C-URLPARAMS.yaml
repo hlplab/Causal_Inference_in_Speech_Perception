@@ -1,0 +1,89 @@
+---
+title: Speech Perception Experiment. MUST BE NATIVE ENGLISH SPEAKER AND WEAR HEADPHONES. MUST USE CHROME.
+description: Listen to sentences. Takes approximately 15-20 minutes.
+keywords: psychology,experiment,speech,words
+reward: 2.00
+assignments: 4
+######################################
+## HIT Timing Properties
+######################################
+
+# this Assignment Duration value is 60 * 90 = 1.5 hour
+assignmentduration: 5400
+
+# this HIT Lifetime value is 60*60*24*2 = 2 days
+hitlifetime: 172800
+
+# this Auto Approval period is 60*60*24*15 = 15 days
+autoapprovaldelay: 1296000
+
+qualifications:
+  builtin:
+    # this is a built-in qualification -- user must have > 95\% approval rate
+    - qualification: PercentAssignmentsApprovedRequirement
+      comparator: GreaterThan
+      value: 95
+      private: true
+    # this is a built-in qualification -- user must have successfully completed 90 HITs
+    - qualification: NumberHitsApprovedRequirement
+      comparator: GreaterThan
+      value: 70
+      private: true
+    # this is a built-in qualification -- user must be in the United States
+    - qualification: LocaleRequirement
+      comparator: EqualTo
+      locale: US
+      private: false
+  custom:
+    # Has not done related HLP Lab experiment
+    # Liu and Jaeger 2019 - Tongue Twisters
+   - qualification: 34TL3CYI86QRBGQQ569OXQFS1WRPHU
+     comparator: DoesNotExist
+     private: true
+     # Liu and Jaeger 2018 - causal inference
+   - qualification: 3Z755UFFEJQVFIP5MSA6JDZ6F1H19C
+     comparator: DoesNotExist
+     private: true
+     # Liu and Jaeger 2018 - causal inference (fill-up subjects)
+   - qualification: 3MDZXJHIC8PJ3G5P26X3CG49LGG52K
+     comparator: DoesNotExist
+     private: true
+     # CISP, Experiments NORM A and B, Experiment A
+   - qualification: 3ULGVXAI5J417X1PO1ET7OYVLN8245
+     comparator: DoesNotExist
+     private: true
+
+question:
+  url: https://www.hlp.rochester.edu/mturk/CISP/experiment-A/experiment-A.html?{params}
+  height: 750
+  input:
+  # 64 subjects for each of the 4 between-subject design condition; 256 subjects total
+  # Params encodes the following URL parameters:
+  # condition: M[OUTH], H[AND]
+  # label: S, SH
+  # respKeyExp: 0 ['X':'word', 'M':'non-word'], 1 ['X':'non-word', 'M':'word']
+  # respKeyTest: 0 ['X':'S', 'M':'SH'], 1 ['X':'SH', 'M':'S']
+  #
+  # This results in a total of 2 x 2 design and 2 x 2 nuisance factors to balance
+  # i.e, 4 x 4 = 16 different lists. We want 16 participants in each of these lists.
+  # Since 16 is above the cutoff for which MTurk charges 20% extra, we duplicate the
+  # .yaml file 4x and collect 4 participants for each of those duplicates.
+  # this has the additional benefit of allowing us to stagger the HITS so as not to
+  # allow late night takers.
+    ## all condition=M params commented out for Hand only pilot
+    # - params: condition=M&label=S&respKeyExp=0&respKeyTest=0&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    # - params: condition=M&label=S&respKeyExp=0&respKeyTest=1&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    # - params: condition=M&label=S&respKeyExp=1&respKeyTest=0&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    # - params: condition=M&label=S&respKeyExp=1&respKeyTest=1&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    # - params: condition=M&label=SH&respKeyExp=0&respKeyTest=0&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    # - params: condition=M&label=SH&respKeyExp=0&respKeyTest=1&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    # - params: condition=M&label=SH&respKeyExp=1&respKeyTest=0&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    # - params: condition=M&label=SH&respKeyExp=1&respKeyTest=1&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    - params: condition=H&label=S&respKeyExp=0&respKeyTest=0&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    - params: condition=H&label=S&respKeyExp=0&respKeyTest=1&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    - params: condition=H&label=S&respKeyExp=1&respKeyTest=0&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    - params: condition=H&label=S&respKeyExp=1&respKeyTest=1&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    - params: condition=H&label=SH&respKeyExp=0&respKeyTest=0&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    - params: condition=H&label=SH&respKeyExp=0&respKeyTest=1&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    - params: condition=H&label=SH&respKeyExp=1&respKeyTest=0&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T
+    - params: condition=H&label=SH&respKeyExp=1&respKeyTest=1&expSet=B&testSet=C&preloadStimuli=T&practFeedback=T&practEnforcePerfection=T

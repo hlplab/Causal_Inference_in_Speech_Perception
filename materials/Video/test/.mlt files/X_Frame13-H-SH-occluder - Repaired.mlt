@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mlt LC_NUMERIC="C" title="Shotcut version 21.03.21" producer="main_bin">
+  <profile description="automatic" width="1280" height="720" progressive="1" sample_aspect_num="1" sample_aspect_den="1" display_aspect_num="1280" display_aspect_den="720" frame_rate_num="2997" frame_rate_den="50" colorspace="709"/>
+  <playlist id="main_bin">
+    <property name="xml_retain">1</property>
+  </playlist>
+  <producer id="black" in="00:00:00.000" out="00:00:01.535">
+    <property name="length">00:00:01.552</property>
+    <property name="eof">pause</property>
+    <property name="resource">C:/Users/shawn/Downloads/asi merge videos/shotcut/0</property>
+    <property name="aspect_ratio">1</property>
+    <property name="mlt_service">color</property>
+    <property name="mlt_image_format">rgb24a</property>
+    <property name="set.test_audio">0</property>
+  </producer>
+  <playlist id="background">
+    <entry producer="black" in="00:00:00.000" out="00:00:01.535"/>
+  </playlist>
+  <producer id="producer0" in="00:00:00.000" out="00:00:01.535">
+    <property name="length">00:00:01.552</property>
+    <property name="eof">pause</property>
+    <property name="resource">C:/Users/shawn/Documents/GitHub/KJ08_replication/materials/Video/test/testSet C/8_Frame13-H-SH.mp4</property>
+    <property name="audio_index">1</property>
+    <property name="video_index">0</property>
+    <property name="mute_on_pause">0</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="seekable">1</property>
+    <property name="aspect_ratio">1</property>
+    <property name="creation_time">2021-06-09T22:10:18</property>
+    <property name="shotcut:hash">a4622cacca92d280347ece632d474442</property>
+    <property name="global_feed">1</property>
+    <property name="shotcut:caption">8_Frame13-H-SH.mp4</property>
+  </producer>
+  <playlist id="playlist0">
+    <property name="shotcut:video">1</property>
+    <property name="shotcut:name">V1</property>
+    <entry producer="producer0" in="00:00:00.000" out="00:00:01.535"/>
+  </playlist>
+  <producer id="producer1" in="00:00:00.000" out="00:00:00.717">
+    <property name="length">00:00:00.734</property>
+    <property name="eof">pause</property>
+    <property name="resource">C:/Users/shawn/Documents/GitHub/KJ08_replication/materials/Audio/TestSeries/steps 8-22 from 31 step continuum used in Liu and Jaeger 2018/8.wav</property>
+    <property name="audio_index">0</property>
+    <property name="video_index">-1</property>
+    <property name="mute_on_pause">0</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="seekable">1</property>
+    <property name="creation_time">2021-06-01T23:05:31</property>
+    <property name="shotcut:hash">e53c61c2e68341ba3cb8ddf3d7bc54d3</property>
+    <property name="ignore_points">0</property>
+    <property name="shotcut:caption">8.wav</property>
+    <property name="global_feed">1</property>
+    <property name="xml">was here</property>
+  </producer>
+  <playlist id="playlist1">
+    <property name="shotcut:audio">1</property>
+    <property name="shotcut:name">A1</property>
+    <blank length="00:00:00.284"/>
+    <entry producer="producer1" in="00:00:00.000" out="00:00:00.717"/>
+  </playlist>
+  <producer id="producer2" in="00:00:00.000" out="03:59:59.993">
+    <property name="length">04:00:00.000</property>
+    <property name="eof">pause</property>
+    <property name="resource">C:/Users/shawn/Pictures/black-rectangle.png</property>
+    <property name="ttl">1</property>
+    <property name="aspect_ratio">1</property>
+    <property name="progressive">1</property>
+    <property name="seekable">1</property>
+    <property name="mlt_service">qimage</property>
+    <property name="creation_time">2021-03-29T02:54:35</property>
+    <property name="shotcut:caption">black-rectangle.png</property>
+    <property name="shotcut:hash">ba5a926353dc9ccfbe07d4766bf6fe9b</property>
+    <property name="ignore_points">0</property>
+    <property name="global_feed">1</property>
+    <property name="xml">was here</property>
+    <filter id="filter0" in="00:00:01.084" out="00:00:01.752">
+      <property name="background">color:#00000000</property>
+      <property name="mlt_service">affine</property>
+      <property name="shotcut:filter">affineSizePosition</property>
+      <property name="transition.fill">1</property>
+      <property name="transition.distort">1</property>
+      <property name="transition.rect">722.393 301.809 179.123 99.746 1</property>
+      <property name="transition.valign">middle</property>
+      <property name="transition.halign">center</property>
+      <property name="shotcut:animIn">00:00:00.000</property>
+      <property name="shotcut:animOut">00:00:00.000</property>
+      <property name="transition.threads">0</property>
+      <property name="transition.fix_rotate_x">0</property>
+    </filter>
+  </producer>
+  <playlist id="playlist2">
+    <property name="shotcut:video">1</property>
+    <property name="shotcut:name">V2</property>
+    <blank length="00:00:00.334"/>
+    <entry producer="producer2" in="00:00:01.084" out="00:00:01.752"/>
+  </playlist>
+  <producer id="producer3" in="00:00:00.000" out="00:00:00.717">
+    <property name="length">00:00:00.734</property>
+    <property name="eof">pause</property>
+    <property name="resource">C:/Users/shawn/Documents/GitHub/KJ08_replication/materials/Audio/TestSeries/steps 8-22 from 31 step continuum used in Liu and Jaeger 2018/20.wav</property>
+    <property name="audio_index">0</property>
+    <property name="video_index">-1</property>
+    <property name="mute_on_pause">0</property>
+    <property name="mlt_service">avformat-novalidate</property>
+    <property name="seekable">1</property>
+    <property name="creation_time">2021-06-01T23:05:31</property>
+    <property name="shotcut:hash">a169954865e25aa24c720cc0076b6e43</property>
+    <property name="ignore_points">0</property>
+    <property name="shotcut:caption">20.wav</property>
+    <property name="global_feed">1</property>
+    <property name="xml">was here</property>
+  </producer>
+  <playlist id="playlist3">
+    <property name="shotcut:audio">1</property>
+    <property name="shotcut:name">A2</property>
+    <blank length="00:00:00.284"/>
+    <entry producer="producer3" in="00:00:00.000" out="00:00:00.717"/>
+  </playlist>
+  <tractor id="tractor0" title="Shotcut version 21.03.21" global_feed="1" in="00:00:00.000" out="00:00:01.535">
+    <property name="shotcut">1</property>
+    <property name="shotcut:scaleFactor">11.7218</property>
+    <property name="shotcut:projectAudioChannels">2</property>
+    <property name="shotcut:projectFolder">0</property>
+    <track producer="background"/>
+    <track producer="playlist0" hide="audio"/>
+    <track producer="playlist1" hide="both"/>
+    <track producer="playlist2" hide="audio"/>
+    <track producer="playlist3" hide="video"/>
+    <transition id="transition0">
+      <property name="a_track">0</property>
+      <property name="b_track">1</property>
+      <property name="mlt_service">mix</property>
+      <property name="always_active">1</property>
+      <property name="sum">1</property>
+    </transition>
+    <transition id="transition1">
+      <property name="a_track">0</property>
+      <property name="b_track">1</property>
+      <property name="version">0.9</property>
+      <property name="mlt_service">frei0r.cairoblend</property>
+      <property name="disable">1</property>
+    </transition>
+    <transition id="transition2">
+      <property name="a_track">0</property>
+      <property name="b_track">2</property>
+      <property name="mlt_service">mix</property>
+      <property name="always_active">1</property>
+      <property name="sum">1</property>
+    </transition>
+    <transition id="transition3">
+      <property name="a_track">0</property>
+      <property name="b_track">3</property>
+      <property name="mlt_service">mix</property>
+      <property name="always_active">1</property>
+      <property name="sum">1</property>
+    </transition>
+    <transition id="transition4">
+      <property name="a_track">1</property>
+      <property name="b_track">3</property>
+      <property name="version">0.9</property>
+      <property name="mlt_service">frei0r.cairoblend</property>
+      <property name="threads">0</property>
+      <property name="disable">0</property>
+    </transition>
+    <transition id="transition5">
+      <property name="a_track">0</property>
+      <property name="b_track">4</property>
+      <property name="mlt_service">mix</property>
+      <property name="always_active">1</property>
+      <property name="sum">1</property>
+    </transition>
+  </tractor>
+</mlt>
+

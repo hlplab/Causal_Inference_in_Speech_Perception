@@ -1,0 +1,85 @@
+<!DOCTYPE HTML>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <link rel="stylesheet" type="text/css" href="JSEXP/styles/style.css" />
+        <title>Speech perception experiment</title>
+        <script src="https://proliferate.alps.science/static/js/proliferate.js" type="text/javascript"></script>
+    </head>
+
+    <body>
+        <h1></h1>
+
+        <div id="textContainer">
+            <div id="instructions" >
+            </div>
+            <div id="taskInstructions">
+            </div>
+
+            <form id="mturk_form" method="POST" action="https://www.mturk.com/mturk/externalSubmit">
+                <input id="submitButton" type="submit" name="Submit" value="Submit" />
+            </form>
+            <div id="continue"><!-- to be populated in JS so that it does not show in incompatible browsers -->
+            </div>
+            <div id="errorMessage"><!-- this message will show even if no JS is enabled. Make sure it explains which browsers to use -->
+              <p>It looks like you do not have Javascript enabled or that your browser is incompatible with this experiment/HIT.</p>
+              <p>Please <strong>do not accept this experiment/HIT</strong>, your results will be automatically rejected.</p>
+              <p>If you'd like to do this experiment/HIT, download an up-to-date version of one of the following browsers, active Javascript, and try again:</p>
+              <div id="browserIcons">
+                <a target="_blank" href="http://www.google.com/chrome"><img src="JSEXP/img/64-chrome.png" alt="Chrome" /></a>
+                <!-- <a target="_blank" href="http://www.mozilla.com/en-US/firefox/new/"><img src="img/64-firefox.png" alt="Firefox" /></a> -->
+                <!-- issues with Firefox in terms of result saving -->
+                <a target="_blank" href="http://www.opera.com/"><img src="JSEXP/img/64-opera.png" alt="Opera" /></a>
+                <!-- <a target="_blank" href="http://www.apple.com/safari/"><img src="img/64-safari.png" alt="Safari" /></a> -->
+                <!-- issues with Safare 14+ (13 is ok) -->
+                <p>If you feel you received this message in error, you can <a target="_blank" href="mailto: hlplab@gmail.com">email us</a>.</strong>
+                We can best help you if you include a screen shot of this page in your email.
+                If you also know your operating system (Windows, MacOS, etc. with version number),
+                device type (phone, tablet, laptop/pc, etc.), and browser (e.g., Chrome, Firefox, or Safari--best with
+                version number) that can help us to further narrow down the issue. Thank you!</p>
+                <p><strong>We would appreciate if you return the experiment/HIT.</strong></p>
+              </div>
+            </div>
+        </div> <!--END textContainer -->
+
+        <div id="videoContainer">
+        </div>
+
+        <div id="fixation">
+        </div>
+
+        <div id="progressBar">
+        </div>
+
+        <div id="catchTrialInstruction">
+        </div>
+
+        <div id="catchTrialFeedbackTrue">
+        </div>
+
+        <div id="audioContainer" >
+        </div>
+
+        <div id="calibFit" style="position:absolute; bottom:10px; right:10px;"></div>
+        <div id="buttons"></div>
+
+        <!-- general javascript, incl. general definitions of objects for experiment, block, and stimulus lists  -->
+        <script src="JSEXP/js/imported/underscore-1.12.0.min.js" type="text/javascript" ></script>
+        <script src="JSEXP/js/imported/jquery-1.10.1.min.js" type="text/javascript" ></script>
+        <script src="JSEXP/js/imported/modernizr.min.js" type="text/javascript"></script>
+        <script src="JSEXP/js/experimentControl_identification.js" type="text/javascript" ></script>
+        <script src="JSEXP/js/stimuli.js" type="text/javascript" ></script>
+        <script src="JSEXP/js/mturk_helpers.js" type="text/javascript"></script>
+        <script src="JSEXP/js/progressBar.js" type="text/javascript"></script>
+        <script src="JSEXP/js/utilities.js" type="text/javascript"></script>
+        <script src="JSEXP/js/_arrays.js" type="text/javascript"></script>
+        <script src="JSEXP/js/blocks/instructionBlock.js" type="text/javascript"></script>
+        <script src="JSEXP/js/blocks/soundCheckBlock.js" type="text/javascript"></script>
+        <script src="JSEXP/js/blocks/mediaLoadingBlock.js" type="text/javascript" ></script>
+        <script src="JSEXP/js/blocks/identificationBlock.js" type="text/javascript" ></script>
+
+        <!-- Here is where your experiment javascript file is specified -->
+        <script src="custom_functions.js" type="text/javascript"></script>
+        <script src="experiment-A.js" type="text/javascript"></script>
+
+</body> </html>

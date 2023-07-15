@@ -93,7 +93,7 @@ knitr::knit_hooks$set(warning = color_block('orange'))
 ```
 
 # Context statement
-This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab, University of Rochester, is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206/7 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information.
+This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab at the University of Rochester is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206/7 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information.
 
 # Chronology of Experiments (NEEDS WORK)
 We conducted five test-only and six exposure-test experiments for this project. The main text does summarize these experiments in the order that makes them most accessible. Here we summarize when those experiments were conducted.
@@ -140,8 +140,6 @@ We conducted five test-only and six exposure-test experiments for this project. 
    * 2 x 2 of bias (S or SH, between subjects), and pen location in test (hand or mouth, within-subject)
    * Did not include e.g. a condition where the talker's speech is still shifted when she removes the pen from her mouth, or where the speech is typical with pen in mouth but then becomes shifted when the pen leaves the mouth.
 
-
-## Data import
 ```{r}
 d.CISP.ALL <-
   read.csv("../data/CISP_data.csv") %>%
@@ -158,10 +156,28 @@ d.CISP.ALL <-
     across(
       .cols = c(Item.isCatchTrial, Response.CatchTrial),
       .fns = as.logical))
+
+get_demographics <- function(data, experiment = unique(data$Experiment)) {
+  data %<>%
+    filter(Experiment %in% experiment) %>%
+    select(ParticipantID, starts_with("Participant")) %>%
+    distinct() %>%
+    mutate(across(-Participant.Age, as.character)) %>%
+    replace_na(list(Participant.Sex = "unknown", Participant.Race = "unknown", Participant.Ethnicity = "unknown"))
+  
+  print(round(prop.table(table(data$Participant.Sex)) * 100, 1))
+  print(round(prop.table(table(data$Participant.Ethnicity)) * 100, 1))
+  print(round(prop.table(table(data$Participant.Race)) * 100, 1))
+  cat(paste0("Mean age = ", round(mean(data$Participant.Age, na.rm = T), 1), " (SD = ", round(sd(data$Participant.Age, na.rm = T), 1), "). Interquartile range = ", summary(data$Participant.Age)[2], "-", summary(data$Participant.Age)[5], ". Declined to report: ", percent(summary(data$Participant.Age)[7] / nrow(data))))
+}
+
+get_demographics(data = d.CISP.ALL, experiment = c("CISP-1a", "CISP-1b", "CISP-1c", "CISP-2a", "CISP-2b"))
 ```
 
-
 # Experiments 1a-c
+
+## Data import
+
 ```{r}
 d.test.Exp1 <- 
   d.CISP.ALL %>%
@@ -439,28 +455,30 @@ d.byItem %>%
                   type = "scatter3d")
 
 # run regression predicting pen effect interacting with PCA of cues to determine w
-d.byItem %>%
-  filter(ItemID != "Frame5") %>%
-  group_by(Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Audio, PC1, PC9) %>%
-  proportional_shift(shrink_proportion = o$par, pred.name = "PC1") %>%
-#  summarise(Response.ASHI.mean = mean(Response.ASHI.mean)) %>%
-  plotly::plot_ly(x = ~ PC1, y = ~ PC9, z = ~ Response.ASHI.mean, size = ~ as.numeric(Condition.Test.Audio), color = ~ Condition.Test.Pen,
-                  line = list(width = 1), marker = list(), name = ~ paste(ItemID, Condition.Test.Pen), frame = ~ Condition.Test.OriginalLabel,
-                  type = "scatter3d")
+# d.byItem %>%
+#   filter(ItemID != "Frame5") %>%
+#   group_by(Condition.Test.Pen, Condition.Test.OriginalLabel, Condition.Test.Audio, PC1, PC9) %>%
+#   proportional_shift(shrink_proportion = o$par, pred.name = "PC1") %>%
+# #  summarise(Response.ASHI.mean = mean(Response.ASHI.mean)) %>%
+#   plotly::plot_ly(x = ~ PC1, y = ~ PC9, z = ~ Response.ASHI.mean, size = ~ as.numeric(Condition.Test.Audio), color = ~ Condition.Test.Pen,
+#                   line = list(width = 1), marker = list(), name = ~ paste(ItemID, Condition.Test.Pen), frame = ~ Condition.Test.OriginalLabel,
+#                   type = "scatter3d")
 ```
 
 
 ```{r}
-summary(glm(paste("Response.ASHI ~ (", paste(names(summary(m.pca)$coef[,1])[-1], collapse = "+"), ") * Condition.Test.Pen * Condition.Test.OriginalLabel"), data = d, family = binomial))
-summary(glm(paste("Response.ASHI ~ scale(PC1) * Condition.Test.Pen * Condition.Test.OriginalLabel"), data = d, family = binomial))
-m <- fit_test_model(
-  data = d %>% mutate(PC1 = factor(PC1, levels = as.character(sort(unique(d$PC1))), order = T)), 
-  experiment = c("CISP-1a", "CISP-1b", "CISP-1c"), 
-  formula = bf(Response.ASHI ~ Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(PC1) + (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(PC1) | ParticipantID)))
+# summary(glm(paste("Response.ASHI ~ (", paste(names(summary(m.pca)$coef[,1])[-1], collapse = "+"), ") * Condition.Test.Pen * Condition.Test.OriginalLabel"), data = d, family = binomial))
+# summary(glm(paste("Response.ASHI ~ scale(PC1) * Condition.Test.Pen * Condition.Test.OriginalLabel"), data = d, family = binomial))
+# m <- fit_test_model(
+#   data = d %>% mutate(PC1 = factor(PC1, levels = as.character(sort(unique(d$PC1))), order = T)), 
+#   experiment = c("CISP-1a", "CISP-1b", "CISP-1c"), 
+#   formula = bf(Response.ASHI ~ Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(PC1) + (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(PC1) | ParticipantID)))
 ```
 
 # Experiments 2 and 2b
-We conducted two experiments that were designed to test whether listeners need to see the effects of the pen on the articulators *during the production of the fricative*, or whether the presence of a pen during the production of a fricative is sufficient to cause the effects observed in Experiments 1a-c. To this end, Experiments 2 and 2b introduced a black box that occluded the talker's mouth during the articulation of the fricative (see main text for details). The two experiments were identical except that Experiment 2b introduced an additional task intended to assure that participants paid attention to the videos (rather than just the audio). This change in procedure from Experiment 2 to 2b was intended to address an alternative explanation for the results of Experiment 2. As reported below, Experiment 2 did not find the effects of pen location that were present in Experiments 1a-c. This raised the question as to whether participants in Experiment 2 failed to pay attention to the video (unlike in Experiments 1a-c). The additional task in Experiment 2b addressed this possibility.
+We conducted two experiments that were designed to test whether listeners need to see the effects of the pen on the articulators *during the production of the fricative*, or whether the presence of a pen during the production of a fricative is sufficient to cause the effects observed in Experiments 1a-c. To this end, Experiments 2 and 2b introduced a black box that occluded the talker's mouth during the articulation of the fricative (see main text for details). The two experiments were identical except that Experiment 2b introduced an additional task intended to assure that participants paid attention to the videos (rather than just the audio). This change in procedure from Experiment 2 to 2b was intended to address an alternative explanation for the results of Experiment 2. As reported below, Experiment 2 did not find the effects of pen location that were present in Experiments 1a-c. This raised the question as to whether participants in Experiment 2 failed to pay attention to the video (unlike in Experiments 1a-c). 
+
+On the one hand, the catch task employed in Experiment 2 (same as in Experiments 1a-c: participants were asked to press "B" when they saw a white dot in the video) would seem to reject that possibility: as in Experiments 1a-c, participants that pressed "B" in the absence of a white dot were excluded from the analysis of Experiment 2. However, since none of the trials actually contained a white dot, this means that participants that did not pay any attention to the video and never pressed "B" would fail to be excluded from the analysis of Experiment 2. In Experiment 2b, we thus replaced the catch task from Experiments 1a-c & 2, and instead asked Experiments to press SPACE when the pen was in the mouth. As in Experiment 2, participants in Experiment 2b also had to press "X" or "M" to indicate whether they heard *asi* or *ashi*. 
 
 ## Data import
 ```{r}
@@ -493,8 +511,8 @@ Figure \@ref(fig:XXX) summarized the exclusions for Experiment 2 and 2b. Of note
 ```{r}
 d.test.Exp2 %<>% run_exclusions(c("CISP-2", "CISP-2b"))
 ```
-## Analyses
-### Experiment 2
+
+## Analyses - Experiment 2
 
 ```{r}
 p <-
@@ -609,8 +627,11 @@ hypothesis(m.Exp2vsExp1c,
 
 
 
-### Experiment 2b
-We first analyzed participants' accuracy in detecting when the pen was in talker's mouth, in which case participants were supposed to press SPACE. When the pen was in the talker's mouth, participants were only slightly above chance (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b", Condition.Test.Pen == "M") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))` accurate). When the pen was in the talker's hand, participants were much more accurate (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b", Condition.Test.Pen == "H") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))`). This asymmetry is not particularly surprising: correct detection of the pen in the mouth required a key press, whereas correct detection that the pen was not in the mouth (but rather in the hand) required no action at all. Critically, participants' overall accuracy was above chance (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))`). Overall, this suggests that participants could detect the pen presence above chance, while also suggesting that participants experienced the task to be difficult.
+## Analysis - Experiment 2b
+We first analyzed participants' accuracy in detecting when the pen was in talker's mouth, in which case participants were supposed to press SPACE. Then we turn to the analysis of participants' categorization responses.
+
+### SPACE bar presses
+When the pen was in the talker's mouth, participants were only slightly above chance (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b", Condition.Test.Pen == "M") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))` accurate). When the pen was in the talker's hand, participants were much more accurate (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b", Condition.Test.Pen == "H") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))`). This asymmetry is not particularly surprising: correct detection of the pen in the mouth required a key press, whereas correct detection that the pen was not in the mouth (but rather in the hand) required no action at all. Critically, participants' overall accuracy was above chance (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))`). Overall, this suggests that participants could detect the pen presence above chance, while also suggesting that participants experienced the task to be difficult.
 
 ```{r}
 # In Exp 2b, we used the catch trial functionality to ask participants whether the pen was in the mouth
@@ -618,9 +639,9 @@ We first analyzed participants' accuracy in detecting when the pen was in talker
 # pressed SPACE and FALSE otherwise.
 d.test.Exp2 %>%
   filter(Experiment == "CISP-2b") %>%
-  group_by(ParticipantID, Condition.Test.Pen) %>%
+  group_by(ParticipantID, Condition.Test.Pen, Exclude_Participant.because_of_IgnoredInstructions) %>%
   summarise(Response.CatchCorrect = mean(Response.CatchCorrect)) %>%
-  ggplot(aes(x = Condition.Test.Pen, y = Response.CatchCorrect, shape = Condition.Test.Pen)) +
+  ggplot(aes(x = Condition.Test.Pen, y = Response.CatchCorrect, shape = Condition.Test.Pen)) + 
   geom_point(alpha = .25) +
   geom_line(aes(group = ParticipantID), alpha = .25) +
   stat_summary(fun.data = mean_cl_boot, geom = "pointrange", size = 1) +
@@ -633,8 +654,27 @@ d.test.Exp2 %>%
     "Pen location",
     breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = shapes.test.pen_locations)
 ```
+```{r}
+d.test.Exp2 %<>%
+  select(-Exclude_Participant.because_of_IgnoredInstructions) %>%
+  left_join(
+    d.test.Exp2 %>% 
+      filter(Experiment == "CISP-2b") %>% 
+      group_by(ParticipantID, Condition.Test.Pen, Exclude_Participant.because_of_IgnoredInstructions) %>% 
+      summarise(Response.CatchCorrect = mean(Response.CatchCorrect)) %>% 
+      group_by(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions) %>% 
+      summarise(difference = abs(Response.CatchCorrect[1] - Response.CatchCorrect[2])) %>% 
+      mutate(Exclude_Participant.because_of_IgnoredInstructions = 
+               ifelse(difference > .9, TRUE, Exclude_Participant.because_of_IgnoredInstructions)) %>%
+      select(-difference))
+```
 
-Next, we turn to participants categorization responses---i.e., whether participants heard *asi* or *ashi*. Figure \@ref(fig:results-exp2b) summarizes participants' categorization responses. Compared to Experiment 2, participants in Experiment 2b exhibited noticeably weaker effects of the acoustic continuum (more shallow slope in Figure \@ref(fig:results-exp2b)a). This suggests a trade-off introduced by the secondary task in Experiment 2b: either because participants focused more on the visual input, or because the categorization response was delivered *after* the response to the visual stimulus (SPACE press), participants' responses were less affected by the acoustic continuum. Critically, however, Experiment 2b replicates all effects found in Experiment 2.
+A closer look at participants' SPACE responses reveals that some participants almost never pressed the SPACE bar and some always pressed the SPACE bar, regardless of whether the pen was in the mouth (the lines forming the "X" in the figure). For example, `r nrow(d.test.Exp2 %>% distinct(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions) %>% filter(Exclude_Participant.because_of_IgnoredInstructions))` (`r percent(nrow(d.test.Exp2 %>% distinct(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions) %>% filter(Exclude_Participant.because_of_IgnoredInstructions)) / nrow(d.test.Exp2 %>% distinct(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions)))`) participants pressed SPACE on 90% or more of all trials or did not press SPACE on 90% or more of the trials (all but one of these participants, never pressed SPACE). If those participants are excluded from the analysis, performance improved to `r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b" & !Exclude_Participant.because_of_IgnoredInstructions) %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))` accuracy, with statistically indistinguishable performance when the pen was in the mouth vs. hand. 
+
+We note that, in total, about half of the participants in Experiment 2b did not follow instructions---either by not wearing headphones for the experiment or by never/always pressing SPACE. As mentioned under Exclusions, we have encountered similar issues with data quality over Mechanical Turk over recent years whenever we conducted series of experiments (for which any subsequent experiment only recruits from the pool of participants that have *not* taken any previous experiments in the series). While we see no reason why the data from cooperative participants in Experiment 2b should not be analyzed, the fact that only about 50% of all participants seem to meet this criterion limits the conclusions that can be drawn from this experiment.
+
+### Categorization responses
+Next, we turn to participants categorization responses---i.e., whether participants heard *asi* or *ashi*. Figure \@ref(fig:results-exp2b) summarizes participants' categorization responses. For this figure, we did not exclude the `r nrow(d.test.Exp2 %>% distinct(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions) %>% filter(Exclude_Participant.because_of_IgnoredInstructions))` participants that never or always pressed SPACE. Separate analyses---not summarized here---did, however, show that the results are unchanged when those participants are excluded. Compared to Experiment 2, participants in Experiment 2b exhibited noticeably weaker effects of the acoustic continuum (more shallow slope in Figure \@ref(fig:results-exp2b)a). This suggests a trade-off introduced by the secondary task in Experiment 2b: either because participants focused more on the visual input, or because the categorization response was delivered *after* the response to the visual stimulus (SPACE press), participants' responses were less affected by the acoustic continuum. Critically, however, Experiment 2b replicates all effects found in Experiment 2.
 
 (ref:results-exp2b) Summary of participants’ responses in Experiments 2b, depending on pen location and acoustic continuum step (Panel A) or visual bias (Panel B). For comparison, the results from Experiment 2 are shown in the background. The two experiments were identical except for the secondary task introduced in Experiment 2b.
 

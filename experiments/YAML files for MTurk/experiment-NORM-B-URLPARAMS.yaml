@@ -1,0 +1,69 @@
+---
+title: Speech Perception Experiment. MUST BE NATIVE ENGLISH SPEAKER AND WEAR HEADPHONES. MUST USE CHROME.
+description: Listen to sentences. Takes approximately 5-10 minutes.
+keywords: psychology,experiment,speech,words
+reward: 1.00
+assignments: 8
+######################################
+## HIT Timing Properties
+######################################
+
+# this Assignment Duration value is 60 * 90 = 1.5 hour
+assignmentduration: 5400
+
+# this HIT Lifetime value is 60*60*24*2 = 2 days
+hitlifetime: 172800
+
+# this Auto Approval period is 60*60*24*15 = 15 days
+autoapprovaldelay: 1296000
+
+qualifications:
+  builtin:
+    # this is a built-in qualification -- user must have > 95\% approval rate
+    - qualification: PercentAssignmentsApprovedRequirement
+      comparator: GreaterThan
+      value: 95
+      private: true
+    # this is a built-in qualification -- user must be in the United States
+    - qualification: LocaleRequirement
+      comparator: EqualTo
+      locale: US
+      private: false
+  custom:
+    # Has not done related HLP Lab experiment
+    # Liu and Jaeger 2020 - Tongue Twisters
+   - qualification: 34TL3CYI86QRBGQQ569OXQFS1WRPHU
+     comparator: DoesNotExist
+     private: true
+     # Liu and Jaeger 2018 - causal inference
+   - qualification: 3Z755UFFEJQVFIP5MSA6JDZ6F1H19C
+     comparator: DoesNotExist
+     private: true
+     # Liu and Jaeger 2018 - causal inference (fill-up subjects)
+   - qualification: 3MDZXJHIC8PJ3G5P26X3CG49LGG52K
+     comparator: DoesNotExist
+     private: true
+     # CISP, Experiment NORM A
+   - qualification: 3ULGVXAI5J417X1PO1ET7OYVLN8245
+     comparator: DoesNotExist
+     private: true
+
+question:
+  url: https://www.hlp.rochester.edu/mturk/CISP/experiment-A/experiment-A.html?{params}
+  height: 750
+  input:
+  # There is only one main list but 2 x 2 nuisance factors (keybindings) for a total of 64 subjects
+  # (16 per nuisance list):
+  # respKeyExp: 0 ['X':'word', 'M':'non-word'], 1 ['X':'non-word', 'M':'word']
+  # respKeyTest: 0 ['X':'S', 'M':'SH'], 1 ['X':'SH', 'M':'S']
+  #
+  # Since 16 is above the cutoff for which MTurk charges 20% extra, we duplicate
+  # each list and collect 8 participants for each of those duplicates.
+    - params: label=no_exposure&respKeyTest=0&testSet=B
+    - params: label=no_exposure&respKeyTest=1&testSet=B
+    - params: label=no_exposure&respKeyTest=0&testSet=B
+    - params: label=no_exposure&respKeyTest=1&testSet=B
+    - params: label=no_exposure&respKeyTest=0&testSet=B
+    - params: label=no_exposure&respKeyTest=1&testSet=B
+    - params: label=no_exposure&respKeyTest=0&testSet=B
+    - params: label=no_exposure&respKeyTest=1&testSet=B

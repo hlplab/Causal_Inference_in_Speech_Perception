@@ -1,0 +1,1 @@
+wherever a set of directories exists including both new/ and old_without_respond_frame/, these are the same stims pre- and post- appending the 'press a response key now' frame (implemented for NormD and forward)

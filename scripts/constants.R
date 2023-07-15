@@ -659,7 +659,9 @@ run_exclusions <- function(data, experiment) {
       group_by(Experiment) %>%
       summarise(across(Duration.Assignment, list("mean" = mean, "sd" = sd))) %>%
       mutate(msg = paste0(    
-        "Participants took on average ", 
+        "Participants in ",
+        Experiment,
+        " took on average ", 
         round(Duration.Assignment_mean, 1),
         " minutes to complete the experiment (SD = ",
         round(Duration.Assignment_sd, 1),

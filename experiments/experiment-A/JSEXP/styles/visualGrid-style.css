@@ -1,0 +1,115 @@
+div#visualGridContainer {
+    width: 738px;
+    height: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    border: 5px solid #dddddd;
+    position: relative;
+    display: none;
+}
+
+div#visualGridContainer > div#readyWaitContainer {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    margin-left: -20px;
+    margin-top: -20px;
+    top: 50%;
+    left: 50%;
+}
+
+div#visualGridContainer > div#readyWaitContainer > img {
+    height: 40px;
+    width: 40px;
+}
+
+/* positioning of items in the visual world for the current trial:
+ * for all elements: position: absolute in a position: relative container means
+ * position is relative to container
+ */
+div#visualGridContainer > img.vw_trialimage {
+    position: absolute;
+    width: 246px;
+    height: 200px;
+}
+/* top-left item */
+[vw_pos="0"], [vw_pos='topleft'] {
+    top: 0;
+    left: 0;
+}
+/* top-center */
+[vw_pos="1"], [vw_pos='topcenter'] {
+    margin-left: -123px;
+    top: 0;
+    left: 50%;
+}
+/* top-right */
+[vw_pos="2"], [vw_pos='topright'] {
+    top:0;
+    right:0;
+}
+/* mid-left */
+[vw_pos="3"], [vw_pos='midleft'] {
+    margin-top: -100px;
+    top: 50%;
+    left: 0;
+}
+/* mid-center */
+[vw_pos="4"], [vw_pos='midcenter'] {
+    margin-top: -100px;
+    margin-left: -123px;
+    top: 50%;
+    left: 50%;
+}
+/* mid-right */
+[vw_pos="5"], [vw_pos='midright'] {
+    margin-top: -100px;
+    top: 50%;
+    right: 0;
+}
+/* bottom-left */
+[vw_pos="6"], [vw_pos='bottomleft'] {
+    bottom:0;
+    left:0;
+}
+/* bottom-center */
+[vw_pos="7"], [vw_pos='bottomcenter'] {
+    margin-left: -100px;
+    bottom: 0;
+    left: 50%;
+}
+/* bottom-right */
+[vw_pos="8"], [vw_pos='bottomright'] {
+    bottom: 0;
+    right: 0;
+}
+
+/* styling of familiarization images */
+div#visualGridContainer > img.familiarizationImage {
+    position: absolute;
+    margin-left: -123px;
+    margin-top: -100px;
+    left: 50%;
+    top: 50%;
+    z-index: 1000;
+}
+
+div#visualGridContainer > div#familiarizationText {
+    position: absolute;
+    width: 246px;
+    margin-left: -100px;
+    left: 50%;
+    top: 66%;
+    padding-top: 20px;
+    text-align: center;
+    font-size: 40pt;
+}
+
+div#visualGridContainer > div#familiarizationInstructions {
+    position: absolute;
+    width: 100%;
+    left: 0;
+    top: 10%;
+    text-align: center;
+    font-size: 16pt;
+}

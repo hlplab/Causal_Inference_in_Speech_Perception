@@ -1,7 +1,0 @@
-<!-- Do NOT knit this document. It is part of a larger document. Instead knit the main document (my-apa-formatted-article) -->
-
-# General discussion
-An example of a section.
-
-## Methodological advances that can move the field forward 
-An example of a subsection. 

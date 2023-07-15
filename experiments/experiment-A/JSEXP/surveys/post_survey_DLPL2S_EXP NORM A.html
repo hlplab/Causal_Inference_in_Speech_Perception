@@ -1,0 +1,110 @@
+<div id="endForm" class="survey">
+  <h3>Please answer the questions on this survey truthfully. Your answers will not affect your compensation.</h3>
+  <br/>
+
+  <!-- The first question section should always be set to style display:visible; all others should be display:none -->
+  <div class="question_section" id="audio_type" style="display:visible">
+    <div class="question">
+      <p>What kind of <strong>audio equipment</strong> did you use for the experiment?</p>
+      <input id="audio_type_inear" type="radio" name="audio_type" value="in-ear"><label for="audio_type_inear">In-ear headphones</label></input><br/>
+      <input id="audio_type_overear" type="radio" name="audio_type" value="over-ear"><label for="audio_type_overear">Over-the-ear headphones</label></input><br/>
+      <input id="audio_type_external" type="radio" name="audio_type" value="external"><label for="audio_type_external">External Speakers</label></input><br/>
+      <input id="audio_type_computer" type="radio" name="audio_type" value="computer speakers"><label for="audio_type_computer">Laptop Speakers</label></input><br/>
+    </div>
+  </div>
+
+  <div class="question_section" id="speaker" style="display:none">
+    <div class="question">
+      <p>Check any boxes that you think describe the <strong>speaker</strong>.</p>
+      <input id="speaker_slow" type="checkbox" name="pronun" value="slow"><label for="speaker_slow">Slower than normal speaking rate</label></input><br/>
+      <input id="speaker_normal" type="checkbox" name="pronun" value="normal"><label for="speaker_normal">Normal speaking rate</label></input><br />
+      <input id="speaker_fast" type="checkbox" name="pronun" value="fast"><label for="speaker_fast">Faster than normal speaking rate</label></input><br/>
+      <input id="speaker_high" type="checkbox" name="pronun" value="high"><label for="speaker_high">Higher than normal voice pitch</label></input><br/>
+      <input id="speaker_low" type="checkbox" name="pronun" value="low"><label for="speaker_low">Lower than normal voice pitch</label></input><br/>
+      <input id="speaker_nonaccented" type="checkbox" name="pronun" value="nonaccented"><label for="speaker_nonaccented">Standard accented English</label></input><br/>
+      <input id="speaker_accented" type="checkbox" name="pronun" value="accented"><label for="speaker_accented">Accented or unusual pronunciations</label></input><br/>
+      <input id="speaker_robotic" type="checkbox" name="pronun" value="robotic"><label for="speaker_robotic">The voice sounded robotic/synthesized</label></input><br/>
+      <input id="speaker_relaxed" type="checkbox" name="pronun" value="relaxed"><label for="speaker_relaxed">Relaxed</label></input><br/>
+      <input id="speaker_serious" type="checkbox" name="pronun" value="serious"><label for="speaker_serious">Serious</label></input><br/>
+    </div>
+    <div class="question">
+      <p>Was the speaker a man or a woman?</p>
+      <input id="speaker_man" type="radio" name="sex" value="man"><label for="speaker_man">Man</label></input><br/>
+      <input id="speaker_woman" type="radio" name="sex" value="woman"><label for="speaker_woman">Woman</label></input><br/>
+    </div>
+  </div>
+
+  <div class="question_section" id="words" style="display:none">
+    <div class="question">
+      <p>Did you notice anything in particular about how the speaker pronounced the different words?</p>
+      <textArea id="words" name="words" placeholder="Enter your comments about the speaker's pronunciation here."></textArea>
+    </div>
+  </div>
+
+  <div class="question_section" id="vowels" style="display:none">
+    <div class="question">
+      <p>Which of the following best describes how the speaker produced the different words? </p>
+      <input id="words_more_similar" type="radio" name="words" value="more-similar"><label for="words_more_similar">The words sounded <i>more</i> similar to each other than is the case for typical native talkers of English.</label></input><br/>
+      <input id="words_equally_similar" type="radio" name="words" value="equally-similar"><label for="words_equally_similar">The words sounded <i>equally</i> similar to each other than is the case for typical native talkers of English.</label></input><br/>
+      <input id="words_less_similar" type="radio" name="words" value="less-similar"><label for="words_less_similar">The words sounded <i>less</i> similar to each other than is the case for typical native talkers of English.</label></input><br/>
+    </div>
+  </div>
+
+  <div class="question_section" id="task_diff" style="display:none">
+    <div class="question">
+      <p>Now we have <strong>some questions about how you experienced the task</strong>. This will help us improve future experiments.
+        On each trial, you had to click on one of the words on screen. Which of the following best describes your experience:</p>
+      <input id="task_diff_no_trouble" type="radio" name="task_diff" value="no-trouble"><label for="task_diff_no_trouble">Most of the time, I knew which word I heard and wanted to click on, and I had no trouble finding it on the screen.</label></input><br/>
+      <input id="task_diff_took_time" type="radio" name="task_diff" value="took-time"><label for="task_diff_took_time">Most of the time, I knew which word I heard and wanted to click on, but it took me time to find it on the screen.</label></input><br/>
+      <input id="task_diff_not_sure" type="radio" name="task_diff" value="not-sure"><label for="task_diff_not_sure">Most of the time, I was <i>not</i> sure which word I heard and wanted to click on.</label></input><br/>
+    </div>
+  </div>
+
+  <div class="question_section" id="task_timing" style="display:none">
+    <div class="question">
+      <p>After you gave a response on each trial, the program automatically moved on to play the next sound. Which of the following best describes your experience?</p>
+      <input id="task_timing_ok" type="radio" name="task_timing" value="timing-ok"><label for="task_timing_ok">The timing of the next sound playing seemed OK to me.</label></input><br/>
+      <input id="task_timing_fast" type="radio" name="task_timing" value="timing-fast"><label for="task_timing_fast">The next sound was played <i>too soon</i> after the end of the previous trial. I found that confusing.</label></input><br/>
+      <input id="task_timing_slow" type="radio" name="task_timing" value="timing-slow"><label for="task_timing_slow">The next sound was played <i>too late</i> after the end of the previous trial. I found that confusing.</label></input><br/>
+    </div>
+    <div class="question">
+      <br/>
+      <p>Are there any other suggestions you have that would make it easier for you to take an experiment like this one? We cannot promise we can implement them - some inconvenient aspects of the procedure are required by the purpose of the study. But we are grateful for any suggestions you have, and will consider them.</p>
+      <textArea id="task_suggestions" name="task_suggestions" placeholder="Enter your suggestions here." ></textArea>
+    </div>
+  </div>
+
+  <div class="question_section" id="audio_stall" style="display:none">
+    <div class="question">
+      <p>Did any of the <strong>audio</strong> clips fail to load or stop playing for a moment and then restart during the experiment?</p>
+      <input id="audio_stall_yes" type="radio" name="audio_stall" value="yes"><label for="audio_stall_yes">Yes, many</label></input><br/>
+      <input id="audio_stall_some" type="radio" name="audio_stall" value="some"><label for="audio_stall_some">Yes, just a few</label></input><br/>
+      <input id="audio_stall_no" type="radio" name="audio_stall" value="no"><label for="audio_stall_no">No, none</label></input><br/>
+    </div>
+  </div>
+
+  <div class="question_section" id="timezones" style="display:none">
+	  <div class="question">
+	     <p>What is your <strong>current timezone</strong>? </p>
+	     <select name="us.timezone">
+		       <option value="None">--Select your timezone--</option>
+		       <option value="HST">Hawaii Standard Time (UTC -10)</option>
+		       <option value="HDT">Hawaii-Aleutian Daylight Time (UTC -9)</option>
+		       <option value="AKDT">Alaska Daylight Time (UTC -8)</option>
+		       <option value="PDT">Pacific Daylight Time (UTC -7)</option>
+		       <option value="MST">Mountain Standard Time (UTC -7)</option>
+		       <option value="MDT">Mountain Daylight Time (UTC -6)</option>
+		       <option value="CDT">Central Daylight Time (UTC -5)</option>
+		       <option value="EDT">Eastern Daylight Time (UTC -4)</option>
+		       <option value="Other">--other--</option>
+	     </select>
+	  </div>
+  </div>
+
+  <div class="question_section" id="comments" style="display:none">
+      <p>You can enter any other comments you have below.</p>
+      <textArea id="comments" name="comments" placeholder="Enter your comments here." ></textArea>
+  </div>
+
+  <input class="moveOn" id="SurveyContinue" name="Continue" type="button" value="Continue"/>
+</div>

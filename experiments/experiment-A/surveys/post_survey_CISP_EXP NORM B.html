@@ -1,0 +1,116 @@
+<div id="endForm" class="survey">
+  <h3>Please answer the questions on this survey truthfully. Your answers will not affect your compensation.</h3>
+  <br/>
+
+  <!-- The first question section should always be set to style display:visible; all others should be display:none -->
+  <div class="question_section" id="video_stall" style="display:visible">
+    <div class="question">
+      <p>Did any of the <strong>videos</strong> stall or lag during the experiment?</p>
+      <input id="video_stall_yes" type="radio" name="video_stall" value="yes"><label for="video_stall_yes">Yes, many</label></input><br/>
+      <input id="video_stall_some" type="radio" name="video_stall" value="some"><label for="video_stall_some">Yes, just a few</label></input><br/>
+      <input id="video_stall_no" type="radio" name="video_stall" value="no"><label for="video_stall_no">No, none</label></input><br/>
+    </div>
+    <input class="moveOn" id="SurveyContinue" name="Continue" type="button" value="Continue"/>
+  </div>
+
+  <div class="question_section" id="audio_stall" style="display:none">
+    <div class="question">
+      <p>Did any of the <strong>audio</strong> clips stall or lag during the experiment?</p>
+      <input id="audio_stall_yes" type="radio" name="audio_stall" value="yes"><label for="audio_stall_yes">Yes, many</label></input><br/>
+      <input id="audio_stall_some" type="radio" name="audio_stall" value="some"><label for="audio_stall_some">Yes, just a few</label></input><br/>
+      <input id="audio_stall_no" type="radio" name="audio_stall" value="no"><label for="audio_stall_no">No, none</label></input><br/>
+    </div>
+    <input class="moveOn" id="SurveyContinue" name="Continue" type="button" value="Continue"/>
+  </div>
+
+  <div class="question_section" id="audio_type" style="display:none">
+    <div class="question">
+      <p>What kind of <strong>audio equipment</strong> did you use for the experiment?</p>
+      <input id="audio_type_inear" type="radio" name="audio_type" value="in-ear"><label for="audio_type_inear">In-ear headphones</label></input><br/>
+      <input id="audio_type_overear" type="radio" name="audio_type" value="over-ear"><label for="audio_type_overear">Over-the-ear headphones</label></input><br/>
+      <input id="audio_type_external" type="radio" name="audio_type" value="external"><label for="audio_type_external">External Speakers</label></input><br/>
+      <input id="audio_type_computer" type="radio" name="audio_type" value="computer speakers"><label for="audio_type_computer">Laptop Speakers</label></input><br/>
+    </div>
+    <input class="moveOn" id="SurveyContinue" name="Continue" type="button" value="Continue"/>
+  </div>
+
+  <div class="question_section" id="speaker" style="display:none">
+    <div class="question">
+      <p>Did you notice anything odd about the <strong>person in the video?</strong></p>
+      <textArea id="speaker" name="speaker" placeholder="Did you notice anything odd about the speaker?" ></textArea>
+    </div>
+    <div class="question">
+      <p>Check any boxes that you think describe the speaker in the video.</p>
+      <input id="speaker_slow" type="checkbox" name="pronun" value="slow"><label for="speaker_slow">Slower than normal speaking rate</label></input><br/>
+      <input id="speaker_normal" type="checkbox" name="pronun" value="normal"><label for="speaker_normal">Normal speaking rate</label></input><br />
+      <input id="speaker_fast" type="checkbox" name="pronun" value="fast"><label for="speaker_fast">Faster than normal speaking rate</label></input><br/>
+      <input id="speaker_high" type="checkbox" name="pronun" value="high"><label for="speaker_high">Higher than normal voice pitch</label></input><br/>
+      <input id="speaker_low" type="checkbox" name="pronun" value="low"><label for="speaker_low">Lower than normal voice pitch</label></input><br/>
+      <input id="speaker_nonaccented" type="checkbox" name="pronun" value="nonaccented"><label for="speaker_nonaccented">Standard accented English</label></input><br/>
+      <input id="speaker_accented" type="checkbox" name="pronun" value="accented"><label for="speaker_accented">Accented or unusual pronunciations</label></input><br/>
+      <input id="speaker_relaxed" type="checkbox" name="pronun" value="relaxed"><label for="speaker_relaxed">Relaxed</label></input><br/>
+      <input id="speaker_serious" type="checkbox" name="pronun" value="serious"><label for="speaker_serious">Serious</label></input><br/>
+    </div>
+    <div class="question">
+      <p>Was the speaker in the video a man or a woman?</p>
+      <input id="speaker_man" type="radio" name="sex" value="man"><label for="speaker_man">Man</label></input><br/>
+      <input id="speaker_woman" type="radio" name="sex" value="woman"><label for="speaker_woman">Woman</label></input><br/>
+    </div>
+    <input class="moveOn" id="SurveyContinue" name="Continue" type="button" value="Continue"/>
+  </div>
+
+  <div class="question_section" id="ssh1" style="display:none">
+    <div class="question">
+      <p> Did you notice anything in particular about how the speaker in the video said words that contained an "S" or "SH" sound?</p>
+      <input id="ssh1_yes" type="radio" name="ssh1" value="yes"><label for="ssh1_yes">Yes</label></input><br/>
+      <input id="ssh1_no" type="radio" name="ssh1" value="no"><label for="ssh1_no">No</label></input><br/>
+    </div>
+    <input class="moveOn" id="SurveyContinue" name="Continue" type="button" value="Continue"/>
+  </div>
+
+  <div class="question_section" id="ssh2" style="display:none">
+    <div class="question">
+      <p>Which of the following best describes how the speaker in the video produced the "S" and "SH" sounds? </p>
+      <input id="ssh2_normal" type="radio" name="ssh2" value="normal"><label for="ssh2_normal">Both S and SH sounded normal.</label></input><br/>
+      <input id="ssh2_s_like_sh" type="radio" name="ssh2" value="s-like-sh"><label for="ssh2_s_like_sh">S sounded like SH.</label></input><br/>
+      <input id="ssh2_sh_like_s" type="radio" name="ssh2" value="sh-like-s"><label for="ssh2_sh_like_s">SH sounded like S.</label></input><br/>
+      <input id="ssh2_swapped" type="radio" name="ssh2" value="swapped"><label for="ssh2_swapped">S sounded like SH and SH sounded like S.</label></input><br/>
+    </div>
+    <input class="moveOn" id="SurveyContinue" name="Continue" type="button" value="Continue"/>
+  </div>
+
+  <div class="question_section" id="social1" style="display:none">
+    <div class="question">
+      <p>Which of these best defines your personal smoking habits? </p>
+      <input id="social1_never" type="radio" name="social1" value="never"><label for="social1_never">I don't smoke or I smoke less frequently than one cigarette per day.</label></input><br/>
+      <input id="social1_more_than_1" type="radio" name="social1" value="more than 1"><label for="social1_more_than_1">I smoke more than one cigarette per day.</label></input><br/>
+      <input id="social1_more_than_10" type="radio" name="social1" value="more than 10"><label for="social1_more_than_10">I smoke more than 10 cigarettes per day.</label></input><br/>
+    </div>
+    <input class="moveOn" id="SurveyContinue" name="Continue" type="button" value="Continue"/>
+  </div>
+  <div class="question_section" id="social2" style="display:none">
+    <div class="question">
+      <p>In your current daily life, how often do you interact with people while they are smoking? </p>
+      <input id="socail2_never" type="radio" name="social2" value="never"><label for="socail2_never">Never or less frequently than once per day.</label></input><br/>
+      <input id="social2_more_than_1" type="radio" name="social2" value="more than 1"><label for="social2_more_than_1">More than once per day.</label></input><br/>
+      <input id="social2_more_than_10" type="radio" name="social2" value="more than 10"><label for="social2_more_than_10">More than 10 times per day.</label></input><br/>
+    </div>
+    <input class="moveOn" id="SurveyContinue" name="Continue" type="button" value="Continue"/>
+  </div>
+  <div class="question_section" id="social3" style="display:none">
+    <div class="question">
+      <p>Which of these best defines the environment in which you were raised? </p>
+      <input id="social3_noone" type="radio" name="social3" value="noone"><label for="social3_noone">No one close to me was a smoker.</label></input><br/>
+      <input id="social3_one" type="radio" name="social3" value="one"><label for="social3_one">One parent/guardian/person I saw on a daily basis was a smoker.</label></input><br/>
+      <input id="social3_multiple" type="radio" name="social3" value="multiple"><label for="social3_multiple">Multiple people I saw on a daily basis were smokers.</label></input><br/>
+    </div>
+    <input class="moveOn" id="SurveyContinue" name="Continue" type="button" value="Continue"/>
+  </div>
+
+  <div class="question_section" id="comments" style="display:none">
+      <p>You can enter any other comments you have below.</p>
+      <textArea id="comments" name="comments" placeholder="Enter your comments here." ></textArea>
+    <input class="moveOn" id="SurveyContinue" name="Continue" type="button" value="Continue"/>
+  </div>
+
+</div>

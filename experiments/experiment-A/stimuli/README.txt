@@ -1,0 +1,3 @@
+While generally speaking this includes all stimuli for all experiments, there is an exception with regards to the appended "press a response key now" frames. These are the only versions present in this stimuli folder. 
+
+The unappended versions of these stimuli (those used in ExpA, NormA-C) can be found in the 'materials' folder, under subdirectories of their respective experiments and named 'old_without_respond_frame'
