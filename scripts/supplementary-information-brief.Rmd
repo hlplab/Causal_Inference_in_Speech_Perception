@@ -129,7 +129,13 @@ get_demographics <- function(data, experiment = unique(data$Experiment)) {
   print(round(prop.table(table(data$Participant.Sex)) * 100, 1))
   print(round(prop.table(table(data$Participant.Ethnicity)) * 100, 1))
   print(round(prop.table(table(data$Participant.Race)) * 100, 1))
-  cat(paste0("Mean age = ", round(mean(data$Participant.Age, na.rm = T), 1), " (SD = ", round(sd(data$Participant.Age, na.rm = T), 1), "). Interquartile range = ", summary(data$Participant.Age)[2], "-", summary(data$Participant.Age)[5], ". Declined to report: ", percent(summary(data$Participant.Age)[7] / nrow(data))))
+  cat(
+    paste0(
+      "Mean age = ", round(mean(data$Participant.Age, na.rm = T), 1), 
+      " (SD = ", round(sd(data$Participant.Age, na.rm = T), 1), 
+      "). Interquartile range = ", summary(data$Participant.Age)[2], "-", 
+      summary(data$Participant.Age)[5], ". Declined to report: ", 
+      percent(summary(data$Participant.Age)[7] / nrow(data))))
 }
 ```
 
@@ -205,7 +211,10 @@ For Experiment 1b, we made minor changes to the survey. We removed one question 
 For Experiment 1c, we revised our questions about internet connectivity. Specifically, we changed the two questions that asked about video or sound issues during the experiment. We clarified that these questions were asking solely about technical issues, rather than any oddities between the alignment of the video and audio (as separate questions already assessed that aspect). The revised questions were introduced by the following statement: "The videos and sounds in this experiment were manipulated by aligning the same video with different sound sources. As a consequence, you might have noticed some 'jumps' or slightly odd-looking moments in the video. Here we are interested in *potential technical issues with the internet connection* beyond any oddities you might have noticed about how the video and sound aligned." (emphasis in original) Then two questions assessed whether the videos or sounds failed to load or stopped and restarted playing during exposure. As these revised questions explicitly mentioned that the videos and sounds had been manipulated, they were moved towards the end of the survey, so that they followed any questions that inquired about the pronunciation of the talker in the video (recall that participants could not go back to previously answered questions). <!-- TO DO: please check whether this is all correct. I believe we have detailed notes about these changes both in an RMD file I created back then, and in the Javascript / survey code itself. -->
 
 ```{r}
-d.Exp1.survey <- d.test.Exp1 %>% select(Experiment, ParticipantID, starts_with("Talker"), starts_with("Participant"), -Talker.Sex) %>% distinct()
+d.Exp1.survey <-
+  d.test.Exp1 %>% 
+  select(Experiment, ParticipantID, starts_with("Talker"), starts_with("Participant"), -Talker.Sex) %>%
+  distinct()
 ```
 
 ### Survey results
@@ -231,8 +240,23 @@ The clear majority of participants did not consider the speech they heard to be 
 
 ```{r}
 d.Exp1.survey %>%
-  select(Experiment, Talker.SpeechDescription) %>%
-  filter(!is.na(Talker.SpeechDescription), !str_detect(Talker.SpeechDescription, "^(no|No)"), !str_detect(Talker.SpeechDescription, "I did not notice anything odd")) %>%
+  select(Experiment, ParticipantID, Talker.SpeechDescription) %>%
+  mutate(
+    Talker.SpeechDescription_Odd = NA,
+    Talker.SpeechDescription_AudioVideoMisaligned = NA,
+    Talker.SpeechDescription_Pen = ifelse(str_detect(Talker.SpeechDescription, regex("pen", ignore_case = T)), "yes", NA),
+    Talker.SpeechDescription_WhiteDot = ifelse(str_detect(Talker.SpeechDescription, regex("white dot", ignore_case = T)), "yes", NA),
+    Talker.SpeechDescription_NotOdd = 
+      case_when(
+        is.na(Talker.SpeechDescription) ~ "yes", 
+        Talker.SpeechDescription %in% c("I did not.", "N/A", "NOTHING", "i dont think so") ~ "yes", 
+        str_detect(Talker.SpeechDescription, "^(no|No)") ~ "yes", 
+        str_detect(Talker.SpeechDescription, regex("I did not notice anything odd", ignore_case = T)) ~ "yes",
+        str_detect(Talker.SpeechDescription, "The speaker did not seem odd to me")  ~ "yes",
+        T ~ NA_character_)) %>%
+  write_csv(file = "../data/CISP_data_participant-comments.csv", na = "")
+  
+
   rename(`Did you notice anything odd about the talker?` = Talker.SpeechDescription) %>%
   kable()
 ```
