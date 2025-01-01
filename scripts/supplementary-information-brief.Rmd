@@ -3,20 +3,24 @@ title: "Supplementary Information"
 author: "T. Florian Jaeger and Shawn Cummings"
 date: "\today"
 output:
-  bookdown::pdf_document2:
-    fig_caption: yes
-    keep_tex: yes
-    latex_engine: xelatex
-    number_sections: yes
-    toc: yes
-    toc_depth: 4
-  word_document:
-    toc: yes
+  html_document:
+    toc: true
     toc_depth: '4'
+    df_print: paged
+  bookdown::pdf_document2:
+    fig_caption: true
+    keep_tex: true
+    latex_engine: xelatex
+    number_sections: true
+    toc: true
+    toc_depth: 4
   fontsize: 10pt
+  word_document:
+    toc: true
+    toc_depth: '4'
 geometry: margin=2cm
 header-includes:
-- \usepackage{float}  
+- \usepackage{float}
 - \usepackage{booktabs}
 - \usepackage{siunitx}
 - \usepackage{tabto}
@@ -119,7 +123,10 @@ d.CISP.ALL <-
       .fns = as.numeric),
     across(
       .cols = c(Item.isCatchTrial, Response.CatchTrial),
-      .fns = as.logical))
+      .fns = as.logical)) 
+#%>%
+  # Remove problematic characters from free response column
+  #mutate(Talker.SpeechDescription = gsub("[[:punct:]]", "", Talker.SpeechDescription))
 
 get_demographics <- function(data, experiment = unique(data$Experiment)) {
   data %<>%
@@ -239,7 +246,7 @@ d.Exp1.survey %>%
   xlab('Did the video recordings ever stall during the experiment?')
 ```
 
-The clear majority of participants did not consider the speech they heard to be unusual, until subsequent questions explicitly pointed to the pronunciation of "s" and "sh". The first question that assesses this simply asked participants whether they noticed anything odd about the talker. The following table provides all answers that did not unambiguous negate this. Most of these answers focus on the fact that the speaker frequently had a pen in her mouth. However, a non-trivial proportion of the participants also commented that they felt the audio and video were aligned well, and/or that the talker wasn't saying what the video was showing. <!-- TO DO: this needs a bit more text here -->
+The clear majority of participants did not consider the speech they heard to be unusual, until subsequent questions explicitly pointed to the pronunciation of "s" and "sh". The first question that assesses this simply asked participants whether they noticed anything odd about the talker. The following table provides all answers that did not unambiguously negate this. Most of these answers focus on the fact that the speaker frequently had a pen in her mouth. However, a non-trivial proportion of the participants also commented that they felt the audio and video were aligned well, and/or that the talker wasn't saying what the video was showing. <!-- TO DO: this needs a bit more text here -->
 
 ```{r}
 d.Exp1.survey %>%
@@ -257,9 +264,7 @@ d.Exp1.survey %>%
         str_detect(Talker.SpeechDescription, regex("I did not notice anything odd", ignore_case = T)) ~ "yes",
         str_detect(Talker.SpeechDescription, "The speaker did not seem odd to me")  ~ "yes",
         T ~ NA_character_)) %>%
-  write_csv(file = "../data/CISP_data_participant-comments.csv", na = "")
-  
-
+  write_csv(file = "../data/CISP_data_participant-comments.csv", na = "") %>%
   rename(`Did you notice anything odd about the talker?` = Talker.SpeechDescription) %>%
   kable()
 ```
