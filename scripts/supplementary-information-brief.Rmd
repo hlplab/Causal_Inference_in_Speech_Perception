@@ -55,9 +55,12 @@ library(linguisticsdown)  #IPA symbols
 library(rstan)
 
 # Setting up cmdstanr
+# we recommend running this in a fresh R session or restarting your current session
+# install.packages("cmdstanr", repos = c('https://stan-dev.r-universe.dev', getOption("repos")))
 library(cmdstanr)
 # install_cmdstan()
 
+# install.packages("devtools")
 # devtools::install_github('m-clark/lazerhawk')
 library(lazerhawk)
 ```
