@@ -123,9 +123,9 @@ d.CISP.ALL <-
       .fns = as.numeric),
     across(
       .cols = c(Item.isCatchTrial, Response.CatchTrial),
-      .fns = as.logical)) %>%
+      .fns = as.logical))
   # Remove problematic characters from free response column
-  mutate(Talker.SpeechDescription = gsub("[[:punct:]]", "", Talker.SpeechDescription))
+  # mutate(Talker.SpeechDescription = gsub("[[:punct:]]", "", Talker.SpeechDescription))
 
 get_demographics <- function(data, experiment = unique(data$Experiment)) {
   data %<>%
