@@ -123,10 +123,9 @@ d.CISP.ALL <-
       .fns = as.numeric),
     across(
       .cols = c(Item.isCatchTrial, Response.CatchTrial),
-      .fns = as.logical)) 
-#%>%
+      .fns = as.logical)) %>%
   # Remove problematic characters from free response column
-  #mutate(Talker.SpeechDescription = gsub("[[:punct:]]", "", Talker.SpeechDescription))
+  mutate(Talker.SpeechDescription = gsub("[[:punct:]]", "", Talker.SpeechDescription))
 
 get_demographics <- function(data, experiment = unique(data$Experiment)) {
   data %<>%
@@ -265,8 +264,10 @@ d.Exp1.survey %>%
         str_detect(Talker.SpeechDescription, "The speaker did not seem odd to me")  ~ "yes",
         T ~ NA_character_)) %>%
   write_csv(file = "../data/CISP_data_participant-comments.csv", na = "") %>%
-  rename(`Did you notice anything odd about the talker?` = Talker.SpeechDescription) %>%
-  kable()
+  rename(`Did you notice anything odd about the talker?` = Talker.SpeechDescription)
+
+# kable()
+
 ```
 
 At that point, about half of the participants considered those pronunciations to be normal. It is possible that some of participants' answers to this latter question reflect confusion. For instance, since "s" and "sh" were always presented in the context of the nonce-word *asi*/*ashi*, it is unclear how participants would come to the conclusion that the talker swapped "s" and "sh". Yet, about one sixth of all participants gave that answer.
