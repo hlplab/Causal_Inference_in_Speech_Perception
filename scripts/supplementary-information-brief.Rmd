@@ -3,10 +3,6 @@ title: "Supplementary Information"
 author: "T. Florian Jaeger and Shawn Cummings"
 date: "\today"
 output:
-  html_document:
-    toc: true
-    toc_depth: '4'
-    df_print: paged
   bookdown::pdf_document2:
     fig_caption: true
     keep_tex: true
@@ -148,8 +144,6 @@ get_demographics <- function(data, experiment = unique(data$Experiment)) {
 }
 ```
 
-<!-- TO DO: I think something is wrong with the import of the Talker.SpeechDescription column. probably something related to commas, (), quotes or other special symbols being contained in the answers that some participants gave for that open ended text field -->
-
 # Participant demographics
 
 ```{r}
@@ -210,14 +204,70 @@ d.test %<>%
   excludeData() %>%
   filter(!is.na(Response.ASHI)) 
 
-# mean(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
+# median(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
 # sd(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
 ```
 
-## Procedure: Further details on exit survey
-For Experiment 1b, we made minor changes to the survey. We removed one question about audio quality which asked participants to rate the quality of their audio equipment as "bad", "good", "professional", etc. Previous analyses in our lab have found that the subjective nature of this question makes it hard to interpret. And, in order to encourage the participants to answer survey questions truthfully, we emphasized that they would get compensated independent of their answers, and that truthful answers would greatly help us with the interpretation of results. <!-- TO DO: please check whether this is all correct. I believe we have detailed notes about these changes both in an RMD file I created back then, and in the Javascript / survey code itself. -->
+## Exit survey
 
-For Experiment 1c, we revised our questions about internet connectivity. Specifically, we changed the two questions that asked about video or sound issues during the experiment. We clarified that these questions were asking solely about technical issues, rather than any oddities between the alignment of the video and audio (as separate questions already assessed that aspect). The revised questions were introduced by the following statement: "The videos and sounds in this experiment were manipulated by aligning the same video with different sound sources. As a consequence, you might have noticed some 'jumps' or slightly odd-looking moments in the video. Here we are interested in *potential technical issues with the internet connection* beyond any oddities you might have noticed about how the video and sound aligned." (emphasis in original) Then two questions assessed whether the videos or sounds failed to load or stopped and restarted playing during exposure. As these revised questions explicitly mentioned that the videos and sounds had been manipulated, they were moved towards the end of the survey, so that they followed any questions that inquired about the pronunciation of the talker in the video (recall that participants could not go back to previously answered questions). <!-- TO DO: please check whether this is all correct. I believe we have detailed notes about these changes both in an RMD file I created back then, and in the Javascript / survey code itself. -->
+### Experiment 1a
+The exit survey for Experiment 1a was identical to that of Liu and Jaeger (2018). Questions assessed the quality of the audio equipment, whether participants experienced stalling of audio or video (to help us catch problems with our code). Of particular note, the survey also contained a catch question, asking about the gender of the talker shown during the test phase. Following this survey, a final exit survey collected demographic information using the gender, age, race, and ethnicity categories required for NIH reporting. All responses in the demographic survey were indicated as optional.
+
+ 1)	Did any of the audio clips stall or lag during the experiment?
+-	Yes, many 
+- Yes, just a few 
+- No, none
+
+2)	What kind of audio equipment did you use for the experiment?
+-	In-ear headphones
+-	Over-the-ear headphones
+-	External Speakers
+-	Laptop Speakers
+
+3)	How does your audio equipment sound when you have Skype conversations, watch (high quality) music videos on YouTube, watch movies on Netflix, or engage in other similar activities involving audio?
+-	Poor (most words cannot be understood)
+-	Okay (many sounds are distorted)
+-	Good (occasionally some minor distorted sounds)
+-	Excellent (crystal clear with no distorted sounds)
+-	Professional quality
+-	I don't know or don't do any of the above.
+
+4)	Did you notice anything odd about the speaker in the video?
+-	*text-box for subjects to answer*
+
+5) Check any boxes that you think describe the speaker in the video.
+-	Slower than normal speaking rate
+-	Normal speaking rate
+-	Faster than normal speaking rate
+-	Higher than normal voice pitch
+-	Lower than normal voice pitch
+-	Standard accented English
+-	Accented or unusual pronunciations
+-	Relaxed
+-	Serious
+
+6)	Was the speaker in the video a man or a woman?
+-	Man 
+-	Woman
+
+7)	Did you notice anything in particular about how the speaker in the video said words that contained an "S" or "SH" sound?
+-	Yes 
+-	No
+
+8)	Which of the following best describes how the speaker in the video produced the "S" and "SH" sounds?
+-	Both S and SH sounded normal.
+-	S sounded like SH.
+-	SH sounded like S.
+-	S sounded like SH and SH sounded like S.
+
+9)	You can enter any other comments you have below.
+-	*text-box for subjects to answer*
+
+### Experiment 1b
+For Experiment 1b, we changed the post-experiment survey in three ways. First, we removed one question about audio quality which asked participants to rate the quality of their audio equipment as "good, professional, bad etc.". The subjective nature of this question made it hard to interpret. Second, in order to encourage the participants to answer survey questions truthfully, we emphasised that they would get compensated independent of their answers, and that truthful answers would greatly help us with the interpretation of results. Third and finally, we added three questions that assessed the smoking habits of the participant, the exposure to smoking while growing up, and the exposure to smoking in the everyday life of the participant. These questions were included because some of the experimenters had independent interests in whether extended exposure to audiovisual speech inputs by talkers with pen-like objects in their mouth would affect how listeners perceived "asi" and "ashi" productions by a talker with a pen in the mouth. However, given the potentially sensitive nature of the question, we decided the delete the data without analyzing it.
+
+### Experiment 1C
+For Experiment 1C, we added an additional question to the post-experiment survey. This question asked the participants to select their current timezone to let us know in what part of the US they were located and at what time of the day they took the HIT. We also made minor changes to the wording of some questions. Specifically, we changed the two questions that asked about video or sound issues during the experiment. We clarified that these questions were asking solely about technical issues, rather than any oddities between the alignment of the video and audio (as separate questions already assessed that aspect). The revised questions were introduced by the following statement: "The videos and sounds in this experiment were manipulated by aligning the same video with different sound sources. As a consequence, you might have noticed some 'jumps' or slightly odd-looking moments in the video. Here we are interested in *potential technical issues with the internet connection* beyond any oddities you might have noticed about how the video and sound aligned." (emphasis in original) Then two questions assessed whether the videos or sounds failed to load or stopped and restarted playing during exposure. As these revised questions explicitly mentioned that the videos and sounds had been manipulated, they were moved towards the end of the survey, so that they followed any questions that inquired about the pronunciation of the talker in the video (recall that participants could not go back to previously answered questions). 
 
 ```{r}
 d.Exp1.survey <-
@@ -265,9 +315,6 @@ d.Exp1.survey %>%
         T ~ NA_character_)) %>%
   write_csv(file = "../data/CISP_data_participant-comments.csv", na = "") %>%
   rename(`Did you notice anything odd about the talker?` = Talker.SpeechDescription)
-
-# kable()
-
 ```
 
 At that point, about half of the participants considered those pronunciations to be normal. It is possible that some of participants' answers to this latter question reflect confusion. For instance, since "s" and "sh" were always presented in the context of the nonce-word *asi*/*ashi*, it is unclear how participants would come to the conclusion that the talker swapped "s" and "sh". Yet, about one sixth of all participants gave that answer.
