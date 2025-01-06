@@ -883,10 +883,10 @@ my_hypotheses <- function(m, experiment, plot = F) {
       class = NULL) } %>%
     .[["hypothesis"]] %>% 
     mutate(Hypothesis = c(
-      "Pen location Mouth -> fewer ASHI-responses",
-      "Pen effect increases for more ASHI-like acoustic input",
-      "Pen effect increases for visually ASHI-biased input",
-      "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
+      "Pen location Mouth -> fewer ashi responses",
+      "Pen effect increases for more ashi-like acoustic input",
+      "Pen effect increases for visually ashi biased input",
+      "Pen effect increases even more when acoustic and visual input is ashi biased")) %>%
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
     kable(
       caption = "Effects of pen location.", 
@@ -905,8 +905,8 @@ my_hypotheses <- function(m, experiment, plot = F) {
       class = NULL, scope = "standard") } %>%
     .[["hypothesis"]] %>% 
     mutate(Hypothesis = c(
-      "Acoustic continuum more ASHI-like -> more ASHI-responses",
-      "Visual bias ASHI -> more ASHI-responses",
+      "Acoustic continuum more ashi-like -> more ashi responses",
+      "Visual bias ASHI -> more ashi responses",
       "Acoustic and visual bias effects are independent")) %>% 
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
     kable(
@@ -1024,7 +1024,7 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
   }
   shared_formatting <- 
     list(
-      scale_y_continuous('Proportion "ASHI"-responses'),
+      scale_y_continuous(bquote(paste('Proportion ', italic("ashi"), " responses", sep = ""))),
       scale_shape_manual(
         "Pen location", 
         breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = shapes.test.pen_locations),
