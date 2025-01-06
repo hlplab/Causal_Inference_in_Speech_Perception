@@ -906,7 +906,7 @@ my_hypotheses <- function(m, experiment, plot = F) {
     .[["hypothesis"]] %>% 
     mutate(Hypothesis = c(
       "Acoustic continuum more ashi-like -> more ashi responses",
-      "Visual bias ASHI -> more ashi responses",
+      "Visual bias ashi -> more ashi responses",
       "Acoustic and visual bias effects are independent")) %>% 
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
     kable(
