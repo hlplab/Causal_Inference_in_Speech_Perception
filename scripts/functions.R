@@ -883,10 +883,10 @@ my_hypotheses <- function(m, experiment, plot = F) {
       class = NULL) } %>%
     .[["hypothesis"]] %>% 
     mutate(Hypothesis = c(
-      "Pen location Mouth -> fewer ashi responses",
-      "Pen effect increases for more ashi-like acoustic input",
-      "Pen effect increases for visually ashi biased input",
-      "Pen effect increases even more when acoustic and visual input is ashi biased")) %>%
+      "Pen location Mouth -> fewer \\textit{ashi}-responses",
+      "Pen effect increases for more \\textit{ashi}-like acoustic input",
+      "Pen effect increases for visually \\textit{ashi}-biased input",
+      "Pen effect increases even more when acoustic and visual input is \\textit{ashi}-biased")) %>%
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
     kable(
       caption = "Effects of pen location.", 
@@ -905,8 +905,8 @@ my_hypotheses <- function(m, experiment, plot = F) {
       class = NULL, scope = "standard") } %>%
     .[["hypothesis"]] %>% 
     mutate(Hypothesis = c(
-      "Acoustic continuum more ashi-like -> more ashi responses",
-      "Visual bias ashi -> more ashi responses",
+      "Acoustic continuum more \\textit{ashi}-like -> more \\textit{ashi}-responses",
+      "Visual \\textit{ashi}-bias -> more \\textit{ashi}-responses",
       "Acoustic and visual bias effects are independent")) %>% 
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
     kable(

@@ -3,7 +3,6 @@ title: "Supplementary Information"
 author: "T. Florian Jaeger and Shawn Cummings"
 date: "\today"
 output:
-  fontsize: 10pt
   bookdown::pdf_document2:
     fig_caption: true
     keep_tex: true
@@ -14,6 +13,7 @@ output:
   word_document:
     toc: true
     toc_depth: '4'
+  fontsize: 10pt
 geometry: margin=2cm
 header-includes:
 - \usepackage{float}
@@ -41,18 +41,12 @@ library(magrittr)    # pipes
 library(ggtext)      # markdown formatting for text elements
 library(lubridate)   # date conversion, etc.
 
+library(knitr)
 library(kableExtra)
 
 library(brms)        # Bayesian GL(M)Ms
-library(tidybayes)   # extract posterior from brmfits
-library(modelr)      # create data grids
-library(sjPlot)      # tables for Bayesian GL(M)Ms
-library(broom)       # extracting information from GL(M)Ms
-library(boot)        # easy logit() function
 
-library(knitr)
-library(linguisticsdown)  #IPA symbols
-library(rstan)
+library(linguisticsdown)  # IPA symbols
 
 # Setting up cmdstanr
 # we recommend running this in a fresh R session or restarting your current session
@@ -72,7 +66,7 @@ source("functions.R")
 ```{r, include=FALSE}
 opts_chunk$set(dev = 'png', dpi = 96,
                comment="",
-               echo=FALSE, warning=TRUE, message=FALSE,
+               echo=FALSE, warning=FALSE, message=FALSE,
                cache=FALSE,
                size="small",
                tidy.opts = list(width.cutoff = 200),
@@ -94,7 +88,9 @@ knitr::knit_hooks$set(warning = color_block('orange'))
 ```
 
 # Context statement
-This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab at the University of Rochester is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206/7 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information.
+This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab at the University of Rochester is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206/7 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information. 
+
+The R Markdown document that this PDF is generated from is available on the OSF repo for the paper (https://osf.io/2asgw/), along all experimental materials. This includes the original video and audio recordings as well as all audiovisual test stimuli for all experiments along with their phonetic annotations—lists, and trial-level data. The same holds for the JavaScript code for the experiments. 
 
 # Chronology of Experiments
 
@@ -415,7 +411,7 @@ d.Exp1.survey <-
 ```
 
 ### Survey results
-The clear majority of all participants did not report any issues with the audio or video recordings.
+All survey responses are shared as part of the OSF repo for this project. The clear majority of all participants did not report any issues with the audio or video recordings.
 
 ```{r, fig.width=fig.base_width*3, out.width="66%"}
 d.Exp1.survey %>%
@@ -433,49 +429,35 @@ d.Exp1.survey %>%
   xlab('Did the video recordings ever stall during the experiment?')
 ```
 
-The clear majority of participants did not consider the speech they heard to be unusual, until subsequent questions explicitly pointed to the pronunciation of "s" and "sh". The first question that assesses this simply asked participants whether they noticed anything odd about the talker. The following table provides all answers that did not unambiguously negate this. Most of these answers focus on the fact that the speaker frequently had a pen in her mouth. However, a non-trivial proportion of the participants also commented that they felt the audio and video were aligned well, and/or that the talker wasn't saying what the video was showing. <!-- TO DO: this needs a bit more text here -->
+The clear majority of participants did not consider the speech they heard to be unusual, until subsequent questions explicitly pointed to the pronunciation of "s" and "sh". The first question that assesses this simply asked participants whether they noticed anything odd about the talker, followed by an open-ended text field. We categorized participants' answers in terms of whether their statement mentioned that 1) the talker was described as sounding odd (e.g., having a lisp), 2) the talker had a pen in the mouth, 3) the pen affected the talker's speech, and 4) the audio and video were misaligned. While very few participants considered the talkers' speech atypical (e.g., "accented", exhibiting a "lisp"), many participants commented on the fact that the talker often had a pen in the mouth. Of these, some claimed that the pen affected the pronunciation of the talker (in reality the audio recording was by design independent of the location of the pen). Finally, about 15-20% of participants noted misalignments between the sound and the video. 
 
-```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*5, out.width="100%"}
+```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*4, out.width="66%"}
 read.csv("../data/CISP_data_participant-comments.csv") %>%
-  pivot_longer(cols = starts_with("Talker.SpeechDescription_"),
-               names_to = "question",
-               values_to = "response") %>%
-  mutate(response_boolean = ifelse(response == "yes", 1, 0),
-         question = case_when(
-           question == "Talker.SpeechDescription_Odd" ~ "Was the talker described as odd?",
-           question == "Talker.SpeechDescription_AudioVideoMisaligned" ~ "Was audiovisual misalignment mentioned?",
-           question == "Talker.SpeechDescription_Pen" ~ "Was the pen mentioned?",
-           question == "Talker.SpeechDescription_WhiteDot" ~ "Were the (lack of) white dot catch trials mentioned?",
-           question == "Talker.SpeechDescription_NotOdd" ~ "Was the talker described as *not* odd?"
-         )) %>%
-  filter(Experiment != "") %>%
+  pivot_longer(
+    cols = starts_with("Talker.SpeechDescription_"),
+    names_to = "question",
+    values_to = "response") %>%
+  mutate(
+    response_boolean = ifelse(response == "yes", 1, 0),
+    question = case_when(
+      question == "Talker.SpeechDescription_Odd" ~ "Was the talker described as sounding atypical?",
+      question == "Talker.SpeechDescription_AudioVideoMisaligned" ~ "Was audiovisual misalignment mentioned?",
+      question == "Talker.SpeechDescription_Pen" ~ "Was the pen mentioned?",
+      question == "Talker.SpeechDescription_WhiteDot" ~ "Were the (lack of) white dot catch trials mentioned?",
+      question == "Talker.SpeechDescription_NotOdd" ~ "Was the talker described as *not* odd?")) %>%
+  filter(
+    Experiment != "", 
+    question %in% c("Was the talker described as sounding atypical?", "Was the pen mentioned?", "Did the pen described as affecting pronunciation?", "Was audiovisual misalignment mentioned?")) %>%
+  mutate(question = factor(question, levels = c("Was the talker described as sounding atypical?", "Was the pen mentioned?", "Did the pen described as affecting pronunciation?", "Was audiovisual misalignment mentioned?"))) %>%
   ggplot(aes(x = response_boolean)) +
   geom_bar() +
-  facet_wrap(question ~ Experiment, ncol = 3) +
+  facet_grid(question ~ Experiment) +
   scale_x_continuous("Response",
                    breaks = c(0, 1),
                    labels = c("no", "yes"))
-
-# d.Exp1.survey %>%
-#   select(Experiment, ParticipantID, Talker.SpeechDescription) %>%
-#   mutate(
-#     Talker.SpeechDescription_Odd = NA,
-#     Talker.SpeechDescription_AudioVideoMisaligned = NA,
-#     Talker.SpeechDescription_Pen = ifelse(str_detect(Talker.SpeechDescription, regex("pen", ignore_case = T)), "yes", NA),
-#     Talker.SpeechDescription_WhiteDot = ifelse(str_detect(Talker.SpeechDescription, regex("white dot", ignore_case = T)), "yes", NA),
-#     Talker.SpeechDescription_NotOdd = 
-#       case_when(
-#         is.na(Talker.SpeechDescription) ~ "yes", 
-#         Talker.SpeechDescription %in% c("I did not.", "N/A", "NOTHING", "i dont think so") ~ "yes", 
-#         str_detect(Talker.SpeechDescription, "^(no|No)") ~ "yes", 
-#         str_detect(Talker.SpeechDescription, regex("I did not notice anything odd", ignore_case = T)) ~ "yes",
-#         str_detect(Talker.SpeechDescription, "The speaker did not seem odd to me")  ~ "yes",
-#         T ~ NA_character_)) %>%
-#   write_csv(file = "../data/CISP_data_participant-comments.csv", na = "") %>%
-#   rename(`Did you notice anything odd about the talker?` = Talker.SpeechDescription)
 ```
 
-At that point, about half of the participants considered those pronunciations to be normal. It is possible that some of participants' answers to this latter question reflect confusion. For instance, since "s" and "sh" were always presented in the context of the nonce-word *asi*/*ashi*, it is unclear how participants would come to the conclusion that the talker swapped "s" and "sh". Yet, about one sixth of all participants gave that answer.
+Subsequent multiple choice questions further explored participants' perception of the talker. The clear majority of the participants considered the talker's pronunciations to be typical. At the same time, however, the majority of participants answered on a later question that the talker had "swapped" "s" and "sh". It is possible that some of participants' responses to this latter question reflect confusion. For instance, since "s" and "sh" were always presented in the context of the nonce-word *asi*/*ashi*, it is unclear how participants would come to the conclusion that the talker swapped "s" and "sh". Yet, about one sixth of all participants gave that answer.
 
 ```{r, fig.width=fig.base_width*3, out.width="66%"}
 d.Exp1.survey %>%
