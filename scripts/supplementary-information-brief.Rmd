@@ -3,6 +3,7 @@ title: "Supplementary Information"
 author: "T. Florian Jaeger and Shawn Cummings"
 date: "\today"
 output:
+  fontsize: 10pt
   bookdown::pdf_document2:
     fig_caption: true
     keep_tex: true
@@ -10,7 +11,6 @@ output:
     number_sections: true
     toc: true
     toc_depth: 4
-  fontsize: 10pt
   word_document:
     toc: true
     toc_depth: '4'
@@ -301,7 +301,27 @@ d.Exp1.survey %>%
 
 The clear majority of participants did not consider the speech they heard to be unusual, until subsequent questions explicitly pointed to the pronunciation of "s" and "sh". The first question that assesses this simply asked participants whether they noticed anything odd about the talker. The following table provides all answers that did not unambiguously negate this. Most of these answers focus on the fact that the speaker frequently had a pen in her mouth. However, a non-trivial proportion of the participants also commented that they felt the audio and video were aligned well, and/or that the talker wasn't saying what the video was showing. <!-- TO DO: this needs a bit more text here -->
 
-```{r}
+```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*5, out.width="100%"}
+read.csv("../data/CISP_data_participant-comments.csv") %>%
+  pivot_longer(cols = starts_with("Talker.SpeechDescription_"),
+               names_to = "question",
+               values_to = "response") %>%
+  mutate(response_boolean = ifelse(response == "yes", 1, 0),
+         question = case_when(
+           question == "Talker.SpeechDescription_Odd" ~ "Was the talker described as odd?",
+           question == "Talker.SpeechDescription_AudioVideoMisaligned" ~ "Was audiovisual misalignment mentioned?",
+           question == "Talker.SpeechDescription_Pen" ~ "Was the pen mentioned?",
+           question == "Talker.SpeechDescription_WhiteDot" ~ "Were the (lack of) white dot catch trials mentioned?",
+           question == "Talker.SpeechDescription_NotOdd" ~ "Was the talker described as *not* odd?"
+         )) %>%
+  filter(Experiment != "") %>%
+  ggplot(aes(x = response_boolean)) +
+  geom_bar() +
+  facet_wrap(question ~ Experiment, ncol = 3) +
+  scale_x_continuous("Response",
+                   breaks = c(0, 1),
+                   labels = c("no", "yes"))
+
 # d.Exp1.survey %>%
 #   select(Experiment, ParticipantID, Talker.SpeechDescription) %>%
 #   mutate(
