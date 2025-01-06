@@ -611,12 +611,81 @@ my_LJ18_hypothesis <-
 my_LJ18_hypothesis(m.LJ18)
 ```
 
+## Subset analyses
+Since some participants commented on the pen affecting the pronunciation of the talker, we conducted a subset analysis that excluded those participants. This addresses the potential that those participants might have responded in a way that reflects conscious deliberations about the effect of the pen, rather than the presumably automatic, subsconscious processes entailed by compensation. 
+
+### Experiment 1a
+
+```{r, results='asis'}
+d.test.Exp1 %<>%
+  left_join(
+    read.csv("../data/CISP_data_participant-comments.csv"))
+
+m.Exp1a <- fit_test_model(
+  data = d.test.Exp1 %>% filter(Talker.SpeechDescription_PenAffectsPronunciation != "yes"), 
+  experiment = "CISP-1a",
+  file = paste("../models/Exp", paste(experiment, collapse = "-"), "wo participants who commented on pen affecting pronunciation", sep = "-"))
+
+m.Exp1a %>% 
+  brms_SummaryTable() %>% 
+  kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1a after excluding participants who responded that the pen affected the talker's pronunciation (in reality, this was not the case in our recordings).",
+        format = "latex",
+        booktabs = T,
+        align = c("l", "r", "r", "r", "r")) %>%
+  column_spec(1, width = "10cm") 
+```
+
+```{r, results='asis'}
+my_hypotheses(m.Exp1a, experiment = "Exp 1a") %>% map(print) -> TEMP
+```
+
+### Experiment 1b
+
+```{r, results='asis'}
+m.Exp1b <- fit_test_model(
+  data = d.test.Exp1 %>% filter(Talker.SpeechDescription_PenAffectsPronunciation != "yes"), 
+  experiment = "CISP-1b",
+  file = paste("../models/Exp", paste(experiment, collapse = "-"), "wo participants who commented on pen affecting pronunciation", sep = "-"))
+
+m.Exp1b %>% 
+  brms_SummaryTable() %>% 
+  kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1b after excluding participants who responded that the pen affected the talker's pronunciation (in reality, this was not the case in our recordings).",
+        format = "latex",
+        booktabs = T,
+        align = c("l", "r", "r", "r", "r")) %>%
+  column_spec(1, width = "10cm") 
+```
+
+```{r, results='asis'}
+my_hypotheses(m.Exp1b, experiment = "Exp 1b") %>% map(print) -> TEMP
+```
+
+### Experiment 1c
+
+```{r, results='asis'}
+m.Exp1c <- fit_test_model(
+  data = d.test.Exp1 %>% filter(Talker.SpeechDescription_PenAffectsPronunciation != "yes"), 
+  experiment = "CISP-1c",
+  file = paste("../models/Exp", paste(experiment, collapse = "-"), "wo participants who commented on pen affecting pronunciation", sep = "-"))
+
+m.Exp1c %>% 
+  brms_SummaryTable() %>% 
+  kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1c after excluding participants who responded that the pen affected the talker's pronunciation (in reality, this was not the case in our recordings).",
+        format = "latex",
+        booktabs = T,
+        align = c("l", "r", "r", "r", "r")) %>%
+  column_spec(1, width = "10cm") 
+```
+
+```{r, results='asis'}
+my_hypotheses(m.Exp1c, experiment = "Exp 1c") %>% map(print) -> TEMP
+```
+
 # Experiments 2 and 2b
 We conducted two experiments that were designed to test whether listeners need to see the effects of the pen on the articulators *during the production of the fricative*, or whether the presence of a pen during the production of a fricative is sufficient to cause the effects observed in Experiments 1a-c. To this end, Experiments 2 and 2b introduced a black box that occluded the talker's mouth during the articulation of the fricative (see main text for details). The two experiments were identical except that Experiment 2b introduced an additional task intended to assure that participants paid attention to the videos (rather than just the audio). This change in procedure from Experiment 2 to 2b was intended to address an alternative explanation for the results of Experiment 2. As reported below, Experiment 2 did not find the effects of pen location that were present in Experiments 1a-c. This raised the question as to whether participants in Experiment 2 failed to pay attention to the video (unlike in Experiments 1a-c). 
 
 On the one hand, the catch task employed in Experiment 2 (same as in Experiments 1a-c: participants were asked to press "B" when they saw a white dot in the video) would seem to reject that possibility: as in Experiments 1a-c, participants that pressed "B" in the absence of a white dot were excluded from the analysis of Experiment 2. However, since none of the trials actually contained a white dot, this means that participants that did not pay any attention to the video and never pressed "B" would fail to be excluded from the analysis of Experiment 2. In Experiment 2b, we thus replaced the catch task from Experiments 1a-c & 2, and instead asked Experiments to press SPACE when the pen was in the mouth. As in Experiment 2, participants in Experiment 2b also had to press "X" or "M" to indicate whether they heard *asi* or *ashi*. 
 
-## Data import
 ```{r}
 d.test.Exp2 <- 
   d.CISP.ALL %>%
