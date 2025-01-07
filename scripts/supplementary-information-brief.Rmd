@@ -433,8 +433,8 @@ d.Exp1.survey <-
   distinct()
 ```
 
-### Survey results
-All survey responses are shared as part of the OSF repo for this project. The clear majority of all participants did not report any issues with the audio or video recordings.
+### Survey results {#sec:survey-results}
+All survey responses are shared as part of the OSF repo for this project. The first questions assessed the issues with the audio or video playback. The clear majority of all participants did not report any issues with the audio or video recordings.
 
 ```{r, fig.width=fig.base_width*3, out.width="66%"}
 d.Exp1.survey %>%
@@ -452,10 +452,20 @@ d.Exp1.survey %>%
   xlab('Did the video recordings ever stall during the experiment?')
 ```
 
-The clear majority of participants did not consider the speech they heard to be unusual, until subsequent questions explicitly pointed to the pronunciation of "s" and "sh". The first question that assesses this simply asked participants whether they noticed anything odd about the talker, followed by an open-ended text field. We categorized participants' answers in terms of whether their statement mentioned that 1) the talker was described as sounding odd (e.g., having a lisp), 2) the talker had a pen in the mouth, 3) the pen affected the talker's speech, and 4) the audio and video were misaligned. While very few participants considered the talkers' speech atypical (e.g., "accented", exhibiting a "lisp"), many participants commented on the fact that the talker often had a pen in the mouth. Of these, some claimed that the pen affected the pronunciation of the talker (in reality the audio recording was by design independent of the location of the pen). Finally, about 15-20% of participants noted misalignments between the sound and the video.
+The next set of questions assessed how participants perceived the speech of the talker, including potential effects of the pen. The first question simply asked participants whether they noticed anything odd about the talker, followed by an open-ended text prompt. We anotated participants' responses in terms of whether their statement mentioned that 1) the talker sounded atypical (e.g., having a lisp), 2) the talker had a pen in the mouth, and 3) the audio and video were misaligned. For statements that mentioned the pen, we also annotated what participants noted about the pen.
+
+```{r}
+d.comment <- read.csv("../data/CISP_data_participant-comments.csv")
+
+annotation_numbers <- function(var) {
+  paste0(x <- sum(d.comment[[paste0("Talker.SpeechDescription_", var)]] == "yes"), " (", round(x / nrow(d.comment) * 100, 1), "%)")
+}
+```
+
+While only `r annotation_numbers("Odd")` participants across the three experiments considered the talkers' speech atypical (e.g., "accented", exhibiting a "lisp"),  `r annotation_numbers("Pen")` participants commented on the fact that the talker often had a pen in the mouth. The latter is expected given that the pen was in the talker's mouth on half of the trials, and thus rather salient. Of the responses that mentioned the pen, some claimed that the pen affected the pronunciation of the talker (in reality the audio recording was by design independent of the location of the pen). Most participants simply noticed the pen. Some participants, however, further noted that the pen affected their ability to tell whether the talker was saying *asi* or *ashi* (`r annotation_numbers("PenMadeCategorizationDifficult")`), or that the pen affected the talker's pronunciation (`r annotation_numbers("PenAffectsPronunciation")`), and some hypothesized that the experiment was about the pen (`r annotation_numbers("PenHypothesizedToMatter")`). While these responses suggests that relatively few participants had conscious hypotheses about the effects of the pen, Section \@ref(sec:subset-analyses) below presents subset analyses of Experiments 1a-c that exclude those participants. Finally, a substantial minority of participants---`r annotation_numbers("AudioVideoMisaligned")`---noted misalignments between the sound and the video. This is an inevitable consequence of the approach we chose to investigate the effect of the pen (see main text for our rationale for this approach).
 
 ```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*4, out.width="66%"}
-read.csv("../data/CISP_data_participant-comments.csv") %>%
+d.comment %>%
   pivot_longer(
     cols = starts_with("Talker.SpeechDescription_"),
     names_to = "question",
@@ -470,8 +480,8 @@ read.csv("../data/CISP_data_participant-comments.csv") %>%
       question == "Talker.SpeechDescription_NotOdd" ~ "Was the talker described as *not* odd?")) %>%
   filter(
     Experiment != "",
-    question %in% c("Was the talker described as sounding atypical?", "Was the pen mentioned?", "Did the pen described as affecting pronunciation?", "Was audiovisual misalignment mentioned?")) %>%
-  mutate(question = factor(question, levels = c("Was the talker described as sounding atypical?", "Was the pen mentioned?", "Did the pen described as affecting pronunciation?", "Was audiovisual misalignment mentioned?"))) %>%
+    question %in% c("Was the talker described as sounding atypical?", "Was the pen mentioned?", "Was audiovisual misalignment mentioned?")) %>%
+  mutate(question = factor(question, levels = c("Was the talker described as sounding atypical?", "Was the pen mentioned?", "Was audiovisual misalignment mentioned?"))) %>%
   ggplot(aes(x = response_boolean)) +
   geom_bar() +
   facet_grid(question ~ Experiment) +
@@ -634,75 +644,97 @@ my_LJ18_hypothesis <-
 my_LJ18_hypothesis(m.LJ18)
 ```
 
-<!-- ## Subset analyses -->
-<!-- Since some participants commented on the pen affecting the pronunciation of the talker, we conducted a subset analysis that excluded those participants. This addresses the potential that those participants might have responded in a way that reflects conscious deliberations about the effect of the pen, rather than the presumably automatic, subsconscious processes entailed by compensation.  -->
+## Subset analyses {#sec:subset-analyses}
+As noted in the description of the survey results in Section \@ref(sec:survey-results), some participants commented on potential effects of the pen. We thus conducted a subset analysis to addresses the potential that those participants might have responded in a way that reflects conscious deliberations about the effect of the pen, rather than the presumably automatic, subconscious processes entailed by compensation. For this analysis, we excluded all participants who commented that 1) the pen made it difficult to see what the talker said, 2) the pen affected pronunciation, or 3) the experiment was about the effects of the pen. This removed `r  (d.test.Exp1 %>% distinct(ParticipantID) %>% nrow()) - (d.test.Exp1 %>% 
+    filter(
+      Talker.SpeechDescription_PenMadeCategorizationDifficult != "yes",
+      Talker.SpeechDescription_PenAffectsPronunciation != "yes",
+      Talker.SpeechDescription_PenHypothesizedToMatter != "yes") %>% distinct(ParticipantID) %>% nrow())` additional participants, leaving only `r d.test.Exp1 %>% 
+    filter(
+      Talker.SpeechDescription_PenMadeCategorizationDifficult != "yes",
+      Talker.SpeechDescription_PenAffectsPronunciation != "yes",
+      Talker.SpeechDescription_PenHypothesizedToMatter != "yes") %>% distinct(ParticipantID) %>% nrow()` participants for analysis.
 
-<!-- ### Experiment 1a -->
+### Experiment 1a
 
-<!-- ```{r, results='asis'} -->
-<!-- d.test.Exp1 %<>% -->
-<!--   left_join( -->
-<!--     read.csv("../data/CISP_data_participant-comments.csv")) -->
+```{r, results='asis'}
+d.test.Exp1 %<>%
+  left_join(d.comment)
 
-<!-- m.Exp1a <- fit_test_model( -->
-<!--   data = d.test.Exp1 %>% filter(Talker.SpeechDescription_PenAffectsPronunciation != "yes"),  -->
-<!--   experiment = "CISP-1a", -->
-<!--   file = paste("../models/Exp", paste(experiment, collapse = "-"), "wo participants who commented on pen affecting pronunciation", sep = "-")) -->
+m.Exp1a <- fit_test_model(
+  data = 
+    d.test.Exp1 %>% 
+    filter(
+      Talker.SpeechDescription_PenMadeCategorizationDifficult != "yes",
+      Talker.SpeechDescription_PenAffectsPronunciation != "yes",
+      Talker.SpeechDescription_PenHypothesizedToMatter != "yes"),
+  experiment = "CISP-1a",
+  file = paste("../models/Exp", paste("CISP-1a", collapse = "-"), "wo participants who commented on pen affecting pronunciation", sep = "-"))
 
-<!-- m.Exp1a %>%  -->
-<!--   brms_SummaryTable() %>%  -->
-<!--   kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1a after excluding participants who responded that the pen affected the talker's pronunciation (in reality, this was not the case in our recordings).", -->
-<!--         format = "latex", -->
-<!--         booktabs = T, -->
-<!--         align = c("l", "r", "r", "r", "r")) %>% -->
-<!--   column_spec(1, width = "10cm")  -->
-<!-- ``` -->
+m.Exp1a %>%
+  brms_SummaryTable() %>%
+  kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1a after excluding participants who responded that the pen affected the talker's pronunciation (in reality, this was not the case in our recordings).",
+        format = "latex",
+        booktabs = T,
+        align = c("l", "r", "r", "r", "r")) %>%
+  column_spec(1, width = "10cm")
+```
 
-<!-- ```{r, results='asis'} -->
-<!-- my_hypotheses(m.Exp1a, experiment = "Exp 1a") %>% map(print) -> TEMP -->
-<!-- ``` -->
+```{r, results='asis'}
+my_hypotheses(m.Exp1a, experiment = "Exp 1a") %>% map(print) -> TEMP
+```
 
-<!-- ### Experiment 1b -->
+### Experiment 1b
 
-<!-- ```{r, results='asis'} -->
-<!-- m.Exp1b <- fit_test_model( -->
-<!--   data = d.test.Exp1 %>% filter(Talker.SpeechDescription_PenAffectsPronunciation != "yes"),  -->
-<!--   experiment = "CISP-1b", -->
-<!--   file = paste("../models/Exp", paste(experiment, collapse = "-"), "wo participants who commented on pen affecting pronunciation", sep = "-")) -->
+```{r, results='asis'}
+m.Exp1b <- fit_test_model(
+  data = 
+    d.test.Exp1 %>% 
+    filter(
+      Talker.SpeechDescription_PenMadeCategorizationDifficult != "yes",
+      Talker.SpeechDescription_PenAffectsPronunciation != "yes",
+      Talker.SpeechDescription_PenHypothesizedToMatter != "yes"),
+  experiment = "CISP-1b",
+  file = paste("../models/Exp", paste("CISP-1b", collapse = "-"), "wo participants who commented on pen affecting pronunciation", sep = "-"))
 
-<!-- m.Exp1b %>%  -->
-<!--   brms_SummaryTable() %>%  -->
-<!--   kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1b after excluding participants who responded that the pen affected the talker's pronunciation (in reality, this was not the case in our recordings).", -->
-<!--         format = "latex", -->
-<!--         booktabs = T, -->
-<!--         align = c("l", "r", "r", "r", "r")) %>% -->
-<!--   column_spec(1, width = "10cm")  -->
-<!-- ``` -->
+m.Exp1b %>%
+  brms_SummaryTable() %>%
+  kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1b after excluding participants who responded that the pen affected the talker's pronunciation (in reality, this was not the case in our recordings).",
+        format = "latex",
+        booktabs = T,
+        align = c("l", "r", "r", "r", "r")) %>%
+  column_spec(1, width = "10cm")
+```
 
-<!-- ```{r, results='asis'} -->
-<!-- my_hypotheses(m.Exp1b, experiment = "Exp 1b") %>% map(print) -> TEMP -->
-<!-- ``` -->
+```{r, results='asis'}
+my_hypotheses(m.Exp1b, experiment = "Exp 1b") %>% map(print) -> TEMP
+```
 
-<!-- ### Experiment 1c -->
+### Experiment 1c
 
-<!-- ```{r, results='asis'} -->
-<!-- m.Exp1c <- fit_test_model( -->
-<!--   data = d.test.Exp1 %>% filter(Talker.SpeechDescription_PenAffectsPronunciation != "yes"),  -->
-<!--   experiment = "CISP-1c", -->
-<!--   file = paste("../models/Exp", paste(experiment, collapse = "-"), "wo participants who commented on pen affecting pronunciation", sep = "-")) -->
+```{r, results='asis'}
+m.Exp1c <- fit_test_model(
+  data = 
+    d.test.Exp1 %>% 
+    filter(
+      Talker.SpeechDescription_PenMadeCategorizationDifficult != "yes",
+      Talker.SpeechDescription_PenAffectsPronunciation != "yes",
+      Talker.SpeechDescription_PenHypothesizedToMatter != "yes"),
+  experiment = "CISP-1c",
+  file = paste("../models/Exp", paste("CISP-1c", collapse = "-"), "wo participants who commented on pen affecting pronunciation", sep = "-"))
 
-<!-- m.Exp1c %>%  -->
-<!--   brms_SummaryTable() %>%  -->
-<!--   kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1c after excluding participants who responded that the pen affected the talker's pronunciation (in reality, this was not the case in our recordings).", -->
-<!--         format = "latex", -->
-<!--         booktabs = T, -->
-<!--         align = c("l", "r", "r", "r", "r")) %>% -->
-<!--   column_spec(1, width = "10cm")  -->
-<!-- ``` -->
+m.Exp1c %>%
+  brms_SummaryTable() %>%
+  kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1c after excluding participants who responded that the pen affected the talker's pronunciation (in reality, this was not the case in our recordings).",
+        format = "latex",
+        booktabs = T,
+        align = c("l", "r", "r", "r", "r")) %>%
+  column_spec(1, width = "10cm")
+```
 
-<!-- ```{r, results='asis'} -->
-<!-- my_hypotheses(m.Exp1c, experiment = "Exp 1c") %>% map(print) -> TEMP -->
-<!-- ``` -->
+```{r, results='asis'}
+my_hypotheses(m.Exp1c, experiment = "Exp 1c") %>% map(print) -> TEMP
+```
 
 # Experiments 2 and 2b
 We conducted two experiments that were designed to test whether listeners need to see the effects of the pen on the articulators *during the production of the fricative*, or whether the presence of a pen during the production of a fricative is sufficient to cause the effects observed in Experiments 1a-c. To this end, Experiments 2 and 2b introduced a black box that occluded the talker's mouth during the articulation of the fricative (see main text for details). The two experiments were identical except that Experiment 2b introduced an additional task intended to assure that participants paid attention to the videos (rather than just the audio). This change in procedure from Experiment 2 to 2b was intended to address an alternative explanation for the results of Experiment 2. As reported below, Experiment 2 did not find the effects of pen location that were present in Experiments 1a-c. This raised the question as to whether participants in Experiment 2 failed to pay attention to the video (unlike in Experiments 1a-c).
