@@ -462,7 +462,7 @@ annotation_numbers <- function(var) {
 }
 ```
 
-While only `r annotation_numbers("Odd")` participants across the three experiments considered the talkers' speech atypical (e.g., "accented", exhibiting a "lisp"),  `r annotation_numbers("Pen")` participants commented on the fact that the talker often had a pen in the mouth. The latter is expected given that the pen was in the talker's mouth on half of the trials, and thus rather salient. Of the responses that mentioned the pen, some claimed that the pen affected the pronunciation of the talker (in reality the audio recording was by design independent of the location of the pen). Most participants simply noticed the pen. Some participants, however, further noted that the pen affected their ability to tell whether the talker was saying *asi* or *ashi* (`r annotation_numbers("PenMadeCategorizationDifficult")`), or that the pen affected the talker's pronunciation (`r annotation_numbers("PenAffectsPronunciation")`), and some hypothesized that the experiment was about the pen (`r annotation_numbers("PenHypothesizedToMatter")`). While these responses suggests that relatively few participants had conscious hypotheses about the effects of the pen, Section \@ref(sec:subset-analyses) below presents subset analyses of Experiments 1a-c that exclude those participants. Finally, a substantial minority of participants---`r annotation_numbers("AudioVideoMisaligned")`---noted misalignments between the sound and the video. This is an inevitable consequence of the approach we chose to investigate the effect of the pen (see main text for our rationale for this approach).
+While only `r annotation_numbers("Odd")` participants across the three experiments considered the talkers' speech atypical (e.g., "accented", exhibiting a "lisp"),  `r annotation_numbers("Pen")` participants commented on the fact that the talker often had a pen in the mouth. The latter is expected given that the pen was in the talker's mouth on half of the trials, and thus rather salient. Of the responses that mentioned the pen, some claimed that the pen affected the pronunciation of the talker (in reality the audio recording was by design independent of the location of the pen). Most participants simply noticed the pen. Some participants, however, further noted that the pen affected their ability to tell whether the talker was saying *asi* or *ashi* (`r annotation_numbers("PenMadeCategorizationDifficult")`), or that the pen affected the talker's pronunciation (`r annotation_numbers("PenAffectsPronunciation")`), and some hypothesized that the experiment was about the pen (`r annotation_numbers("PenHypothesizedToMatter")`). While these responses suggests that relatively few participants had conscious hypotheses about the effects of the pen, Section \@ref(sec:subset-analyses) below presents subset analyses of Experiments 1a-c that exclude those participants. Finally, a substantial minority of participants---`r annotation_numbers("AudioVideoMisaligned")`---noted misalignments between the sound and the video. This is an inevitable consequence of the approach we chose to investigate the effect of the pen (see main text for our rationale for this approach). Critically thought, it is unclear how awareness of audiovisual misalignment would bias the results we reliably observed across Experiments 1a-c.
 
 ```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*4, out.width="66%"}
 d.comment %>%
@@ -644,7 +644,13 @@ my_LJ18_hypothesis <-
 my_LJ18_hypothesis(m.LJ18)
 ```
 
-## Subset analyses {#sec:subset-analyses}
+## Subset analyses removing participants who commented on effects of the pen {#sec:subset-analyses}
+
+```{r}
+d.test.Exp1 %<>%
+  left_join(d.comment)
+```
+
 As noted in the description of the survey results in Section \@ref(sec:survey-results), some participants commented on potential effects of the pen. We thus conducted a subset analysis to addresses the potential that those participants might have responded in a way that reflects conscious deliberations about the effect of the pen, rather than the presumably automatic, subconscious processes entailed by compensation. For this analysis, we excluded all participants who commented that 1) the pen made it difficult to see what the talker said, 2) the pen affected pronunciation, or 3) the experiment was about the effects of the pen. This removed `r  (d.test.Exp1 %>% distinct(ParticipantID) %>% nrow()) - (d.test.Exp1 %>% 
     filter(
       Talker.SpeechDescription_PenMadeCategorizationDifficult != "yes",
@@ -653,14 +659,11 @@ As noted in the description of the survey results in Section \@ref(sec:survey-re
     filter(
       Talker.SpeechDescription_PenMadeCategorizationDifficult != "yes",
       Talker.SpeechDescription_PenAffectsPronunciation != "yes",
-      Talker.SpeechDescription_PenHypothesizedToMatter != "yes") %>% distinct(ParticipantID) %>% nrow()` participants for analysis.
+      Talker.SpeechDescription_PenHypothesizedToMatter != "yes") %>% distinct(ParticipantID) %>% nrow()` participants for analysis. As reported in the following subsections, all results reported in the main analysis held even for this much smaller subset of participants.
 
 ### Experiment 1a
 
 ```{r, results='asis'}
-d.test.Exp1 %<>%
-  left_join(d.comment)
-
 m.Exp1a <- fit_test_model(
   data = 
     d.test.Exp1 %>% 
