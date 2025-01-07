@@ -659,7 +659,7 @@ As noted in the description of the survey results in Section \@ref(sec:survey-re
     filter(
       Talker.SpeechDescription_PenMadeCategorizationDifficult != "yes",
       Talker.SpeechDescription_PenAffectsPronunciation != "yes",
-      Talker.SpeechDescription_PenHypothesizedToMatter != "yes") %>% distinct(ParticipantID) %>% nrow()` participants for analysis. As reported in the following subsections, all results reported in the main analysis held even for this much smaller subset of participants.
+      Talker.SpeechDescription_PenHypothesizedToMatter != "yes") %>% distinct(ParticipantID) %>% nrow()` participants for analysis. As reported in the following subsections, all results reported in the main analyses held for this much smaller subset of participants. In fact, the effect estimates ($\hat{\beta}$) for the subset analyses were as large or larger than in the main analyses.
 
 ### Experiment 1a
 
