@@ -14,7 +14,7 @@ output:
     toc: true
     toc_depth: '4'
   fontsize: 10pt
-bibliography: references.bib  
+bibliography: ["references.bib", "r-references.bib"]  
 geometry: margin=2cm
 header-includes:
 - \usepackage{float}
@@ -42,8 +42,10 @@ library(magrittr)    # pipes
 library(ggtext)      # markdown formatting for text elements
 library(lubridate)   # date conversion, etc.
 
-library(knitr)
-library(kableExtra)
+library(knitr)   
+# devtools::install_github("crsh/papaja")
+library(papaja)      # R reference list
+library(kableExtra)  # table formatting
 
 library(brms)        # Bayesian GL(M)Ms
 
@@ -88,10 +90,30 @@ knitr::knit_hooks$set(error = color_block('red'))
 knitr::knit_hooks$set(warning = color_block('orange'))
 ```
 
-# Context statement
+# Open science statement
 This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab at the University of Rochester is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206/7 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information. 
 
 The R Markdown document that this PDF is generated from is available on the OSF repo for the paper (https://osf.io/2asgw/), along all experimental materials. This includes the original video and audio recordings as well as all audiovisual test stimuli for all experiments along with their phonetic annotations—lists, and trial-level data. The same holds for the JavaScript code for the experiments. 
+
+# Required software {#sec:software}
+This document was compiled using \texttt{knitr} in RStudio with R:
+
+```{r}
+version
+
+r_refs(
+  file = "r-references.bib",
+  append = FALSE,
+  type_pref = c("Manual", "Article", "Book"))
+```
+
+<!-- You will also need to download the IPA font [SIL Doulos](https://software.sil.org/doulos/download/) and a Latex environment like (e.g., [MacTex](https://tug.org/mactex/mactex-download.html) or the R library \texttt{tinytex}). -->
+
+We used the following R packages to create this document: `r cite_r("r-references.bib")`. 
+If opened in RStudio, the top of the R markdown document should alert you to any libraries you will need to download, if you have not already installed them. The full session information is provided at the end of this document.
+
+## Interested in using R markdown do create APA formatted documents that integrate your code with your writing?
+A project template, including R markdown files that result in APA-formatted PDFs, is available at [https://github.com/hlplab/template-R-project](https://github.com/hlplab/template-R-project). Feedback welcome. We aim to help others avoid the mistakes and detours we made when first deciding to embrace literal coding to increase transparency in our projects.
 
 # Chronology of Experiments
 
@@ -941,4 +963,4 @@ m.Exp2b %>%
 my_hypotheses(m.Exp2b, experiment = "Exp 2b") %>% map(print) -> TEMP
 ```
 
-
+# References
