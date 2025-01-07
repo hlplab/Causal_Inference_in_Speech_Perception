@@ -73,7 +73,7 @@ opts_chunk$set(dev = 'png', dpi = 96,
                cache=FALSE,
                size="small",
                tidy.opts = list(width.cutoff = 200),
-               fig.width = fig.base_width, fig.height = fig.base_height, 
+               fig.width = fig.base_width, fig.height = fig.base_height,
                fig.pos = "!ht", fig.align = "center")
 
 def.chunk.hook  <- knitr::knit_hooks$get("chunk")
@@ -91,9 +91,9 @@ knitr::knit_hooks$set(warning = color_block('orange'))
 ```
 
 # Open science statement
-This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab at the University of Rochester is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206/7 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information. 
+This document contains the data preparation, visualization, and analyses reported in the main text. As of 2022, the Human Language Processing Lab at the University of Rochester is committed to producing articles and supplementary information in the form of R Markdown documents whenever possible. This particular project grew out of a yearlong undergraduate research class (BCS 206/7 "Undergraduate Research in Cognitive Science"). To accommodate differences in familiarity with R programming, and to facilitate project workflow, the authors agreed to write the main text in a common word processing software, and to provide this R Markdown document as supplementary information.
 
-The R Markdown document that this PDF is generated from is available on the OSF repo for the paper (https://osf.io/2asgw/), along all experimental materials. This includes the original video and audio recordings as well as all audiovisual test stimuli for all experiments along with their phonetic annotations—lists, and trial-level data. The same holds for the JavaScript code for the experiments. 
+The R Markdown document that this PDF is generated from is available on the OSF repo for the paper (https://osf.io/2asgw/), along all experimental materials. This includes the original video and audio recordings as well as all audiovisual test stimuli for all experiments along with their phonetic annotations—lists, and trial-level data. The same holds for the JavaScript code for the experiments.
 
 # Required software {#sec:software}
 This document was compiled using \texttt{knitr} in RStudio with R:
@@ -109,7 +109,7 @@ r_refs(
 
 <!-- You will also need to download the IPA font [SIL Doulos](https://software.sil.org/doulos/download/) and a Latex environment like (e.g., [MacTex](https://tug.org/mactex/mactex-download.html) or the R library \texttt{tinytex}). -->
 
-We used the following R packages to create this document: `r cite_r("r-references.bib")`. 
+We used the following R packages to create this document: `r cite_r("r-references.bib")`.
 If opened in RStudio, the top of the R markdown document should alert you to any libraries you will need to download, if you have not already installed them. The full session information is provided at the end of this document.
 
 ## Interested in using R markdown do create APA formatted documents that integrate your code with your writing?
@@ -128,10 +128,10 @@ d.CISP.ALL <-
   read.csv("../data/CISP_data.csv") %>%
   mutate(
     across(
-      .cols = c(starts_with("Participant"), -Participant.Age, 
-                Phase, starts_with("Condition"), -Condition.Test.Audio, 
+      .cols = c(starts_with("Participant"), -Participant.Age,
+                Phase, starts_with("Condition"), -Condition.Test.Audio,
                 starts_with("Item"), starts_with("Talker"),
-                Response, Task, Exclude_Participant.Reason), 
+                Response, Task, Exclude_Participant.Reason),
       .fns = factor),
     across(
       .cols = c(Participant.Age, Condition.Test.Audio, Response.RT, starts_with("Duration")),
@@ -149,16 +149,16 @@ get_demographics <- function(data, experiment = unique(data$Experiment)) {
     distinct() %>%
     mutate(across(-Participant.Age, as.character)) %>%
     replace_na(list(Participant.Sex = "unknown", Participant.Race = "unknown", Participant.Ethnicity = "unknown"))
-  
+
   print(round(prop.table(table(data$Participant.Sex)) * 100, 1))
   print(round(prop.table(table(data$Participant.Ethnicity)) * 100, 1))
   print(round(prop.table(table(data$Participant.Race)) * 100, 1))
   cat(
     paste0(
-      "Mean age = ", round(mean(data$Participant.Age, na.rm = T), 1), 
-      " (SD = ", round(sd(data$Participant.Age, na.rm = T), 1), 
-      "). Interquartile range = ", summary(data$Participant.Age)[2], "-", 
-      summary(data$Participant.Age)[5], ". Declined to report: ", 
+      "Mean age = ", round(mean(data$Participant.Age, na.rm = T), 1),
+      " (SD = ", round(sd(data$Participant.Age, na.rm = T), 1),
+      "). Interquartile range = ", summary(data$Participant.Age)[2], "-",
+      summary(data$Participant.Age)[5], ". Declined to report: ",
       percent(summary(data$Participant.Age)[7] / nrow(data))))
 }
 ```
@@ -172,7 +172,7 @@ get_demographics(data = d.CISP.ALL, experiment = c("CISP-1a", "CISP-1b", "CISP-1
 # Experiments 1a-c
 
 ```{r}
-d.test.Exp1 <- 
+d.test.Exp1 <-
   d.CISP.ALL %>%
   filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c"))
 
@@ -187,7 +187,7 @@ d.LJ18.test <-
     Condition.Test.OriginalLabel = NA,
     Response = factor(case_when(Response == "SH" ~ "ASHI", Response == "S" ~ "ASI")),
     Response.ASHI = case_when(
-      Response == "ASHI" ~ 1, 
+      Response == "ASHI" ~ 1,
       Response == "ASI" ~ 0,
       T ~ NA_integer_),
     # Blocks were 6 trials per block in LJ18 but 12 in CISP, so we re-calculate
@@ -221,7 +221,7 @@ d.test.Exp1 <-
 # To also make sure exclusions have been applied LJ18
 d.test %<>%
   excludeData() %>%
-  filter(!is.na(Response.ASHI)) 
+  filter(!is.na(Response.ASHI))
 
 # median(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
 # sd(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
@@ -233,8 +233,8 @@ d.test %<>%
 The exit survey for Experiment 1a was identical to that of Liu and Jaeger (2018). Questions assessed the quality of the audio equipment, whether participants experienced stalling of audio or video (to help us catch problems with our code). Of particular note, the survey also contained a catch question, asking about the gender of the talker shown during the test phase. Following this survey, a final exit survey collected demographic information using the gender, age, race, and ethnicity categories required for NIH reporting. All responses in the demographic survey were indicated as optional.
 
  1)	Did any of the audio clips stall or lag during the experiment?
--	Yes, many 
-- Yes, just a few 
+-	Yes, many
+- Yes, just a few
 - No, none
 
 2)	What kind of audio equipment did you use for the experiment?
@@ -266,11 +266,11 @@ The exit survey for Experiment 1a was identical to that of Liu and Jaeger (2018)
 -	Serious
 
 6)	Was the speaker in the video a man or a woman?
--	Man 
+-	Man
 -	Woman
 
 7)	Did you notice anything in particular about how the speaker in the video said words that contained an "S" or "SH" sound?
--	Yes 
+-	Yes
 -	No
 
 8)	Which of the following best describes how the speaker in the video produced the "S" and "SH" sounds?
@@ -294,8 +294,8 @@ QUESTIONS
 - No, none
 
 2) Did any of the audio clips stall or lag during the experiment?
-- Yes, many 
-- Yes, just a few 
+- Yes, many
+- Yes, just a few
 - No, none
 
 3) What kind of audio equipment did you use for the experiment?
@@ -319,11 +319,11 @@ QUESTIONS
 - Serious
 
 6) Was the speaker in the video a man or a woman?
-- Man 
+- Man
 - Woman
 
 7) Did you notice anything in particular about how the speaker in the video said words that contained an "S" or "SH" sound?
-- Yes 
+- Yes
 - No
 
 8) Which of the following best describes how the speaker in the video produced the "S" and "SH" sounds?
@@ -332,18 +332,18 @@ QUESTIONS
 - SH sounded like S.
 - S sounded like SH and SH sounded like S.
 
-9) Which of these best defines your personal smoking habits? 
-- I don't smoke or I smoke less frequently than one cigarette per day. 
-- I smoke more than one cigarette per day. 
+9) Which of these best defines your personal smoking habits?
+- I don't smoke or I smoke less frequently than one cigarette per day.
+- I smoke more than one cigarette per day.
 - I smoke more than 10 cigarettes per day.
 
-10) In your current daily life, how often do you interact with people while they are smoking? 
-- Never or less frequently than once per day. 
-- More than once per day. 
+10) In your current daily life, how often do you interact with people while they are smoking?
+- Never or less frequently than once per day.
+- More than once per day.
 - More than 10 times per day.
 
-11) Which of these best defines the environment in which you were raised? 
-- No one close to me was a smoker. 
+11) Which of these best defines the environment in which you were raised?
+- No one close to me was a smoker.
 - One parent/guardian/person I saw on a daily basis was a smoker.
 - Multiple people I saw on a daily basis were smokers.
 
@@ -351,7 +351,7 @@ QUESTIONS
 - *text-box for subjects to answer*
 
 ### Experiment 1C
-For Experiment 1C, we added an additional question to the post-experiment survey. This question asked the participants to select their current timezone to let us know in what part of the US they were located and at what time of the day they took the HIT. We also made minor changes to the wording of some questions. Specifically, we changed the two questions that asked about video or sound issues during the experiment. We clarified that these questions were asking solely about technical issues, rather than any oddities between the alignment of the video and audio (as separate questions already assessed that aspect). The revised questions were introduced by the following statement: "The videos and sounds in this experiment were manipulated by aligning the same video with different sound sources. As a consequence, you might have noticed some 'jumps' or slightly odd-looking moments in the video. Here we are interested in *potential technical issues with the internet connection* beyond any oddities you might have noticed about how the video and sound aligned." (emphasis in original) Then two questions assessed whether the videos or sounds failed to load or stopped and restarted playing during exposure. As these revised questions explicitly mentioned that the videos and sounds had been manipulated, they were moved towards the end of the survey, so that they followed any questions that inquired about the pronunciation of the talker in the video (recall that participants could not go back to previously answered questions). 
+For Experiment 1C, we added an additional question to the post-experiment survey. This question asked the participants to select their current timezone to let us know in what part of the US they were located and at what time of the day they took the HIT. We also made minor changes to the wording of some questions. Specifically, we changed the two questions that asked about video or sound issues during the experiment. We clarified that these questions were asking solely about technical issues, rather than any oddities between the alignment of the video and audio (as separate questions already assessed that aspect). The revised questions were introduced by the following statement: "The videos and sounds in this experiment were manipulated by aligning the same video with different sound sources. As a consequence, you might have noticed some 'jumps' or slightly odd-looking moments in the video. Here we are interested in *potential technical issues with the internet connection* beyond any oddities you might have noticed about how the video and sound aligned." (emphasis in original) Then two questions assessed whether the videos or sounds failed to load or stopped and restarted playing during exposure. As these revised questions explicitly mentioned that the videos and sounds had been manipulated, they were moved towards the end of the survey, so that they followed any questions that inquired about the pronunciation of the talker in the video (recall that participants could not go back to previously answered questions).
 
 1) What kind of audio equipment did you use for the experiment?
 - In-ear headphones
@@ -374,11 +374,11 @@ For Experiment 1C, we added an additional question to the post-experiment survey
 - Serious
 
 4) Was the speaker in the video a man or a woman?
-- Man 
+- Man
 - Woman
 
 5) Did you notice anything in particular about how the speaker in the video said words that contained an "S" or "SH" sound?
-- Yes 
+- Yes
 - No
 
 6) Which of the following best describes how the speaker in the video produced the "S" and "SH" sounds?
@@ -387,28 +387,28 @@ For Experiment 1C, we added an additional question to the post-experiment survey
 - SH sounded like S.
 - S sounded like SH and SH sounded like S.
 
-7) The videos and sounds in this experiment were manipulated by aligning the same video with different sound sources. As a consequence, you might have noticed some 'jumps' or slightly odd looking moments in the video. Here we are interested in potential technical issues with the internet connection beyond any oddities you might have noticed about how the video and sound aligned. Did any of the videos fail to load or stop playing for a moment and then restart during the experiment? (We will ask about the sounds separately on the next page.) 
-- Yes, many 
-- Yes, just a few 
+7) The videos and sounds in this experiment were manipulated by aligning the same video with different sound sources. As a consequence, you might have noticed some 'jumps' or slightly odd looking moments in the video. Here we are interested in potential technical issues with the internet connection beyond any oddities you might have noticed about how the video and sound aligned. Did any of the videos fail to load or stop playing for a moment and then restart during the experiment? (We will ask about the sounds separately on the next page.)
+- Yes, many
+- Yes, just a few
 - No, none
 
-8) Did any of the audio clips fail to load or stop playing for a moment and then restart during the experiment? 
-- Yes, many 
-- Yes, just a few 
+8) Did any of the audio clips fail to load or stop playing for a moment and then restart during the experiment?
+- Yes, many
+- Yes, just a few
 - No, none
 
-9) Which of these best defines your personal smoking habits? 
-- I don't smoke or I smoke less frequently than one cigarette per day. 
-- I smoke more than one cigarette per day. 
+9) Which of these best defines your personal smoking habits?
+- I don't smoke or I smoke less frequently than one cigarette per day.
+- I smoke more than one cigarette per day.
 - I smoke more than 10 cigarettes per day.
 
-10) In your current daily life, how often do you interact with people while they are smoking? 
-- Never or less frequently than once per day. 
-- More than once per day. 
+10) In your current daily life, how often do you interact with people while they are smoking?
+- Never or less frequently than once per day.
+- More than once per day.
 - More than 10 times per day.
 
-11) Which of these best defines the environment in which you were raised? 
-- No one close to me was a smoker. 
+11) Which of these best defines the environment in which you were raised?
+- No one close to me was a smoker.
 - One parent/guardian/person I saw on a daily basis was a smoker.
 - Multiple people I saw on a daily basis were smokers.
 
@@ -428,7 +428,7 @@ For Experiment 1C, we added an additional question to the post-experiment survey
 
 ```{r}
 d.Exp1.survey <-
-  d.test.Exp1 %>% 
+  d.test.Exp1 %>%
   select(Experiment, ParticipantID, starts_with("Talker"), starts_with("Participant"), -Talker.Sex) %>%
   distinct()
 ```
@@ -452,7 +452,7 @@ d.Exp1.survey %>%
   xlab('Did the video recordings ever stall during the experiment?')
 ```
 
-The clear majority of participants did not consider the speech they heard to be unusual, until subsequent questions explicitly pointed to the pronunciation of "s" and "sh". The first question that assesses this simply asked participants whether they noticed anything odd about the talker, followed by an open-ended text field. We categorized participants' answers in terms of whether their statement mentioned that 1) the talker was described as sounding odd (e.g., having a lisp), 2) the talker had a pen in the mouth, 3) the pen affected the talker's speech, and 4) the audio and video were misaligned. While very few participants considered the talkers' speech atypical (e.g., "accented", exhibiting a "lisp"), many participants commented on the fact that the talker often had a pen in the mouth. Of these, some claimed that the pen affected the pronunciation of the talker (in reality the audio recording was by design independent of the location of the pen). Finally, about 15-20% of participants noted misalignments between the sound and the video. 
+The clear majority of participants did not consider the speech they heard to be unusual, until subsequent questions explicitly pointed to the pronunciation of "s" and "sh". The first question that assesses this simply asked participants whether they noticed anything odd about the talker, followed by an open-ended text field. We categorized participants' answers in terms of whether their statement mentioned that 1) the talker was described as sounding odd (e.g., having a lisp), 2) the talker had a pen in the mouth, 3) the pen affected the talker's speech, and 4) the audio and video were misaligned. While very few participants considered the talkers' speech atypical (e.g., "accented", exhibiting a "lisp"), many participants commented on the fact that the talker often had a pen in the mouth. Of these, some claimed that the pen affected the pronunciation of the talker (in reality the audio recording was by design independent of the location of the pen). Finally, about 15-20% of participants noted misalignments between the sound and the video.
 
 ```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*4, out.width="66%"}
 read.csv("../data/CISP_data_participant-comments.csv") %>%
@@ -469,7 +469,7 @@ read.csv("../data/CISP_data_participant-comments.csv") %>%
       question == "Talker.SpeechDescription_WhiteDot" ~ "Were the (lack of) white dot catch trials mentioned?",
       question == "Talker.SpeechDescription_NotOdd" ~ "Was the talker described as *not* odd?")) %>%
   filter(
-    Experiment != "", 
+    Experiment != "",
     question %in% c("Was the talker described as sounding atypical?", "Was the pen mentioned?", "Did the pen described as affecting pronunciation?", "Was audiovisual misalignment mentioned?")) %>%
   mutate(question = factor(question, levels = c("Was the talker described as sounding atypical?", "Was the pen mentioned?", "Did the pen described as affecting pronunciation?", "Was audiovisual misalignment mentioned?"))) %>%
   ggplot(aes(x = response_boolean)) +
@@ -508,10 +508,10 @@ This dependency on the range of inputs is important to keep in mind when interpr
 (ref:results-exp1) Summary of participants’ responses in Experiments 1a-c, depending on pen location and acoustic continuum step (Panel A) or visual bias (Panel B). For comparison, responses from a audio-only experiment using some of the same stimuli [@liu-jaeger2018] are shown in gray.
 
 ```{r results-exp1, fig.width=fig.base_width*2, fig.height=fig.base_height*3, fig.cap="(ref:results-exp1)", out.width="80%"}
-p <- 
+p <-
   plot_data(
-    d.test, 
-    experiment = c("CISP-1a", "CISP-1b", "CISP-1c"), 
+    d.test,
+    experiment = c("CISP-1a", "CISP-1b", "CISP-1c"),
     background_experiment = "LJ18-NORM")
 plot(p)
 
@@ -527,13 +527,13 @@ ggsave(
 
 ```{r, results='asis'}
 m.Exp1a <- fit_test_model(data = d.test.Exp1, experiment = "CISP-1a")
-m.Exp1a %>% 
-  brms_SummaryTable() %>% 
+m.Exp1a %>%
+  brms_SummaryTable() %>%
   kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1a.",
         format = "latex",
         booktabs = T,
         align = c("l", "r", "r", "r", "r")) %>%
-  column_spec(1, width = "10cm") 
+  column_spec(1, width = "10cm")
 ```
 
 ```{r, results='asis'}
@@ -544,13 +544,13 @@ my_hypotheses(m.Exp1a, experiment = "Exp 1a") %>% map(print) -> TEMP
 
 ```{r, results='asis'}
 m.Exp1b <- fit_test_model(data = d.test.Exp1, experiment = "CISP-1b")
-m.Exp1b %>% 
-  brms_SummaryTable() %>% 
+m.Exp1b %>%
+  brms_SummaryTable() %>%
   kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1b.",
         format = "latex",
         booktabs = T,
         align = c("l", "r", "r", "r", "r")) %>%
-  column_spec(1, width = "10cm") 
+  column_spec(1, width = "10cm")
 ```
 
 ```{r, results='asis'}
@@ -561,13 +561,13 @@ my_hypotheses(m.Exp1b, experiment = "Exp 1b") %>% map(print) -> TEMP
 
 ```{r, results='asis'}
 m.Exp1c <- fit_test_model(data = d.test.Exp1, experiment = "CISP-1c")
-m.Exp1c %>% 
-  brms_SummaryTable() %>% 
+m.Exp1c %>%
+  brms_SummaryTable() %>%
   kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 1c.",
         format = "latex",
         booktabs = T,
         align = c("l", "r", "r", "r", "r")) %>%
-  column_spec(1, width = "10cm") 
+  column_spec(1, width = "10cm")
 ```
 
 ```{r, results='asis'}
@@ -578,15 +578,15 @@ my_hypotheses(m.Exp1c, experiment = "Exp 1c") %>% map(print) -> TEMP
 For comparison, we also analyzed the "baseline" experiment from Liu and Jaeger (2018, Experiment 1a-b) with the same analysis approach employed in the present study. Like all previous work in this line of research, this baseline experiment employed audio-only test stimuli. Unlike our Experiments 1a-c, Liu and Jaeger's control experiment contained an exposure phase (with only typical fricative pronunications). We further note that none of Experiments 1a-c employed the exact same continuum steps as Liu and Jaeger (2018). It is known that the selection of acoustic continuum steps that participants experience in an experiment can affect their categorization responses: even the exact same continuum step can be categorized differently depending on the other steps included in the experiment (Yamata & Tohkura, 1992). These factors limit the extent to which our Experiments 1a-c can be directly compared to Liu and Jaeger's audio-only experiment. We thus focus only on the magnitude of the acoustic effects in Liu and Jaeger, compared to the present experiments.
 
 ```{r, results='markup'}
-m.LJ18 <- 
+m.LJ18 <-
   fit_test_model(
-    d.test %>% filter(Experiment == "LJ18-NORM"), 
-    experiment = "LJ18-NORM", 
+    d.test %>% filter(Experiment == "LJ18-NORM"),
+    experiment = "LJ18-NORM",
     formula = bf(Response.ASHI ~
                    1 + mo(Block) * mo(Condition.Test.Audio) +
                    (1 + mo(Condition.Test.Audio) | ParticipantID)))
 
-my_LJ18_hypothesis <- 
+my_LJ18_hypothesis <-
   function(m, experiment = "LJ18-NORM", BF.max = 4000) {
     format <-  
       . %>%
@@ -598,7 +598,7 @@ my_LJ18_hypothesis <-
           ~ signif(.x, 3)),
         BF = ifelse(is.infinite(BF), paste(">", ndraws(m)), as.character(round(BF, 1)))) %>%
       relocate(Experiment, everything())
-    
+
     hypothesis(
       m,
       c("bsp_moCondition.Test.Audio > 0",
@@ -620,11 +620,11 @@ my_LJ18_hypothesis <-
         across(
           c("$p_{posterior}$"),
           ~ signif(.x, 3)),
-        BF = ifelse(is.infinite(BF), paste(">", BF.max - 1), as.character(round(BF, 1)))) %>% 
+        BF = ifelse(is.infinite(BF), paste(">", BF.max - 1), as.character(round(BF, 1)))) %>%
       relocate(Exp, everything()) %>%
       kable(
-        caption = "Effects of acoustic continuum.", 
-        align = c(rep("l", 2), rep("r", 6), "l"), 
+        caption = "Effects of acoustic continuum.",
+        align = c(rep("l", 2), rep("r", 6), "l"),
         escape = F) %>%
       column_spec(2, width = "7cm") %>%
     column_spec(7, width = "1.1cm") %>%
@@ -705,21 +705,21 @@ my_LJ18_hypothesis(m.LJ18)
 <!-- ``` -->
 
 # Experiments 2 and 2b
-We conducted two experiments that were designed to test whether listeners need to see the effects of the pen on the articulators *during the production of the fricative*, or whether the presence of a pen during the production of a fricative is sufficient to cause the effects observed in Experiments 1a-c. To this end, Experiments 2 and 2b introduced a black box that occluded the talker's mouth during the articulation of the fricative (see main text for details). The two experiments were identical except that Experiment 2b introduced an additional task intended to assure that participants paid attention to the videos (rather than just the audio). This change in procedure from Experiment 2 to 2b was intended to address an alternative explanation for the results of Experiment 2. As reported below, Experiment 2 did not find the effects of pen location that were present in Experiments 1a-c. This raised the question as to whether participants in Experiment 2 failed to pay attention to the video (unlike in Experiments 1a-c). 
+We conducted two experiments that were designed to test whether listeners need to see the effects of the pen on the articulators *during the production of the fricative*, or whether the presence of a pen during the production of a fricative is sufficient to cause the effects observed in Experiments 1a-c. To this end, Experiments 2 and 2b introduced a black box that occluded the talker's mouth during the articulation of the fricative (see main text for details). The two experiments were identical except that Experiment 2b introduced an additional task intended to assure that participants paid attention to the videos (rather than just the audio). This change in procedure from Experiment 2 to 2b was intended to address an alternative explanation for the results of Experiment 2. As reported below, Experiment 2 did not find the effects of pen location that were present in Experiments 1a-c. This raised the question as to whether participants in Experiment 2 failed to pay attention to the video (unlike in Experiments 1a-c).
 
-On the one hand, the catch task employed in Experiment 2 (same as in Experiments 1a-c: participants were asked to press "B" when they saw a white dot in the video) would seem to reject that possibility: as in Experiments 1a-c, participants that pressed "B" in the absence of a white dot were excluded from the analysis of Experiment 2. However, since none of the trials actually contained a white dot, this means that participants that did not pay any attention to the video and never pressed "B" would fail to be excluded from the analysis of Experiment 2. In Experiment 2b, we thus replaced the catch task from Experiments 1a-c & 2, and instead asked Experiments to press SPACE when the pen was in the mouth. As in Experiment 2, participants in Experiment 2b also had to press "X" or "M" to indicate whether they heard *asi* or *ashi*. 
+On the one hand, the catch task employed in Experiment 2 (same as in Experiments 1a-c: participants were asked to press "B" when they saw a white dot in the video) would seem to reject that possibility: as in Experiments 1a-c, participants that pressed "B" in the absence of a white dot were excluded from the analysis of Experiment 2. However, since none of the trials actually contained a white dot, this means that participants that did not pay any attention to the video and never pressed "B" would fail to be excluded from the analysis of Experiment 2. In Experiment 2b, we thus replaced the catch task from Experiments 1a-c & 2, and instead asked Experiments to press SPACE when the pen was in the mouth. As in Experiment 2, participants in Experiment 2b also had to press "X" or "M" to indicate whether they heard *asi* or *ashi*.
 
 ```{r}
-d.test.Exp2 <- 
+d.test.Exp2 <-
   d.CISP.ALL %>%
   filter(Experiment %in% c("CISP-2a","CISP-2b")) %>%
   # Make CISP-2a the default CISP-2 for visualizations below
   mutate(
-    Experiment = 
+    Experiment =
       case_when(
         Experiment == "CISP-2a" ~ "CISP-2",
         T ~ Experiment),
-    Response.CatchCorrect = 
+    Response.CatchCorrect =
       case_when(
         Experiment == "CISP-2" & Response.CatchTrial == Item.isCatchTrial ~ 1,
         Experiment == "CISP-2" & Response.CatchTrial != Item.isCatchTrial ~ 0,
@@ -729,7 +729,7 @@ d.test.Exp2 <-
 ```
 
 ## Procedure
-Experiment 2 employed the exact same tasks as Experiment 1a-c. Experiment 2b, however, introduced an additional task. Participants were asked to press SPACE whenever the pen was in the talker's mouth. After pressing SPACE, participants had to answer whether they heard *asi* or *ashi*, as in all preceding experiments. 
+Experiment 2 employed the exact same tasks as Experiment 1a-c. Experiment 2b, however, introduced an additional task. Participants were asked to press SPACE whenever the pen was in the talker's mouth. After pressing SPACE, participants had to answer whether they heard *asi* or *ashi*, as in all preceding experiments.
 
 ## Exclusions
 Figure \@ref(fig:exclusions-exp2) summarized the exclusions for Experiment 2 and 2b. Of note is the high exclusion rate for Experiment 2b, for which almost one fourth of all participants stated after the experiment that they had not been wearing head phones. This deterioration of data quality for experiments conducted over Mechanical Turk post 2020 was also observed in other experiments conducted in our lab during the same time period. Like in the present study, data quality tended to decrease in particular for the later studies of a series of experiments. One possible explanation is our recruitment criterion, which only allowed participants to see the experiment if they had *not* participated in any previous experiment of the series. This successively reduces the participant pool, potentially making experiments in a series increasingly more vulnerable to less cooperative participants. This motivated our switch to the Prolific crowdsourcing platform for subsequent experiments. Experiment 2b was the last experiment we conducted over Mechanical Turk. <!-- TO DO: correct? -->
@@ -760,13 +760,13 @@ ggsave(
 
 ```{r, results='asis'}
 m.Exp2 <- fit_test_model(data = d.test.Exp1, experiment = "CISP-2")
-m.Exp2 %>% 
-  brms_SummaryTable() %>% 
+m.Exp2 %>%
+  brms_SummaryTable() %>%
   kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 2.",
         format = "latex",
         booktabs = T,
         align = c("l", "r", "r", "r", "r")) %>%
-  column_spec(1, width = "10cm") 
+  column_spec(1, width = "10cm")
 ```
 
 ```{r, results='asis'}
@@ -812,70 +812,70 @@ p[[1]] + condition_effects_formatting
 If the effects of pen location in Experiments 1a-c were due to the pen visually occluding otherwise available visual cues to articulatorily relevant evidence, then both pen locations in Experiment 2 should yield *ashi*-responses similar to the pen-in-mouth condition of Experiment 1c (which used the exact same audio-visual stimuli as Experiment 2, except without a visual occluder). To test this hypothesis, we combined the data from Experiments 1c and 2, and coded both pen locations of Experiment 2 as a single new pen location ("occluded"). We then analyzed this combined data in the exact same way as Experiments 1c and 2, except that pen location now was a 3-way sliding difference-coded factor, testing (1) whether the occluded condition (Experiment 2) elicited fewer *ashi* responses than the pen-in-hand condition of Experiment 1c (as predicted by the occlusion hypothesis) and (2) whether the pen-in-mouth condition of Experiment 1c yielded fewer *ashi* responses than the occluded condition (as predicted if occlusion does *not* explain all of the effects of pen location in Experiments 1a-c).
 
 ```{r}
-m.Exp2vsExp1c <- 
+m.Exp2vsExp1c <-
   fit_test_model(
-    data = 
+    data =
       bind_rows(d.test.Exp1, d.test.Exp2) %>%
       prep_for_analysis() %>%
       mutate(
-        Condition.Test.Pen = 
+        Condition.Test.Pen =
           factor(
             ifelse(Experiment == "CISP-2", "O", as.character(Condition.Test.Pen)),
             levels = c("H", "O", "M")),
-        Condition.Test.Pen = 
-          "contrasts<-"(factor(Condition.Test.Pen), , 
+        Condition.Test.Pen =
+          "contrasts<-"(factor(Condition.Test.Pen), ,
                         cbind("OvsH" = c(-2/3, 1/3, 1/3), "MvsO" = c(-1/3, -1/3, 2/3)))),
     experiment = c("CISP-1c", "CISP-2"),
-    formula = bf(Response.ASHI ~ 1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio) + 
+    formula = bf(Response.ASHI ~ 1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio) +
                    (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)),
     file = "../models/Exp-CISP-2-vs-CISP-1c-occlusion-test")
 ```
 
-Overall, the results of this analysis do not provide any notable evidence for the occlusion hypothesis while providing strong evidence for the compensation hypothesis. In the middle of the acoustic continuum, *ashi*-responses were *more* likely in Experiment 2, compared to even the pen-in-hand condition of Experiment 1c (BF = 2). This is the opposite of what would be expected if the main effects of pen location in Experiments 1a-c were due to visual occlusion. There also was strong evidence that the pen-in-mouth condition of Experiment 1c resulted in fewer *ashi*-responses than in Experiment 2 (BF = 73.1). 
+Overall, the results of this analysis do not provide any notable evidence for the occlusion hypothesis while providing strong evidence for the compensation hypothesis. In the middle of the acoustic continuum, *ashi*-responses were *more* likely in Experiment 2, compared to even the pen-in-hand condition of Experiment 1c (BF = 2). This is the opposite of what would be expected if the main effects of pen location in Experiments 1a-c were due to visual occlusion. There also was strong evidence that the pen-in-mouth condition of Experiment 1c resulted in fewer *ashi*-responses than in Experiment 2 (BF = 73.1).
 
-The only way in which the visual occluder in Experiment 2 resembled the pen-in-mouth condition in Experiment 1c was in terms of their interaction with visual evidence to the articulation of "sh": both the black rectangle in Experiment 2 and the pen-in-the-mouth in Experiment 1c reduced the effect of visually *ashi*-like stimuli, compared to the pen-in-hand condition (see third row of the two tables). These two effects were almost identical (comparison of occluder vs. pen-in-hand condition: BF = 14.2; comparison of pen-in-mouth vs. occluder condition: BF = .9). This result is not particularly surprising given that the black rectangle completely occluded any direct visual evidence of "s" vs. "sh" articulation. 
+The only way in which the visual occluder in Experiment 2 resembled the pen-in-mouth condition in Experiment 1c was in terms of their interaction with visual evidence to the articulation of "sh": both the black rectangle in Experiment 2 and the pen-in-the-mouth in Experiment 1c reduced the effect of visually *ashi*-like stimuli, compared to the pen-in-hand condition (see third row of the two tables). These two effects were almost identical (comparison of occluder vs. pen-in-hand condition: BF = 14.2; comparison of pen-in-mouth vs. occluder condition: BF = .9). This result is not particularly surprising given that the black rectangle completely occluded any direct visual evidence of "s" vs. "sh" articulation.
 
 ```{r, results='asis'}
-hypothesis(m.Exp2vsExp1c, 
-           c("b_Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenOvsH < 0", 
-             "bsp_moCondition.Test.Audio:Condition.Test.PenOvsH < 0", 
+hypothesis(m.Exp2vsExp1c,
+           c("b_Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenOvsH < 0",
+             "bsp_moCondition.Test.Audio:Condition.Test.PenOvsH < 0",
              "b_Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH < 0",
              "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH< 0"), class = NULL, robust = T) %>%
-      .[["hypothesis"]] %>% 
+      .[["hypothesis"]] %>%
       mutate(Hypothesis = c(
         "Pen location Mouth -> fewer ASHI-responses",
         "Pen effect increases for more ASHI-like acoustic input",
         "Pen effect increases for visually ASHI-biased input",
         "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
       format_hypothesis_tables("Exp 2 vs. 1c") %>%
-      kable(caption = "Effects of pen location: occlusion vs. hand", 
-      align = c(rep("l", 2), rep("r", 6), "l"), 
+      kable(caption = "Effects of pen location: occlusion vs. hand",
+      align = c(rep("l", 2), rep("r", 6), "l"),
       escape = F) %>%
     column_spec(2, width = "7cm") %>%
     column_spec(7, width = "1.1cm") %>%
     kable_styling(latex_options = "HOLD_position")
 
-hypothesis(m.Exp2vsExp1c, 
+hypothesis(m.Exp2vsExp1c,
            c("b_Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenMvsO < 0",
-             "bsp_moCondition.Test.Audio:Condition.Test.PenMvsO < 0", 
-             "b_Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0", 
+             "bsp_moCondition.Test.Audio:Condition.Test.PenMvsO < 0",
+             "b_Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0",
              "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0"), class = NULL, robust = T) %>%
-      .[["hypothesis"]] %>% 
+      .[["hypothesis"]] %>%
       mutate(Hypothesis = c(
         "Pen location Mouth -> fewer ASHI-responses",
         "Pen effect increases for more ASHI-like acoustic input",
         "Pen effect increases for visually ASHI-biased input",
         "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
       format_hypothesis_tables("Exp 2 vs. 1c") %>%
-      kable(caption = "Effects of pen location: mouth vs. occlusion", 
-      align = c(rep("l", 2), rep("r", 6), "l"), 
+      kable(caption = "Effects of pen location: mouth vs. occlusion",
+      align = c(rep("l", 2), rep("r", 6), "l"),
       escape = F) %>%
     column_spec(2, width = "7cm") %>%
     column_spec(7, width = "1.1cm") %>%
     kable_styling(latex_options = "HOLD_position")
 
-# hypothesis(m.Exp2vsExp1c, 
-#            c("b_Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + b_Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0"), class = NULL, robust = T) 
+# hypothesis(m.Exp2vsExp1c,
+#            c("b_Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + b_Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0"), class = NULL, robust = T)
 ```
 
 
@@ -886,7 +886,7 @@ We first analyzed participants' accuracy in detecting when the pen was in talker
 ### SPACE bar presses
 Participants' overall accuracy was above chance (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))`). Overall, this suggests that participants could detect the pen presence above chance, while also suggesting that participants experienced the task to be difficult.
 
-When the pen was in the talker's mouth, participants were only slightly above chance (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b", Condition.Test.Pen == "M") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))` accurate). When the pen was in the talker's hand, participants were much more accurate (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b", Condition.Test.Pen == "H") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))`). This asymmetry is not particularly surprising: correct detection of the pen in the mouth required a key press, whereas correct detection that the pen was not in the mouth (but rather in the hand) required no action at all. 
+When the pen was in the talker's mouth, participants were only slightly above chance (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b", Condition.Test.Pen == "M") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))` accurate). When the pen was in the talker's hand, participants were much more accurate (`r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b", Condition.Test.Pen == "H") %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))`). This asymmetry is not particularly surprising: correct detection of the pen in the mouth required a key press, whereas correct detection that the pen was not in the mouth (but rather in the hand) required no action at all.
 
 ```{r, out.width="33%"}
 # In Exp 2b, we used the catch trial functionality to ask participants whether the pen was in the mouth
@@ -896,7 +896,7 @@ d.test.Exp2 %>%
   filter(Experiment == "CISP-2b") %>%
   group_by(ParticipantID, Condition.Test.Pen, Exclude_Participant.because_of_IgnoredInstructions) %>%
   summarise(Response.CatchCorrect = mean(Response.CatchCorrect)) %>%
-  ggplot(aes(x = Condition.Test.Pen, y = Response.CatchCorrect, shape = Condition.Test.Pen)) + 
+  ggplot(aes(x = Condition.Test.Pen, y = Response.CatchCorrect, shape = Condition.Test.Pen)) +
   geom_point(alpha = .25) +
   geom_line(aes(group = ParticipantID), alpha = .25) +
   stat_summary(fun.data = mean_cl_boot, geom = "pointrange", size = 1) +
@@ -914,18 +914,18 @@ d.test.Exp2 %>%
 d.test.Exp2 %<>%
   select(-Exclude_Participant.because_of_IgnoredInstructions) %>%
   left_join(
-    d.test.Exp2 %>% 
-      filter(Experiment == "CISP-2b") %>% 
-      group_by(ParticipantID, Condition.Test.Pen, Exclude_Participant.because_of_IgnoredInstructions) %>% 
-      summarise(Response.CatchCorrect = mean(Response.CatchCorrect)) %>% 
-      group_by(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions) %>% 
-      summarise(difference = abs(Response.CatchCorrect[1] - Response.CatchCorrect[2])) %>% 
-      mutate(Exclude_Participant.because_of_IgnoredInstructions = 
+    d.test.Exp2 %>%
+      filter(Experiment == "CISP-2b") %>%
+      group_by(ParticipantID, Condition.Test.Pen, Exclude_Participant.because_of_IgnoredInstructions) %>%
+      summarise(Response.CatchCorrect = mean(Response.CatchCorrect)) %>%
+      group_by(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions) %>%
+      summarise(difference = abs(Response.CatchCorrect[1] - Response.CatchCorrect[2])) %>%
+      mutate(Exclude_Participant.because_of_IgnoredInstructions =
                ifelse(difference > .9, TRUE, Exclude_Participant.because_of_IgnoredInstructions)) %>%
       select(-difference))
 ```
 
-A closer look at participants' SPACE responses reveals that some participants almost never pressed the SPACE bar and some always pressed the SPACE bar, regardless of whether the pen was in the mouth (the lines forming the "X" in the figure). For example, `r nrow(d.test.Exp2 %>% distinct(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions) %>% filter(Exclude_Participant.because_of_IgnoredInstructions))` (`r percent(nrow(d.test.Exp2 %>% distinct(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions) %>% filter(Exclude_Participant.because_of_IgnoredInstructions)) / nrow(d.test.Exp2 %>% distinct(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions)))`) participants pressed SPACE on 90% or more of all trials or did not press SPACE on 90% or more of the trials (all but one of these participants, never pressed SPACE). If those participants are excluded from the analysis, performance improved to `r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b" & !Exclude_Participant.because_of_IgnoredInstructions) %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))` accuracy, with statistically indistinguishable performance when the pen was in the mouth vs. hand. 
+A closer look at participants' SPACE responses reveals that some participants almost never pressed the SPACE bar and some always pressed the SPACE bar, regardless of whether the pen was in the mouth (the lines forming the "X" in the figure). For example, `r nrow(d.test.Exp2 %>% distinct(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions) %>% filter(Exclude_Participant.because_of_IgnoredInstructions))` (`r percent(nrow(d.test.Exp2 %>% distinct(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions) %>% filter(Exclude_Participant.because_of_IgnoredInstructions)) / nrow(d.test.Exp2 %>% distinct(ParticipantID, Exclude_Participant.because_of_IgnoredInstructions)))`) participants pressed SPACE on 90% or more of all trials or did not press SPACE on 90% or more of the trials (all but one of these participants, never pressed SPACE). If those participants are excluded from the analysis, performance improved to `r percent(d.test.Exp2 %>% filter(Experiment == "CISP-2b" & !Exclude_Participant.because_of_IgnoredInstructions) %>% summarise(y = mean(Response.CatchCorrect)) %>% pull(y))` accuracy, with statistically indistinguishable performance when the pen was in the mouth vs. hand.
 
 We note that, in total, about half of the participants in Experiment 2b did not follow instructions---either by not wearing headphones for the experiment or by never/always pressing SPACE. As mentioned under Exclusions, we have encountered similar issues with data quality over Mechanical Turk over recent years whenever we conducted series of experiments (for which any subsequent experiment only recruits from the pool of participants that have *not* taken any previous experiments in the series). While we see no reason why the data from cooperative participants in Experiment 2b should not be analyzed, the fact that only about 50% of all participants seem to meet this criterion limits the conclusions that can be drawn from this experiment.
 
@@ -950,13 +950,13 @@ ggsave(
 
 ```{r, results='asis'}
 m.Exp2b <- fit_test_model(data = d.test.Exp1, experiment = "CISP-2b")
-m.Exp2b %>% 
-  brms_SummaryTable() %>% 
+m.Exp2b %>%
+  brms_SummaryTable() %>%
   kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 2b.",
         format = "latex",
         booktabs = T,
         align = c("l", "r", "r", "r", "r")) %>%
-  column_spec(1, width = "10cm") 
+  column_spec(1, width = "10cm")
 ```
 
 ```{r, results='asis'}
