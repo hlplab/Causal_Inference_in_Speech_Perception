@@ -1,7 +1,10 @@
 ---
-title: "Supplementary Information"
+title: |
+    | Supplementary Information 
+    | for Cummings, Karboga, Yang, & Jaeger 
+    | *Compensation in audiovisual speech perception*
 author: "T. Florian Jaeger and Shawn Cummings"
-date: "\today"
+date: \today
 output:
   bookdown::pdf_document2:
     fig_caption: true
