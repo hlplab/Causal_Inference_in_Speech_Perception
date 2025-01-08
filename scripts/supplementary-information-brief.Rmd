@@ -48,6 +48,7 @@ library(papaja)      # R reference list
 library(kableExtra)  # table formatting
 
 library(brms)        # Bayesian GL(M)Ms
+library(rstan)
 
 library(linguisticsdown)  # IPA symbols
 
