@@ -1,13 +1,16 @@
-# Last updated 01-10-25 snc
-
-
+# Last updated 01-12-25 snc
+rm(list=ls(all.names=TRUE))
 # Packages
 library(brms)
 library(lme4)
 library(rlang)
+library(assertthat)
 
 library(tidyverse)
 
+library(MVBeliefUpdatr)
+
+library(cowplot)
 
 setwd("/Users/shawncummings/Documents/GitHub/Causal_Inference_in_Speech_Perception/")
 
@@ -83,11 +86,6 @@ p3 <- d.test %>%
                fun.data = mean_cl_boot)
 p3
 
-# models ###
-d.test$cog.scaled <- scale(d.test$cog)
-
-
-
 # full model structure
 # m1 <- brm(Response.ASHI ~
 #             Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(round(cog, 0)) * Experiment +
@@ -136,8 +134,6 @@ m3 <- glm(Response.ASHI ~ Condition.Test.Pen * cog,
               prep_for_analysis(),
             family="binomial")
 summary(m3)
-# singularity... but whatever
-
 
 # m4 <- glmer(Response.ASHI ~
 #               Condition.Test.OriginalLabel * Condition.Test.Pen * Block * cog.scaled * Experiment +
@@ -159,23 +155,209 @@ d.exp2 <- d.exp %>%
   mutate(Condition.Test.Pen = "M")
 
 d.exp <- rbind(d.exp, d.exp2) %>%
-  arrange(Condition.Test.Pen, cog)
-
+  arrange(word)
+  
+  #arrange(Condition.Test.Pen, cog)
 
 predict <- as.data.frame(
-  predict(m3,
-          newdata = d.exp))
+  1 / (1 + exp(-predict(m3,
+                       newdata = d.exp))))
 
+d.exp <- cbind(d.exp, predict) %>%
+  rename(predict.acoustics = `1/(1 + exp(-predict(m3, newdata = d.exp)))`,
+         segment.lexical = segment) %>%
+  mutate(
+    # define some cutoff probabilities
+    cutoff_s = 0.6,
+    cutoff_sh = 0.4,
+    Condition = case_when(
+      segment.lexical == "S" & type == "typical" ~ "SH-bias",
+      segment.lexical == "S" & type == "shifted" ~ "S-bias",
+      segment.lexical == "SH" & type == "typical" ~ "S-bias",
+      segment.lexical == "SH" & type == "shifted" ~ "SH-bias"),
+    believable = case_when(
+      segment.lexical == "S" & predict.acoustics > cutoff_s ~ "no",
+      segment.lexical == "S" & predict.acoustics <= cutoff_s ~ "yes",
+      segment.lexical == "SH" & predict.acoustics < cutoff_sh ~ "no",
+      segment.lexical == "SH" & predict.acoustics >= cutoff_sh ~ "yes"
+    ))
 
-p4 <- cbind(d.exp, predict) %>%
-  rename(predict = `predict(m3, newdata = d.exp)`) %>%
+d.exp %>%
+  group_by(Condition.Test.Pen, believable, Condition) %>%
+  tally()
+
+# 
+p4 <- d.exp %>%
   ggplot(aes(x = cog,
-             y = predict,
-             color = Condition.Test.Pen)) +
-  geom_point()
+           y = predict.acoustics,
+           color = Condition.Test.Pen,
+           shape = type)) +
+  scale_shape_manual(values = c(1, 19)) +
+  geom_point() +
+  facet_wrap(~segment.lexical,
+             nrow = 2)
 p4
 
+p6 <- d.exp  %>%
+  ggplot(aes(x = cog,
+             y = predict.acoustics,
+             color = believable,
+             shape = type)) +
+  scale_shape_manual(values = c(1, 19)) +
+  geom_point() +
+  facet_wrap(Condition.Test.Pen~segment.lexical)
+p6
+
+# filter d.exp to only include believable tokens
+d.exp <- filter(d.exp, believable == "yes")
+
+# make an IO
+IO <- make_MVG_ideal_observer_from_data(
+  data = d.exp %>%
+    filter(Condition.Test.Pen == "H",
+           type == "typical"),
+  category = "segment.lexical",
+  cues = "cog",
+  verbose = T)
+
+# and make an IA based on it
+# and a random kappa and nu... could/should try others!
+# pretty low for now just so effects are more visually evident
+IA <- IO %>%
+  mutate(kappa = 64,
+         nu = 64,
+         prior_kappa = 64,
+         prior_nu = 64,
+         S = get_S_from_expected_Sigma(Sigma, nu)) %>%
+  rename(m = mu) %>%
+  select(!Sigma) %>%
+  arrange(category)
+
+is.NIW_belief(IA)
+
+# check classic effect
+posterior_s_bias <- update_NIW_ideal_adaptor_incrementally(
+  prior = IA,
+  exposure = filter(d.exp,
+                    Condition == "S-bias",
+                    Condition.Test.Pen == "H"),
+  exposure.category = "segment.lexical",
+  exposure.cues = "cog")
+
+posterior_sh_bias <- update_NIW_ideal_adaptor_incrementally(
+  prior = IA,
+  exposure = filter(d.exp,
+                    Condition == "SH-bias",
+                    Condition.Test.Pen == "H"),
+  exposure.category = "segment.lexical",
+  exposure.cues = "cog")
+
+p_priors <- plot_expected_categories_density_1D(filter(IA),
+                                                xlim = c(4000, 7000))
+
+p_sh <- plot_expected_categories_density_1D(filter(posterior_sh_bias, observation.n == max(observation.n)),
+                                          xlim = c(4000, 7000))
+
+p_s <- plot_expected_categories_density_1D(filter(posterior_s_bias, observation.n == max(observation.n)),
+                                            xlim = c(4000, 7000))
+
+p7 <- plot_grid(p_priors,
+                p_sh,
+                p_s,
+                labels = c("priors", "sh-bias", "s-bias"),
+                ncol = 1)
+p7
+
+# and now with PIM
+posterior_s_bias_pim <- update_NIW_ideal_adaptor_incrementally(
+  prior = IA,
+  exposure = filter(d.exp,
+                    Condition == "S-bias",
+                    Condition.Test.Pen == "M"),
+  exposure.category = "segment.lexical",
+  exposure.cues = "cog")
+
+posterior_sh_bias_pim <- update_NIW_ideal_adaptor_incrementally(
+  prior = IA,
+  exposure = filter(d.exp,
+                    Condition == "SH-bias",
+                    Condition.Test.Pen == "M"),
+  exposure.category = "segment.lexical",
+  exposure.cues = "cog")
+
+p_sh_pim <- plot_expected_categories_density_1D(filter(posterior_sh_bias_pim, observation.n == max(observation.n)),
+                                            xlim = c(4000, 7000))
+
+p_s_pim <- plot_expected_categories_density_1D(filter(posterior_s_bias_pim, observation.n == max(observation.n)),
+                                           xlim = c(4000, 7000))
 
 
+p8 <- plot_grid(p_priors,
+                p_s,
+                p_s_pim,
+                labels = c("priors", "s-bias-PIH", "s-bias-PIM"),
+                ncol = 1)
+p8
+
+p9 <- plot_grid(p_priors,
+                p_sh,
+                p_sh_pim,
+                labels = c("priors", "sh-bias-PIH", "sh-bias-PIM"),
+                ncol = 1)
+p9
+
+summary <- rbind(
+  mutate(IA,
+         bias = "prior", pen = "NA",
+         observation.n = 40),
+  mutate(posterior_s_bias_pim,
+         bias = "s", pen = "m"),
+  mutate(posterior_sh_bias_pim,
+         bias = "sh", pen = "m"),
+  mutate(posterior_s_bias,
+         bias = "s", pen = "h"),
+  mutate(posterior_sh_bias,
+         bias = "sh", pen = "h")) %>%
+  select(category, m, S, bias, pen)
+summary
+
+
+
+# this doesn't work... 
+plot_expected_categorization_function_1D(IA,
+                                         data.test = d.acoustics.test,
+                                         xlim = c(1000, 10000),
+                                         target_category = 2)
+
+
+# let's do it the long way 
+
+
+IA_func <- get_categorization_function_from_NIW_ideal_adaptor(IA,
+                                                              noise_treatment = "no_noise")
+
+IA_linspace <- as.data.frame(c(5000:7000)) %>%
+  rename(cog = `c(5000:7000)`) %>%
+  mutate(prob = as.numeric(IA_func(cog)))
+
+
+ggplot(aes(x = ))
+
+ssss <- as.numeric(IA_func(5500))
+
+
+plot_IA_func <- ggplot() +
+  geom_function()
+  IA_func()
+
+# let's try manual
+IA_func2 <- get_NIW_categorization_function(
+  ms = c(6541, 4465),
+  Ss = c(9709768, 3326227),
+  kappas = c(64, 64),
+  nus = c(64, 64),
+  noise_treatment = "no_noise")
+
+IA_func2(5500)
 
 
