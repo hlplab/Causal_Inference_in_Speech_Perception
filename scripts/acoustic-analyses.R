@@ -1,4 +1,31 @@
-# Last updated 01-12-25 snc
+# Last updated 01-13-25 snc
+
+
+### STATUS/TODO ###
+
+# Pipeline currently runs!
+# 1. use perception from 1a-c to predict effects of cog and pen
+# 2. predict likely effects on exposure
+# 3. use that data to inform some ideal adaptors
+
+# Problems!
+
+# what model structure to use? I had some weird rhat issues with the brm()?
+# also, predict() seems not to allow newdata which doesn't have columns
+# for each effect of the model (including re structure)
+
+# For all thresholds I've checked (see lines 200ish), there are as many 
+# implausible acoustics in the PIH as PIM condition, contra our a priori prediction
+
+# The MVBeliefUpdatr functions to plot categorization curves aren't working for me.
+# I think something to do with needing to feed in noise_treatment = "no_noise"?
+# anyway, many errors of the type "Input x and m are not of compatible dimensions."
+
+
+
+
+
+
 rm(list=ls(all.names=TRUE))
 # Packages
 library(brms)
@@ -14,6 +41,7 @@ library(cowplot)
 
 setwd("/Users/shawncummings/Documents/GitHub/Causal_Inference_in_Speech_Perception/")
 
+# just for prep_for_analysis()
 source("scripts/functions.R")
 
 # Data import
@@ -24,7 +52,7 @@ test <- read_tsv("./materials/Annotated/test_segments.txt")
 
 # perception from all experiments
 d.perception <- read.csv("./data/CISP_data.csv") %>%
-  # get rid of cues, we don't trust those 
+  # get rid of old cues, I don't trust those 
   select(!starts_with("cue")) %>%
   # remove occluder manipulations
   filter(!Experiment.internalName %in% c("NORM D", "NORM E")) %>%
@@ -76,7 +104,7 @@ p2 <- d.test %>%
   facet_wrap(~Experiment.internalName)
 p2
 
-# and aggregate over 1a-c
+# and aggregate just over 1a-c
 p3 <- d.test %>%
   filter(Experiment.internalName %in% c("NORM A", "NORM B", "NORM C")) %>%
   ggplot(aes(x = cog,
@@ -85,6 +113,8 @@ p3 <- d.test %>%
   stat_summary(geom = "pointrange",
                fun.data = mean_cl_boot)
 p3
+
+# now let's use this data do get a model of the effect of pen!
 
 # full model structure
 # m1 <- brm(Response.ASHI ~
@@ -107,8 +137,8 @@ p3
 
 # abbreviated model, including just acoustics (linear, not monotonic) and pen
 m2 <- brm(Response.ASHI ~ 
-            Condition.Test.Pen * cog.scaled +
-            (1 + Condition.Test.Pen * cog.scaled | ParticipantID),
+            Condition.Test.Pen * cog +
+            (1 + Condition.Test.Pen * cog | ParticipantID),
           data = d.test %>%
             filter(Experiment.internalName %in% c("NORM A", "NORM B", "NORM C")) %>%
             prep_for_analysis(),
@@ -147,6 +177,7 @@ summary(m3)
 
 # create sample exposure data to test
 # we want to check each exposure item with and without PIM
+# (which should leave cog unaffected by will change the prediction)
 d.exp <- d.acoustics %>%
   filter(type != "test") %>%
   mutate(Condition.Test.Pen = "H")
@@ -154,11 +185,11 @@ d.exp <- d.acoustics %>%
 d.exp2 <- d.exp %>%
   mutate(Condition.Test.Pen = "M")
 
-d.exp <- rbind(d.exp, d.exp2) %>%
-  arrange(word)
-  
-  #arrange(Condition.Test.Pen, cog)
+d.exp <- rbind(d.exp, d.exp2)
 
+# predict responses
+# when running a bigger model, or any with random slopes by subject,
+# this function complains that subjects aren't in the new data...
 predict <- as.data.frame(
   1 / (1 + exp(-predict(m3,
                        newdata = d.exp))))
