@@ -24,8 +24,6 @@
 
 
 
-
-
 rm(list=ls(all.names=TRUE))
 # Packages
 library(brms)
@@ -34,24 +32,52 @@ library(rlang)
 library(assertthat)
 
 library(tidyverse)
+library(magrittr)
 
 library(MVBeliefUpdatr)
 
 library(cowplot)
 
-setwd("/Users/shawncummings/Documents/GitHub/Causal_Inference_in_Speech_Perception/")
+setwd("/Users/shawncummings/Documents/GitHub/Causal_Inference_in_Speech_Perception/scripts/")
+# setwd("scripts/")
 
 # just for prep_for_analysis()
-source("scripts/functions.R")
+source("functions.R")
 
 # Data import
 # acoustics
-s <- read_tsv("./materials/Annotated/s_segments.txt")
-sh <- read_tsv("./materials/Annotated/sh_segments.txt")
-test <- read_tsv("./materials/Annotated/test_segments.txt")
+s <- read_tsv("../materials/Annotated/s_segments.txt")
+sh <- read_tsv("../materials/Annotated/sh_segments.txt")
+test <- read_tsv("../materials/Annotated/test_segments.txt")
+
+# dataframe including just CoG for now
+d.acoustics <- 
+  rbind(s, sh, test) %>%
+  filter(segment %in% c("S", "SH", "?")) %>%
+  mutate(type = case_when(
+    grepl("50", source) == T ~ "shifted", 
+    grepl("_0", source) == T ~ "typical",
+    grepl("test", source) == T ~ "test"),
+    cog = as.numeric(cog)) %>%
+  select(segment, word, cog, type)
 
 # perception from all experiments
-d.perception <- read.csv("./data/CISP_data.csv") %>%
+d.perception <- 
+  read.csv("../data/CISP_data.csv") %>%
+  # run formatting from SI
+  mutate(
+    across(
+      .cols = c(starts_with("Participant"), -Participant.Age,
+                Phase, starts_with("Condition"), -Condition.Test.Audio,
+                starts_with("Item"), starts_with("Talker"),
+                Response, Task, Exclude_Participant.Reason),
+      .fns = factor),
+    across(
+      .cols = c(Participant.Age, Condition.Test.Audio, Response.RT, starts_with("Duration")),
+      .fns = as.numeric),
+    across(
+      .cols = c(Item.isCatchTrial, Response.CatchTrial),
+      .fns = as.logical)) %>%
   # get rid of old cues, I don't trust those 
   select(!starts_with("cue")) %>%
   # remove occluder manipulations
@@ -60,15 +86,6 @@ d.perception <- read.csv("./data/CISP_data.csv") %>%
   # 1-31 S high
   mutate(LJ_step = as.numeric(gsub("_", "", str_sub(Item.Filename, 0, 2))))
 
-# dataframe including just CoG for now
-d.acoustics <- rbind(s, sh, test) %>%
-  filter(segment %in% c("S", "SH", "?")) %>%
-  mutate(type = case_when(
-    grepl("50", source) == T ~ "shifted", 
-    grepl("_0", source) == T ~ "typical",
-    grepl("test", source) == T ~ "test"),
-         cog = as.numeric(cog)) %>%
-  select(segment, word, cog, type)
 
 # quick sanity check
 d.acoustics %>%
@@ -79,7 +96,7 @@ d.acoustics %>%
 p1 <- d.acoustics %>%
   ggplot(aes(x = cog,
              fill = segment)) +
-  geom_histogram(bins = 20) +
+  geom_histogram(bins = 20, position = "identity", alpha = .5) +
   facet_wrap(~type)
 p1
 # as expected, typical SH is lowest, then both shifted, and typical S is highest.
@@ -97,21 +114,27 @@ d.test <- merge(filter(d.perception, Phase == "test"), d.acoustics.test,
 # across all experiments
 p2 <- d.test %>%
   ggplot(aes(x = cog,
-             y = Response.ASHI,
-             linetype = Condition.Test.Pen)) +
+             y = Response.ASHI)) +
   stat_summary(geom = "pointrange",
-               fun.data = mean_cl_boot) +
+               fun.data = mean_cl_boot, aes(shape = Condition.Test.Pen)) +
+  stat_summary(geom = "line",
+               fun = mean, aes(linetype = Condition.Test.Pen)) +
   facet_wrap(~Experiment.internalName)
 p2
 
 # and aggregate just over 1a-c
 p3 <- d.test %>%
+  run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c")) %>%
+  excludeData() %>%
+  filter(!is.na(Response.ASHI)) %>%
   filter(Experiment.internalName %in% c("NORM A", "NORM B", "NORM C")) %>%
   ggplot(aes(x = cog,
              y = Response.ASHI,
              linetype = Condition.Test.Pen)) +
   stat_summary(geom = "pointrange",
-               fun.data = mean_cl_boot)
+               fun.data = mean_cl_boot) +
+  stat_summary(geom = "line",
+               fun = mean, aes(linetype = Condition.Test.Pen)) 
 p3
 
 # now let's use this data do get a model of the effect of pen!

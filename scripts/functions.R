@@ -635,6 +635,8 @@ exclusionPlot <- function(data) {
 
 
 excludeData <- function(data) {
+  require(magrittr)
+  
   data %<>%
     filter(
       Exclude_Participant.Reason == "none" | Experiment == "LJ18-NORM",
@@ -644,6 +646,9 @@ excludeData <- function(data) {
 }
 
 run_exclusions <- function(data, experiment) {
+  require(knitr)
+  require(kableExtra)
+  
   data %<>% filter(Experiment %in% experiment)
   print(
     kable(
