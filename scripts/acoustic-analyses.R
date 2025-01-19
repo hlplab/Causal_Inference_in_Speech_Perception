@@ -144,7 +144,7 @@ p3 <-
                fun = mean, aes(linetype = Condition.Test.Pen)) 
 p3
 
-# now let's use this data do get a model of the effect of pen!
+# now let's use this data to get a model of the effect of pen!
 
 # abbreviated model, including just acoustics (linear, not monotonic) and pen
 m1 <- 
@@ -176,19 +176,10 @@ m1 <-
     threads = threading(threads = 2),
     file = "../models/Exp-CISP-1a-c-acoustics")
 summary(m1)
-# for some reason this gave us crap results with bit Rhats...
-
-# moving to frequentist model just to establish the pipeline
-m3 <- glm(Response.ASHI ~ Condition.Test.Pen * cog,
-            data = d.test %>%
-              filter(Experiment.internalName %in% c("NORM A", "NORM B", "NORM C")) %>%
-              prep_for_analysis(),
-            family="binomial")
-summary(m3)
 
 # create sample exposure data to test
 # we want to check each exposure item with and without PIM
-# (which should leave cog unaffected by will change the prediction)
+# (which should leave cog unaffected but will change the prediction)
 d.exp <- d.acoustics %>%
   filter(type != "test") %>%
   mutate(Condition.Test.Pen = "H")
@@ -196,17 +187,26 @@ d.exp <- d.acoustics %>%
 d.exp2 <- d.exp %>%
   mutate(Condition.Test.Pen = "M")
 
-d.exp <- rbind(d.exp, d.exp2)
+
+d.exp <- rbind(d.exp, d.exp2) %>%
+  mutate(cog_gs = (cog - mean(cog)) / (2 * sd(cog)),
+         ParticipantID = "1",
+         Experiment = "CISP-1c")
 
 # predict responses
-# when running a bigger model, or any with random slopes by subject,
-# this function complains that subjects aren't in the new data...
+# scaling cog_gs separately for each dataframe is potentially an issue?
+# the model we are predicting from has random effects for Participant,
+# for now let's just set ParticipantID to a constant.
+# The model is also making different predictions for different levels of 
+# Experiment... for now using CISP-1c. 
+
 predict <- as.data.frame(
-  1 / (1 + exp(-predict(m3,
-                       newdata = d.exp))))
+  1 / (1 + exp(-predict(m1,
+                       newdata = d.exp,
+                       allow_new_levels = T))))
 
 d.exp <- cbind(d.exp, predict) %>%
-  rename(predict.acoustics = `1/(1 + exp(-predict(m3, newdata = d.exp)))`,
+  rename(predict.acoustics = Estimate,
          segment.lexical = segment) %>%
   mutate(
     # define some cutoff probabilities
