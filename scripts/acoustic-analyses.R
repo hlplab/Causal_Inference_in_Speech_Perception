@@ -44,15 +44,13 @@ setwd("/Users/shawncummings/Documents/GitHub/Causal_Inference_in_Speech_Percepti
 # just for prep_for_analysis()
 source("functions.R")
 
-# Data import
-# acoustics
-s <- read_tsv("../materials/Annotated/s_segments.txt")
-sh <- read_tsv("../materials/Annotated/sh_segments.txt")
-test <- read_tsv("../materials/Annotated/test_segments.txt")
-
-# dataframe including just CoG for now
+# Data import acoustics
+# including just CoG for now
 d.acoustics <- 
-  rbind(s, sh, test) %>%
+  rbind(
+    read_tsv("../materials/Annotated/s_segments.txt"),
+    read_tsv("../materials/Annotated/sh_segments.txt"),
+    read_tsv("../materials/Annotated/test_segments.txt")) %>%
   filter(segment %in% c("S", "SH", "?")) %>%
   mutate(type = case_when(
     grepl("50", source) == T ~ "shifted", 
@@ -123,11 +121,20 @@ p2 <- d.test %>%
 p2
 
 # and aggregate just over 1a-c
-p3 <- d.test %>%
+d.test %<>%
   run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c")) %>%
   excludeData() %>%
   filter(!is.na(Response.ASHI)) %>%
-  filter(Experiment.internalName %in% c("NORM A", "NORM B", "NORM C")) %>%
+  filter(Experiment.internalName %in% c("NORM A", "NORM B", "NORM C"))
+
+# check relation between continuum steps and cog
+d.test %>%
+  ggplot(aes(x = Condition.Test.Audio,
+             y = cog)) +
+  geom_point() 
+
+p3 <- 
+  d.test %>%
   ggplot(aes(x = cog,
              y = Response.ASHI,
              linetype = Condition.Test.Pen)) +
@@ -139,45 +146,36 @@ p3
 
 # now let's use this data do get a model of the effect of pen!
 
-# full model structure
-# m1 <- brm(Response.ASHI ~
-#             Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(round(cog, 0)) * Experiment +
-#             (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(round(cog, 0)) | ParticipantID),
-#           data = d.test %>%
-#             filter(Experiment.internalName %in% c("NORM A", "NORM B", "NORM C")) %>%
-#             prep_for_analysis(),
-#           family = "bernoulli",
-#           prior = my_priors,
-#           sample_prior = "yes",
-#           backend = "cmdstanr",
-#           chains = 4,
-#           warmup = 1000,
-#           iter = 2000,
-#           control = .9,
-#           cores = min(parallel::detectCores(), 4),
-#           threads = threading(threads = 4))
-# summary(m1)
-
 # abbreviated model, including just acoustics (linear, not monotonic) and pen
-m2 <- brm(Response.ASHI ~ 
-            Condition.Test.Pen * cog +
-            (1 + Condition.Test.Pen * cog | ParticipantID),
-          data = d.test %>%
-            filter(Experiment.internalName %in% c("NORM A", "NORM B", "NORM C")) %>%
-            prep_for_analysis(),
-          family = "bernoulli",
-          prior = my_priors,
-          sample_prior = "yes",
-          backend = "cmdstanr",
-          chains = 4, 
-          warmup = 1000,
-          iter = 2000,
-          control = .9,
-          cores = min(parallel::detectCores(), 4), 
-          threads = threading(threads = 4))
-summary(m2)
-
-save(m2, file = "models/Exp-CISP-1a-c-acoustics.rds")
+m1 <- 
+  brm(
+    formula = 
+      Response.ASHI ~ 1 + Experiment * Condition.Test.Pen * cog_gs +
+      # Including experiment since there's clear evidence that the 
+      # selection of test steps affects how participants interpret the input 
+      # (presumable incl. cog). 
+      (1 + Condition.Test.Pen * cog_gs | ParticipantID),
+    data = 
+      d.test %>%
+      # data is already filtered to Exp 1a-c but just making sure
+      ungroup() %>%
+      filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>%
+      prep_for_analysis() %>%
+      # scaling cog to keep effect of priors same as for other predictors
+      mutate(cog_gs = (cog - mean(cog)) / (2 * sd(cog))),
+    family = "bernoulli",
+    prior = my_priors,
+    sample_prior = "yes",
+    backend = "cmdstanr",
+    chains = 4, 
+    warmup = 2000,
+    iter = 4000,
+    thin = 2,
+    control = list(adapt_delta = .95, max_treedepth = 15),
+    cores = min(parallel::detectCores(), 4), 
+    threads = threading(threads = 2),
+    file = "../models/Exp-CISP-1a-c-acoustics")
+summary(m1)
 # for some reason this gave us crap results with bit Rhats...
 
 # moving to frequentist model just to establish the pipeline
@@ -187,16 +185,6 @@ m3 <- glm(Response.ASHI ~ Condition.Test.Pen * cog,
               prep_for_analysis(),
             family="binomial")
 summary(m3)
-
-# m4 <- glmer(Response.ASHI ~
-#               Condition.Test.OriginalLabel * Condition.Test.Pen * Block * cog.scaled * Experiment +
-#               (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * cog.scaled | ParticipantID),
-#             data = d.test %>%
-#               filter(Experiment.internalName %in% c("NORM A", "NORM B", "NORM C")) %>%
-#               prep_for_analysis(),
-#             family="binomial",
-#             control=glmerControl(optimizer="bobyqa", optCtrl=list(maxfun=800000)))
-# summary(m4)
 
 # create sample exposure data to test
 # we want to check each exposure item with and without PIM
