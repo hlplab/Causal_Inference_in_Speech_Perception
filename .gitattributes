@@ -4758,3 +4758,15 @@ materials/Audio/FillerNonwords/goned.wav filter=lfs diff=lfs merge=lfs -text
 experiments/experiment-A/JSEXP/sounds/beep.wav filter=lfs diff=lfs merge=lfs -text
 experiments/experiment-A/JSEXP/sounds/cabbage.wav filter=lfs diff=lfs merge=lfs -text
 experiments/experiment-A/JSEXP/sounds/lemonade.wav filter=lfs diff=lfs merge=lfs -text
+models/Exp-CISP-2b.rds filter=lfs diff=lfs merge=lfs -text
+models/Exp-LJ18-NORM.rds filter=lfs diff=lfs merge=lfs -text
+models/Exp-CISP-1b-wo[[:space:]]participants[[:space:]]who[[:space:]]commented[[:space:]]on[[:space:]]pen[[:space:]]affecting[[:space:]]pronunciation.rds filter=lfs diff=lfs merge=lfs -text
+models/Exp-CISP-1a-wo[[:space:]]participants[[:space:]]who[[:space:]]commented[[:space:]]on[[:space:]]pen[[:space:]]affecting[[:space:]]pronunciation.rds filter=lfs diff=lfs merge=lfs -text
+models/Exp-CISP-1a.rds filter=lfs diff=lfs merge=lfs -text
+models/Exp-CISP-1b.rds filter=lfs diff=lfs merge=lfs -text
+models/Exp-CISP-1c-CISP-2.rds filter=lfs diff=lfs merge=lfs -text
+models/Exp-CISP-1c-wo[[:space:]]participants[[:space:]]who[[:space:]]commented[[:space:]]on[[:space:]]pen[[:space:]]affecting[[:space:]]pronunciation.rds filter=lfs diff=lfs merge=lfs -text
+models/Exp-CISP-1c.rds filter=lfs diff=lfs merge=lfs -text
+models/Exp-CISP-2-vs-CISP-1c-occlusion-test.rds filter=lfs diff=lfs merge=lfs -text
+models/Exp-CISP-1a-c-acoustics.rds filter=lfs diff=lfs merge=lfs -text
+models/Exp-CISP-2.rds filter=lfs diff=lfs merge=lfs -text
