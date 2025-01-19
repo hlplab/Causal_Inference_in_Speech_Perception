@@ -295,13 +295,13 @@ posterior_sh_bias <- update_NIW_ideal_adaptor_incrementally(
   exposure.cues = "cog")
 
 p_priors <- plot_expected_categories_density_1D(filter(IA),
-                                                xlim = c(4000, 7000))
+                                                xlim = c(4000, 8000))
 
 p_sh <- plot_expected_categories_density_1D(filter(posterior_sh_bias, observation.n == max(observation.n)),
-                                          xlim = c(4000, 7000))
+                                          xlim = c(4000, 8000))
 
 p_s <- plot_expected_categories_density_1D(filter(posterior_s_bias, observation.n == max(observation.n)),
-                                            xlim = c(4000, 7000))
+                                            xlim = c(4000, 8000))
 
 p7 <- plot_grid(p_priors,
                 p_sh,
@@ -328,10 +328,10 @@ posterior_sh_bias_pim <- update_NIW_ideal_adaptor_incrementally(
   exposure.cues = "cog")
 
 p_sh_pim <- plot_expected_categories_density_1D(filter(posterior_sh_bias_pim, observation.n == max(observation.n)),
-                                            xlim = c(4000, 7000))
+                                            xlim = c(4000, 8000))
 
 p_s_pim <- plot_expected_categories_density_1D(filter(posterior_s_bias_pim, observation.n == max(observation.n)),
-                                           xlim = c(4000, 7000))
+                                           xlim = c(4000, 8000))
 
 
 p8 <- plot_grid(p_priors,
@@ -368,7 +368,7 @@ summary
 # this doesn't work... 
 plot_expected_categorization_function_1D(IA,
                                          data.test = d.acoustics.test,
-                                         xlim = c(1000, 10000),
+                                         xlim = c(0, 10000),
                                          target_category = 2)
 
 
