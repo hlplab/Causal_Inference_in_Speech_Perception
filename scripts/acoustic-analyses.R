@@ -1,4 +1,4 @@
-# Last updated 01-13-25 snc
+# Last updated 01-19-25 snc
 
 
 ### STATUS/TODO ###
@@ -9,10 +9,6 @@
 # 3. use that data to inform some ideal adaptors
 
 # Problems!
-
-# what model structure to use? I had some weird rhat issues with the brm()?
-# also, predict() seems not to allow newdata which doesn't have columns
-# for each effect of the model (including re structure)
 
 # For all thresholds I've checked (see lines 200ish), there are as many 
 # implausible acoustics in the PIH as PIM condition, contra our a priori prediction
