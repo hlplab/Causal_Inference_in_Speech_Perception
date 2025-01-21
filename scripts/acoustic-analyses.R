@@ -1,4 +1,4 @@
-# Last updated 01-13-25 snc
+# Last updated 01-21-25 tfj
 
 
 ### STATUS/TODO ###
@@ -6,38 +6,20 @@
 # Pipeline currently runs!
 # 1. use perception from 1a-c to predict effects of cog and pen
 # 2. predict likely effects on exposure
-# 3. use that data to inform some ideal adaptors
+# 3. use that data to calculate posterior via belief updating in the exposure different conditions (ideal adaptors)
 
-# Problems!
-
-# what model structure to use? I had some weird rhat issues with the brm()?
-# also, predict() seems not to allow newdata which doesn't have columns
-# for each effect of the model (including re structure)
-
-# For all thresholds I've checked (see lines 200ish), there are as many 
-# implausible acoustics in the PIH as PIM condition, contra our a priori prediction
-
-# The MVBeliefUpdatr functions to plot categorization curves aren't working for me.
-# I think something to do with needing to feed in noise_treatment = "no_noise"?
-# anyway, many errors of the type "Input x and m are not of compatible dimensions."
-
-
-
-
-rm(list=ls(all.names=TRUE))
 # Packages
-library(brms)
-library(lme4)
-library(rlang)
-library(assertthat)
-
 library(tidyverse)
 library(magrittr)
+library(rlang)
+library(assertthat)
+library(cowplot)
+
+library(brms)
 
 # devtools::install_github("hlplab/MVBeliefUpdatr")
 library(MVBeliefUpdatr)
 
-library(cowplot)
 
 setwd("/Users/shawncummings/Documents/GitHub/Causal_Inference_in_Speech_Perception/scripts/")
 # setwd("scripts/")
@@ -132,7 +114,7 @@ d.test %<>%
 d.test %>%
   ggplot(aes(x = Condition.Test.Audio,
              y = cog)) +
-  geom_point() 
+  geom_line() 
 
 p3 <- 
   d.test %>%
@@ -289,12 +271,10 @@ posterior_s_bias.PiH <-
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
     exposure = 
+      d.exp %>%
+      # Make sure token that aren't perceived as intended are not used for updating
+      mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
       filter(
-        d.exp,
-        # filter d.exp to only include believable tokens
-        # NOTE: THIS MIGHT BE TOO SIMPLISTIC. WE MIGHT HAVE TO MODEL THE *PROBABILITY* WITH WHICH A TOKEN 
-        # IS STILL RECOGNIZED AS INTENDED. 
-        segment.perceived_as_intended == "yes",
         Condition.Exposure == "S-bias",
         Condition.Pen == "H"),
     exposure.category = "Condition.OriginalLabel",
@@ -304,10 +284,10 @@ posterior_sh_bias.PiH <-
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
     exposure = 
+      d.exp %>%
+      # Make sure token that aren't perceived as intended are not used for updating
+      mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
       filter(
-        d.exp,
-        # filter d.exp to only include believable tokens
-        segment.perceived_as_intended == "yes",
         Condition.Exposure == "SH-bias",
         Condition.Pen == "H"),
     exposure.category = "Condition.OriginalLabel",
@@ -328,10 +308,10 @@ posterior_s_bias.PiM <-
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
     exposure = 
+      d.exp %>%
+      # Make sure token that aren't perceived as intended are not used for updating
+      mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
       filter(
-        d.exp,
-        # filter d.exp to only include believable tokens
-        segment.perceived_as_intended == "yes",
         Condition.Exposure == "S-bias",
         Condition.Pen == "M"),
     exposure.category = "Condition.OriginalLabel",
@@ -341,10 +321,10 @@ posterior_sh_bias.PiM <-
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
     exposure = 
+      d.exp %>%
+      # Make sure token that aren't perceived as intended are not used for updating
+      mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
       filter(
-        d.exp,
-        # filter d.exp to only include believable tokens
-        segment.perceived_as_intended == "yes",
         Condition.Exposure == "SH-bias",
         Condition.Pen == "M"),
     exposure.category = "Condition.OriginalLabel",
@@ -393,69 +373,74 @@ summary <-
     mutate(posterior_s_bias.PiH,
            bias = "S", pen = "H"),
     mutate(posterior_sh_bias.PiH,
-           bias = "SH", pen = "H")) %>%
-  select(category, m, S, bias, pen)
-summary
+           bias = "SH", pen = "H"))
+
+plot_expected_categorization_function_1D(
+  summary %>% filter(bias != "prior") %>% group_by(bias, pen),
+  data.test = d.acoustics.test,
+  animate_by = observation.n,
+  xlim = xlim,
+  target_category = 2) + aes(color = bias, linetype = pen)
 
 
+# TO DO:
+# make sure returned categorization function only returns one number per x
+# make sure get_NIW_posterior_predictive() can handle vector inputs (with multiple values x) <-- this is what it's currently choking on
+
+x = IA
 data.exposure = NULL
 data.test = NULL
 target_category = 1
 logit = F
-category.ids = NULL
-category.labels = NULL
-category.colors = NULL
-category.linetypes = NULL
+xlim = c(1000, 10000)
+ylim = NULL
+x.expand = c(0, 0)
 facet_rows_by = NULL
 facet_cols_by = NULL
 facet_wrap_by = NULL
 animate_by = NULL
 animation_follow = F
-x.expand = c(0, 0)
-xlim = c(1000, 10000)
-ylim = NULL
-x <- IA
+category.ids = NULL
+category.labels = NULL
+category.colors = NULL
+category.linetypes = NULL
 
-get_categorization_function_from_NIW_ideal_adaptor(x)(5000)
 
 facet_rows_by <- enquo(facet_rows_by)
 facet_cols_by <- enquo(facet_cols_by)
 facet_wrap_by <- enquo(facet_wrap_by)
 animate_by <- enquo(animate_by)
-
 MVBeliefUpdatr:::check_compatibility_between_NIW_belief_and_data(x, data.exposure, data.test,
                                                 !! facet_rows_by, !! facet_cols_by, !! facet_wrap_by, !! animate_by)
-
-cue.labels = get_cue_labels_from_model(x)
+cue.labels <- get_cue_labels_from_model(x)
 assert_that(length(cue.labels) == 1, msg = "Expecting exactly one cue for plotting.")
 
 if (is_missing(xlim)) {
   if (!is.null(data.exposure) & !is.null(data.test))
-    xlim = range(range(data.exposure[[cue.labels[1]]]), range(data.test[[cue.labels[1]]])) else
+    xlim <- range(range(data.exposure[[cue.labels[1]]]), range(data.test[[cue.labels[1]]])) else
       if (!is.null(data.exposure))
-        xlim = range(data.exposure[[cue.labels[1]]]) else
+        xlim <- range(data.exposure[[cue.labels[1]]]) else
           if (!is.null(data.test))
-            xlim = range(data.test[[cue.labels[1]]])
+            xlim <- range(data.test[[cue.labels[1]]])
 }
 assert_that(!is_missing(xlim), msg = "`xlim` must be specified")
 
 # Setting aes defaults
-if (is.null(category.ids)) category.ids = levels(x$category)
-if (is.null(category.labels)) category.labels = levels(x$category)
-if (is.null(category.colors)) category.colors = get_default_colors("category", category.ids)
-if (is.null(category.linetypes)) category.linetypes = rep(1, length(category.ids))
+if (is.null(category.ids)) category.ids <- levels(x$category)
+if (is.null(category.labels)) category.labels <- levels(x$category)
+if (is.null(category.colors)) category.colors <- get_default_colors("category", category.ids)
+if (is.null(category.linetypes)) category.linetypes <- rep(1, length(category.ids))
 
 if (any(!quo_is_null(facet_rows_by),
         !quo_is_null(facet_cols_by),
         !quo_is_null(animate_by))) x %<>% group_by(!! facet_rows_by, !! facet_cols_by, !! facet_wrap_by, !! animate_by,
                                                    .add = TRUE)
-
 stat_functions <-
   x %>%
   group_map(
     .keep = T,
     .f = function(.x, .y) {
-      cat_function <- get_categorization_function_from_NIW_ideal_adaptor(.x, logit = logit)
+      cat_function <- get_categorization_function_from_NIW_ideal_adaptor(.x, target_category = target_category, logit = logit)
       stat_function(
         data = .x,
         fun = cat_function) })
@@ -474,50 +459,10 @@ p <-
       paste0("p(resp = ", category.labels[target_category], ")")) +
   coord_cartesian(ylim = ylim)
 
-p <- facet_or_animate(p, !!facet_rows_by, !!facet_cols_by, !! facet_wrap_by, !!animate_by, animation_follow)
+p
 
 
-# this doesn't work... 
-plot_expected_categorization_function_1D(IA,
-                                         data.test = d.acoustics.test,
-                                         xlim = c(1000, 10000),
-                                         target_category = 2, verbose = T)
-
-
-add_ibbu_stanfit_draws(
-  IA,
-  ndraws = 10,
-  wide = F,
-  nest = T,
-  untransform_cues = T)
-
-# let's do it the long way 
-
-
-IA_func <- get_categorization_function_from_NIW_ideal_adaptor(IA,
-                                                              noise_treatment = "no_noise")
-
-IA_linspace <- 
-  tibble(cog = c(5000:7000)) %>%
-  mutate(prob = as.numeric(IA_func(cog)))
-
-
-
-ssss <- as.numeric(IA_func(5500))
-
-
-plot_IA_func <- ggplot() +
-  geom_function()
-  IA_func()
-
-# let's try manual
-IA_func2 <- get_NIW_categorization_function(
-  ms = c(6541, 4465),
-  Ss = c(9709768, 3326227),
-  kappas = c(64, 64),
-  nus = c(64, 64),
-  noise_treatment = "no_noise")
-
-IA_func2(5500)
-
-
+###
+f <- get_categorization_function_from_NIW_ideal_adaptor(IA, target_category = target_category, logit = logit)
+f(1500)
+f(c(1500, 2500))
