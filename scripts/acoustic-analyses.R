@@ -29,21 +29,21 @@ source("functions.R")
 
 # Data import acoustics
 # including just CoG for now
-d.acoustics <-
+d.acoustics <- 
   rbind(
     read_tsv("../materials/Annotated/s_segments.txt"),
     read_tsv("../materials/Annotated/sh_segments.txt"),
     read_tsv("../materials/Annotated/test_segments.txt")) %>%
   filter(segment %in% c("S", "SH", "?")) %>%
   mutate(type = case_when(
-    grepl("50", source) == T ~ "shifted",
+    grepl("50", source) == T ~ "shifted", 
     grepl("_0", source) == T ~ "typical",
     grepl("test", source) == T ~ "test"),
     cog = as.numeric(cog)) %>%
   select(segment, word, cog, type)
 
 # perception from all experiments
-d.perception <-
+d.perception <- 
   read.csv("../data/CISP_data.csv") %>%
   # run formatting from SI
   mutate(
@@ -59,7 +59,7 @@ d.perception <-
     across(
       .cols = c(Item.isCatchTrial, Response.CatchTrial),
       .fns = as.logical)) %>%
-  # get rid of old cues, I don't trust those
+  # get rid of old cues, I don't trust those 
   select(!starts_with("cue")) %>%
   # remove occluder manipulations
   filter(!Experiment.internalName %in% c("NORM D", "NORM E")) %>%
@@ -82,7 +82,7 @@ p1 <- d.acoustics %>%
 p1
 # as expected, typical SH is lowest, then both shifted, and typical S is highest.
 
-## add cog from test items
+## add cog from test items 
 d.acoustics.test <- d.acoustics %>%
   filter(type == "test") %>%
   rename(LJ_step = word) %>%
@@ -114,9 +114,9 @@ d.test %<>%
 d.test %>%
   ggplot(aes(x = Condition.Test.Audio,
              y = cog)) +
-  geom_line()
+  geom_line() 
 
-p3 <-
+p3 <- 
   d.test %>%
   ggplot(aes(x = cog,
              y = Response.ASHI,
@@ -124,10 +124,10 @@ p3 <-
   stat_summary(geom = "pointrange",
                fun.data = mean_cl_boot) +
   stat_summary(geom = "line",
-               fun = mean, aes(linetype = Condition.Test.Pen))
+               fun = mean, aes(linetype = Condition.Test.Pen)) 
 p3
 
-# now let's use this data to get a model of the effect of pen!
+# now let's use this data do get a model of the effect of pen!
 
 # abbreviated model, including just acoustics (linear, not monotonic) and pen
 d.test %<>%
@@ -137,31 +137,31 @@ d.test %<>%
   # scaling cog to keep effect of priors same as for other predictors
   mutate(cog_gs = (cog - mean(cog)) / (2 * sd(cog)))
 
-stats.cog <-
+stats.cog <- 
   d.test %>%
   summarise(mean = mean(cog), sd = sd(cog))
 
-m1 <-
+m1 <- 
   brm(
-    formula =
+    formula = 
       Response.ASHI ~ 1 + Experiment * Condition.Test.Pen * Condition.Test.OriginalLabel * cog_gs +
-      # Including experiment since there's clear evidence that the
-      # selection of test steps affects how participants interpret the input
-      # (presumable incl. cog).
+      # Including experiment since there's clear evidence that the 
+      # selection of test steps affects how participants interpret the input 
+      # (presumable incl. cog). 
       (1 + Condition.Test.Pen * Condition.Test.OriginalLabel * cog_gs | ParticipantID),
-    data =
+    data = 
       d.test %>%
       prep_for_analysis(),
     family = "bernoulli",
     prior = my_priors,
     sample_prior = "yes",
     backend = "cmdstanr",
-    chains = 4,
+    chains = 4, 
     warmup = 2000,
     iter = 4000,
     thin = 2,
     control = list(adapt_delta = .95, max_treedepth = 15),
-    cores = min(parallel::detectCores(), 4),
+    cores = min(parallel::detectCores(), 4), 
     threads = threading(threads = 2),
     file = "../models/Exp-CISP-1a-c-acoustics")
 summary(m1)
@@ -170,10 +170,10 @@ summary(m1)
 # we want to check each exposure item with and without PIM
 # (which should leave cog unaffected but will change the prediction)
 #
-# NOTE: THIS APPROACH MODELS THE PREDICTED EFFECT OF THE PEN ON THE PROBABILITY OF
+# NOTE: THIS APPROACH MODELS THE PREDICTED EFFECT OF THE PEN ON THE PROBABILITY OF 
 # PERCEIVED A SEGMENT AS INTENDED. HOWEVER, IT MIGHT BE BETTER TO INSTEAD MODEL THE
 # EFFECT ON THE PERCEIVED COG?
-d.exp <-
+d.exp <- 
   d.acoustics %>%
   filter(type != "test") %>%
   # Adding information about the visual bias, which---for exposure items---was always
@@ -183,39 +183,39 @@ d.exp <-
   mutate(cog_gs = (cog - stats.cog$mean) / (2 * stats.cog$sd)) %>%
   crossing(
     Condition.Test.Pen = c("H", "M"),
-    # Create one version of the data frame for each experiment
-    # (since we included experiment in the model fit, we need
+    # Create one version of the data frame for each experiment 
+    # (since we included experiment in the model fit, we need 
     # to include it in the newdata, and average over it below)
     Experiment = c("CISP-1a", "CISP-1b", "CISP-1c")) %>%
   # Get predictions ignoring random effects
   bind_cols(predict(m1, newdata = ., re_formula = NA)) %>%
   rename(Condition.Pen = Condition.Test.Pen, Condition.OriginalLabel = Condition.Test.OriginalLabel) %>%
   # average prediction across experiments (since we can't really
-  # model the effects of selected continuum steps for the exposure
+  # model the effects of selected continuum steps for the exposure 
   # data anyway)
   group_by(word, type, Condition.OriginalLabel, Condition.Pen, cog, cog_gs) %>%
   summarise(predicted_probability.SH = mean(Estimate)) %>%
-  # Define cutoff probabilities and determine whether segment would be
+  # Define cutoff probabilities and determine whether segment would be 
   # perceived as intended.
   mutate(
-    # Cutoff values are the minimum probability that the segment must
+    # Cutoff values are the minimum probability that the segment must 
     # have to still be perceived as intended. Lower values thus imply
-    # stronger word superiority effects (less evidence is needed to
+    # stronger word superiority effects (less evidence is needed to 
     # still be willing to accept the segment as intended).
     cutoff_s = 0.4,
     cutoff_sh = 0.4,
-    Condition.Exposure =
+    Condition.Exposure = 
       case_when(
         Condition.OriginalLabel == "S" & type == "typical" ~ "SH-bias",
         Condition.OriginalLabel == "S" & type == "shifted" ~ "S-bias",
         Condition.OriginalLabel == "SH" & type == "typical" ~ "S-bias",
         Condition.OriginalLabel == "SH" & type == "shifted" ~ "SH-bias"),
-    segment.perceived_as_intended =
+    segment.perceived_as_intended = 
       case_when(
         Condition.OriginalLabel == "S" & 1 - predicted_probability.SH < cutoff_s ~ "no",
         Condition.OriginalLabel == "S" & 1 - predicted_probability.SH >= cutoff_s ~ "yes",
         Condition.OriginalLabel == "SH" & predicted_probability.SH < cutoff_sh ~ "no",
-        Condition.OriginalLabel == "SH" & predicted_probability.SH >= cutoff_sh ~ "yes"))
+        Condition.OriginalLabel == "SH" & predicted_probability.SH >= cutoff_sh ~ "yes")) 
 
 # d.exp %>%
 #   group_by(Condition.Exposure, Condition.OriginalLabel, Condition.Pen, type, segment.perceived_as_intended) %>%
@@ -242,7 +242,7 @@ d.exp  %>%
   facet_grid(Condition.Pen + Condition.Exposure ~ Condition.OriginalLabel)
 
 # make an IO based on the typical tokens (and no pen in mouth)
-IO <-
+IO <- 
   make_MVG_ideal_observer_from_data(
   data = d.exp %>% filter(Condition.Pen == "H", type == "typical"),
   category = "Condition.OriginalLabel",
@@ -252,8 +252,8 @@ IO <-
 # and make an IA based on it
 # and a random kappa and nu... could/should try others!
 # pretty low for now just so effects are more visually evident
-kappa_nu <- 10
-IA <-
+kappa_nu <- 20
+IA <- 
   IO %>%
   mutate(kappa = kappa_nu,
          nu = kappa_nu,
@@ -267,10 +267,10 @@ IA <-
 is.NIW_belief(IA)
 
 # check classic exposure effect (pen in hand)
-posterior_s_bias.PiH <-
+posterior_s_bias.PiH <- 
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
-    exposure =
+    exposure = 
       d.exp %>%
       # Make sure token that aren't perceived as intended are not used for updating
       mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
@@ -280,10 +280,10 @@ posterior_s_bias.PiH <-
     exposure.category = "Condition.OriginalLabel",
     exposure.cues = "cog")
 
-posterior_sh_bias.PiH <-
+posterior_sh_bias.PiH <- 
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
-    exposure =
+    exposure = 
       d.exp %>%
       # Make sure token that aren't perceived as intended are not used for updating
       mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
@@ -293,21 +293,21 @@ posterior_sh_bias.PiH <-
     exposure.category = "Condition.OriginalLabel",
     exposure.cues = "cog")
 
-xlim <- c(4000, 7000)
+xlim <- c(4000, 8000)
 plot_grid(
   p_priors <- plot_expected_categories_density_1D(filter(IA), xlim = xlim),
   p_sh_PiH <- plot_expected_categories_density_1D(filter(posterior_sh_bias.PiH, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
   p_s_PiH <- plot_expected_categories_density_1D(filter(posterior_s_bias.PiH, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
   labels = c("priors", "after SH-biased exposure (PiH)", "after S-biased exposure (PiH)"),
   hjust = 0,
-  ncol = 1,
+  ncol = 1, 
   align = "hv")
 
 # and now with PIM
-posterior_s_bias.PiM <-
+posterior_s_bias.PiM <- 
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
-    exposure =
+    exposure = 
       d.exp %>%
       # Make sure token that aren't perceived as intended are not used for updating
       mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
@@ -317,10 +317,10 @@ posterior_s_bias.PiM <-
     exposure.category = "Condition.OriginalLabel",
     exposure.cues = "cog")
 
-posterior_sh_bias.PiM <-
+posterior_sh_bias.PiM <- 
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
-    exposure =
+    exposure = 
       d.exp %>%
       # Make sure token that aren't perceived as intended are not used for updating
       mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
@@ -336,32 +336,32 @@ plot_grid(
   p_s_PiM <- plot_expected_categories_density_1D(filter(posterior_s_bias.PiM, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
   labels = c("priors", "after SH-biased exposure (PiM)", "after S-biased exposure (PiM)"),
   hjust = 0,
-  ncol = 1,
+  ncol = 1, 
   align = "hv")
 
 # Compare effect of SH-biased exposure for PiH vs. PiM
-plot_grid(p_priors, p_sh_PiH, p_sh_PiM,
+plot_grid(p_priors, p_sh_PiH, p_sh_PiM, 
           ggplot(mapping = aes(color = category)) +
             bind_rows(
-              filter(posterior_sh_bias.PiH, observation.n == max(observation.n)) %>%
+              filter(posterior_sh_bias.PiH, observation.n == max(observation.n)) %>% 
                 mutate(posterior = "PiH"),
-              filter(posterior_sh_bias.PiM, observation.n == max(observation.n)) %>%
+              filter(posterior_sh_bias.PiM, observation.n == max(observation.n)) %>% 
                 mutate(posterior = "PiM")) %>%
             mutate(
-              mu = get_expected_mu_from_m(m),
-              Sigma = get_expected_Sigma_from_S(S, nu)) %>%
-            group_by(category, .add = T) %>%
-            group_map(.keep = T, .f = function(.x, .y)
-              stat_function(data = .x, mapping = aes(color = category),
-                            fun = function(x, mean1, sd1, mean2, sd2) dnorm(x, mean1, sd1) - dnorm(x, mean2, sd2),
+              mu = get_expected_mu_from_m(m), 
+              Sigma = get_expected_Sigma_from_S(S, nu)) %>% 
+            group_by(category, .add = T) %>% 
+            group_map(.keep = T, .f = function(.x, .y) 
+              stat_function(data = .x, mapping = aes(color = category), 
+                            fun = function(x, mean1, sd1, mean2, sd2) dnorm(x, mean1, sd1) - dnorm(x, mean2, sd2), 
                             args = list(mean1 = .x$mu[[1]], sd1 = .x$Sigma[[1]]^0.5, mean2 = .x$mu[[2]], sd2 = .x$Sigma[[2]]^0.5))) +
-            scale_x_continuous(get_cue_labels_from_model(IA), limits = xlim, expand = c(0, 0)) +
+            scale_x_continuous(get_cue_labels_from_model(IA), limits = xlim, expand = c(0, 0)) + 
             scale_y_continuous("Density") +
             theme(legend.position = "none"),
           labels = c("prior", "after SH-biased exposure (PiH)", "after SH-biased exposure (PiM)", "difference between PiH - PiM"),
           ncol = 1, hjust = 0, align = "hv")
 
-summary <-
+summary <- 
   rbind(
     mutate(IA,
            bias = "prior", pen = "NA",
@@ -375,94 +375,14 @@ summary <-
     mutate(posterior_sh_bias.PiH,
            bias = "SH", pen = "H"))
 
-plot_expected_categorization_function_1D(
+p <- 
+  plot_expected_categorization_function_1D(
   summary %>% filter(bias != "prior") %>% group_by(bias, pen),
   data.test = d.acoustics.test,
   animate_by = observation.n,
   xlim = xlim,
   target_category = 2) + aes(color = bias, linetype = pen)
 
-
-# TO DO:
-# make sure returned categorization function only returns one number per x
-# make sure get_NIW_posterior_predictive() can handle vector inputs (with multiple values x) <-- this is what it's currently choking on
-
-x = IA
-data.exposure = NULL
-data.test = NULL
-target_category = 1
-logit = F
-xlim = c(1000, 10000)
-ylim = NULL
-x.expand = c(0, 0)
-facet_rows_by = NULL
-facet_cols_by = NULL
-facet_wrap_by = NULL
-animate_by = NULL
-animation_follow = F
-category.ids = NULL
-category.labels = NULL
-category.colors = NULL
-category.linetypes = NULL
-
-
-facet_rows_by <- enquo(facet_rows_by)
-facet_cols_by <- enquo(facet_cols_by)
-facet_wrap_by <- enquo(facet_wrap_by)
-animate_by <- enquo(animate_by)
-MVBeliefUpdatr:::check_compatibility_between_NIW_belief_and_data(x, data.exposure, data.test,
-                                                !! facet_rows_by, !! facet_cols_by, !! facet_wrap_by, !! animate_by)
-cue.labels <- get_cue_labels_from_model(x)
-assert_that(length(cue.labels) == 1, msg = "Expecting exactly one cue for plotting.")
-
-if (is_missing(xlim)) {
-  if (!is.null(data.exposure) & !is.null(data.test))
-    xlim <- range(range(data.exposure[[cue.labels[1]]]), range(data.test[[cue.labels[1]]])) else
-      if (!is.null(data.exposure))
-        xlim <- range(data.exposure[[cue.labels[1]]]) else
-          if (!is.null(data.test))
-            xlim <- range(data.test[[cue.labels[1]]])
-}
-assert_that(!is_missing(xlim), msg = "`xlim` must be specified")
-
-# Setting aes defaults
-if (is.null(category.ids)) category.ids <- levels(x$category)
-if (is.null(category.labels)) category.labels <- levels(x$category)
-if (is.null(category.colors)) category.colors <- get_default_colors("category", category.ids)
-if (is.null(category.linetypes)) category.linetypes <- rep(1, length(category.ids))
-
-if (any(!quo_is_null(facet_rows_by),
-        !quo_is_null(facet_cols_by),
-        !quo_is_null(animate_by))) x %<>% group_by(!! facet_rows_by, !! facet_cols_by, !! facet_wrap_by, !! animate_by,
-                                                   .add = TRUE)
-stat_functions <-
-  x %>%
-  group_map(
-    .keep = T,
-    .f = function(.x, .y) {
-      cat_function <- get_categorization_function_from_NIW_ideal_adaptor(.x, target_category = target_category, logit = logit)
-      stat_function(
-        data = .x,
-        fun = cat_function) })
-
-p <-
-  ggplot() +
-  stat_functions +
-  { if (!is.null(data.test))
-    add_test_data_to_1D_plot(data = data.test, cue.labels = cue.labels) } +
-  { if (!is.null(data.exposure))
-    add_exposure_data_to_1D_plot(data = data.exposure, cue.labels = cue.labels,
-                                 category.ids = category.ids, category.labels = category.labels, category.colors) } +
-  scale_x_continuous(name = cue.labels, limits = xlim, expand = x.expand) +
-  scale_y_continuous(name = if (logit)
-    paste0("log-odds(resp = ", category.labels[target_category], ")") else
-      paste0("p(resp = ", category.labels[target_category], ")")) +
-  coord_cartesian(ylim = ylim)
-
-p
-
-
-###
-f <- get_categorization_function_from_NIW_ideal_adaptor(IA, target_category = target_category, logit = logit)
-f(1500)
-f(c(1500, 2500))
+library(gganimate)
+a <- animate(p, width = 500, height = 500, fps = 5, renderer = av_renderer())
+anim_save("../figures/updating.webm", a)
