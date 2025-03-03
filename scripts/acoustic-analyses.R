@@ -1,12 +1,4 @@
-# Last updated 01-21-25 tfj
-
-
-### STATUS/TODO ###
-
-# Pipeline currently runs!
-# 1. use perception from 1a-c to predict effects of cog and pen
-# 2. predict likely effects on exposure
-# 3. use that data to calculate posterior via belief updating in the exposure different conditions (ideal adaptors)
+# Last updated 02-23-25 snc.
 
 # Packages
 library(tidyverse)
@@ -17,7 +9,12 @@ library(cowplot)
 
 library(brms)
 
-# devtools::install_github("hlplab/MVBeliefUpdatr")
+# TODO
+# make sure to calculate CoG effect based on aligned vis. label
+# update beliefs based on penned(cog) (which takes cog and label and y/n pen as inputs)
+# optim() 
+
+#devtools::install_github("hlplab/MVBeliefUpdatr")
 library(MVBeliefUpdatr)
 
 
@@ -214,8 +211,51 @@ d.exp <-
       case_when(
         Condition.OriginalLabel == "S" & 1 - predicted_probability.SH < cutoff_s ~ "no",
         Condition.OriginalLabel == "S" & 1 - predicted_probability.SH >= cutoff_s ~ "yes",
-        Condition.OriginalLabel == "SH" & predicted_probability.SH < cutoff_sh ~ "no",
         Condition.OriginalLabel == "SH" & predicted_probability.SH >= cutoff_sh ~ "yes")) 
+
+newdata <- data_frame(
+  #Response.ASHI = c(0,0,1),
+                      Condition.Test.OriginalLabel = "S",
+                      Condition.Test.Pen = "H",
+                      cog_gs = (5500 - stats.cog$mean) / (2 * stats.cog$sd),
+                      Experiment = "CISP-1a")
+  
+
+predict(m1, newdata = newdata , re_formula = NA)
+
+sampledata <- data_frame(
+  crossing(Condition.Test.OriginalLabel = c("S", "SH"),
+           Condition.Test.Pen = c("H", "M"),
+           Experiment = c("CISP-1a", "CISP-1b", "CISP-1c"),
+           cog_gs = round(seq(min(d.exp$cog_gs), max(d.exp$cog_gs), length.out = 10000), 3))) %>%
+  # Get predictions ignoring random effects
+  bind_cols(predict(m1, newdata = ., re_formula = NA)) %>%
+  group_by(Condition.Test.OriginalLabel, 
+           Condition.Test.Pen,
+           cog_gs) %>%
+  summarize(estimate_rounded = round(mean(Estimate), 4)) %>%
+  pivot_wider(names_from = "Condition.Test.Pen",
+              values_from = "cog_gs",
+              values_fn = mean) 
+
+sd2 <- sampledata %>%
+  filter(!is.na(H),
+         !is.na(M))
+  
+sd2plot <- sd2 %>%
+  ggplot(aes(y = estimate_rounded)) +
+  geom_point(aes(x = H)) +
+  geom_point(aes(x = M),
+             color = "red") +
+  theme_cowplot() +
+  facet_wrap(~Condition.Test.OriginalLabel)
+sd2plot
+
+d.exp.compensated <- d.exp %>%
+  mutate(estimate_rounded = round(predicted_probability.SH, 4)) %>%
+  merge(sd2 %>%
+          rename(Condition.OriginalLabel = Condition.Test.OriginalLabel), 
+        all.x = T)
 
 # d.exp %>%
 #   group_by(Condition.Exposure, Condition.OriginalLabel, Condition.Pen, type, segment.perceived_as_intended) %>%
@@ -279,6 +319,7 @@ posterior_s_bias.PiH <-
         Condition.Pen == "H"),
     exposure.category = "Condition.OriginalLabel",
     exposure.cues = "cog")
+
 
 posterior_sh_bias.PiH <- 
   update_NIW_ideal_adaptor_incrementally(
@@ -374,6 +415,8 @@ summary <-
            bias = "S", pen = "H"),
     mutate(posterior_sh_bias.PiH,
            bias = "SH", pen = "H"))
+
+
 
 p <- 
   plot_expected_categorization_function_1D(
