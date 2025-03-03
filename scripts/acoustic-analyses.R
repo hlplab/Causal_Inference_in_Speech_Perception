@@ -211,6 +211,7 @@ d.exp <-
       case_when(
         Condition.OriginalLabel == "S" & 1 - predicted_probability.SH < cutoff_s ~ "no",
         Condition.OriginalLabel == "S" & 1 - predicted_probability.SH >= cutoff_s ~ "yes",
+        Condition.OriginalLabel == "SH" & predicted_probability.SH < cutoff_sh ~ "no",
         Condition.OriginalLabel == "SH" & predicted_probability.SH >= cutoff_sh ~ "yes")) 
 
 # simulate the acoustics in various conditions 
@@ -221,7 +222,7 @@ sampledata <- data_frame(
            # oversample middle of continuum
            # this is a bad approach, just relying on really high
            # n of samples to get over how sparse the space is
-           cog = c(seq(4000, 7300, length.out = 6000), rnorm(mean = 5500, sd = 300, n = 5000)))) %>%
+           cog = c(seq(3500, 7300, length.out = 6000), rnorm(mean = 5400, sd = 300, n = 5000)))) %>%
   mutate(cog_gs = (cog - stats.cog$mean) / (2 * stats.cog$sd)) %>%
   # Get predictions ignoring random effects
   bind_cols(predict(m1, newdata = ., re_formula = NA)) %>%
@@ -233,6 +234,9 @@ sampledata <- data_frame(
   pivot_wider(names_from = "Condition.Test.Pen",
               values_from = "cog_gs",
               values_fn = mean)
+
+# save this df because it takes forever to generate by brute force
+save(sampledata, file = "sample_data_compensated_by_PIM.RData")
 
 sd2 <- sampledata %>%
   filter(!is.na(H),
@@ -301,6 +305,7 @@ d.exp.compensated <- d.exp %>%
       case_when(
         Condition.OriginalLabel == "S" & 1 - predicted_probability.SH < cutoff_s ~ "no",
         Condition.OriginalLabel == "S" & 1 - predicted_probability.SH >= cutoff_s ~ "yes",
+        Condition.OriginalLabel == "SH" & predicted_probability.SH < cutoff_sh ~ "no",
         Condition.OriginalLabel == "SH" & predicted_probability.SH >= cutoff_sh ~ "yes")) 
 
 
@@ -564,7 +569,7 @@ p <-
     group_by(bias, pen, compensated),
   data.test = d.acoustics.test,
   xlim = xlim,
-  target_category = 2) + 
+  target_category = 1) + 
   aes(color = paste(bias, compensated), 
       linetype = pen) +
   scale_color_manual(values = c("black", "red", "darkgreen", "blue", "darkgreen")) +
