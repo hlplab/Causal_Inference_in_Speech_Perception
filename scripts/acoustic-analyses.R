@@ -14,6 +14,7 @@ library(magrittr)
 library(rlang)
 library(assertthat)
 library(cowplot)
+library(gganimate)
 
 library(brms)
 
@@ -364,25 +365,26 @@ plot_grid(p_priors, p_sh_PiH, p_sh_PiM,
 summary <- 
   rbind(
     mutate(IA,
-           bias = "prior", pen = "NA",
-           observation.n = 40),
-    mutate(posterior_s_bias.PiM,
-           bias = "S", pen = "M"),
-    mutate(posterior_sh_bias.PiM,
-           bias = "SH", pen = "M"),
+           bias = "prior", pen = "H") %>%
+      # Copy prior (for animation below)
+      crossing(observation.n = 0:max(posterior_s_bias.PiH$observation.n)),
     mutate(posterior_s_bias.PiH,
            bias = "S", pen = "H"),
     mutate(posterior_sh_bias.PiH,
-           bias = "SH", pen = "H"))
+           bias = "SH", pen = "H"),
+    mutate(posterior_s_bias.PiM,
+           bias = "S", pen = "M"),
+    mutate(posterior_sh_bias.PiM,
+           bias = "SH", pen = "M"))
 
 p <- 
   plot_expected_categorization_function_1D(
-  summary %>% filter(bias != "prior") %>% group_by(bias, pen),
+  summary %>% group_by(bias, pen),
   data.test = d.acoustics.test,
   animate_by = observation.n,
   xlim = xlim,
-  target_category = 2) + aes(color = bias, linetype = pen)
+  target_category = 2) + aes(color = bias, linetype = pen) +
+  scale_color_manual(values = c("gray", "green", "blue"))
 
-library(gganimate)
 a <- animate(p, width = 500, height = 500, fps = 5, renderer = av_renderer())
 anim_save("../figures/updating.webm", a)
