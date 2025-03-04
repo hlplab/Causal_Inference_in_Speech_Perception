@@ -15,12 +15,10 @@ library(brms)
 # update beliefs based on penned(cog) (which takes cog and label and y/n pen as inputs)
 # optim()
 
-#devtools::install_github("hlplab/MVBeliefUpdatr")
+# devtools::install_github("hlplab/MVBeliefUpdatr")
 library(MVBeliefUpdatr)
 
-
-setwd("/Users/shawncummings/Documents/GitHub/Causal_Inference_in_Speech_Perception/scripts/")
-# setwd("scripts/")
+setwd("scripts/")
 
 # just for prep_for_analysis()
 source("functions.R")
@@ -215,8 +213,9 @@ d.exp <-
         Condition.OriginalLabel == "SH" & predicted_probability.SH < cutoff_sh ~ "no",
         Condition.OriginalLabel == "SH" & predicted_probability.SH >= cutoff_sh ~ "yes"))
 
-# simulate the acoustics in various conditions
-sampledata <- data_frame(
+# Simulate the acoustics in various conditions
+sampledata <- 
+  data_frame(
   crossing(Condition.Test.OriginalLabel = c("S", "SH"),
            Condition.Test.Pen = c("H", "M"),
            Experiment = c("CISP-1a", "CISP-1b", "CISP-1c"),
@@ -236,7 +235,7 @@ sampledata <- data_frame(
               values_from = "cog_gs",
               values_fn = mean)
 
-# save this df because it takes forever to generate by brute force
+# Save this df because it takes forever to generate by brute force
 save(sampledata, file = "sample_data_compensated_by_PIM.RData")
 
 sd2 <- sampledata %>%
@@ -355,8 +354,7 @@ IO <-
   make_MVG_ideal_observer_from_data(
   data = d.exp %>% filter(Condition.Pen == "H", type == "typical"),
   category = "Condition.OriginalLabel",
-  cues = "cog",
-  verbose = T)
+  cues = "cog")
 
 # and make an IA based on it
 # and a random kappa and nu... could/should try others!
@@ -525,26 +523,27 @@ plot_grid(
   align = "hv")
 
 # Compare effect of SH-biased exposure for PiH vs. PiM
-plot_grid(p_priors, p_sh_PiH, p_sh_PiM.compensated,
-          ggplot(mapping = aes(color = category)) +
-            bind_rows(
-              filter(posterior_sh_bias.PiH, observation.n == max(observation.n)) %>%
-                mutate(posterior = "PiH"),
-              filter(posterior_sh_bias.PiM, observation.n == max(observation.n)) %>%
-                mutate(posterior = "PiM")) %>%
-            mutate(
-              mu = get_expected_mu_from_m(m),
-              Sigma = get_expected_Sigma_from_S(S, nu)) %>%
-            group_by(category, .add = T) %>%
-            group_map(.keep = T, .f = function(.x, .y)
-              stat_function(data = .x, mapping = aes(color = category),
-                            fun = function(x, mean1, sd1, mean2, sd2) dnorm(x, mean1, sd1) - dnorm(x, mean2, sd2),
-                            args = list(mean1 = .x$mu[[1]], sd1 = .x$Sigma[[1]]^0.5, mean2 = .x$mu[[2]], sd2 = .x$Sigma[[2]]^0.5))) +
-            scale_x_continuous(get_cue_labels_from_model(IA), limits = xlim, expand = c(0, 0)) +
-            scale_y_continuous("Density") +
-            theme(legend.position = "none"),
-          labels = c("prior", "after SH-biased exposure (PiH)", "after SH-biased exposure (PiM)", "difference between PiH - PiM"),
-          ncol = 1, hjust = 0, align = "hv")
+plot_grid(
+  p_priors, p_sh_PiH, p_sh_PiM.compensated,
+  ggplot(mapping = aes(color = category)) +
+    bind_rows(
+      filter(posterior_sh_bias.PiH, observation.n == max(observation.n)) %>%
+        mutate(posterior = "PiH"),
+      filter(posterior_sh_bias.PiM, observation.n == max(observation.n)) %>%
+        mutate(posterior = "PiM")) %>%
+    mutate(
+      mu = get_expected_mu_from_m(m),
+      Sigma = get_expected_Sigma_from_S(S, nu)) %>%
+    group_by(category, .add = T) %>%
+    group_map(.keep = T, .f = function(.x, .y)
+      stat_function(data = .x, mapping = aes(color = category),
+                    fun = function(x, mean1, sd1, mean2, sd2) dnorm(x, mean1, sd1) - dnorm(x, mean2, sd2),
+                    args = list(mean1 = .x$mu[[1]], sd1 = .x$Sigma[[1]]^0.5, mean2 = .x$mu[[2]], sd2 = .x$Sigma[[2]]^0.5))) +
+    scale_x_continuous(get_cue_labels_from_model(IA), limits = xlim, expand = c(0, 0)) +
+    scale_y_continuous("Density") +
+    theme(legend.position = "none"),
+  labels = c("prior", "after SH-biased exposure (PiH)", "after SH-biased exposure (PiM)", "difference between PiH - PiM"),
+  ncol = 1, hjust = 0, align = "hv")
 
 summary <-
   rbind(
@@ -566,10 +565,10 @@ summary <-
 
 p <-
   plot_expected_categorization_function_1D(
-  summary %>% group_by(bias, pen),
-  data.test = d.acoustics.test,
-  xlim = xlim,
-  target_category = 1) +
+    summary %>% group_by(bias, pen) %>% filter(observation.n == max(observation.n)),
+    data.test = d.acoustics.test,
+    xlim = xlim,
+    target_category = 1) +
   aes(color = paste(bias, compensated),
       linetype = pen) +
   scale_color_manual(values = c("black", "red", "darkgreen", "blue", "darkgreen")) +
