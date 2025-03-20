@@ -1,4 +1,25 @@
-# Last updated 03-03-25 snc.
+# Last updated 03-20-25 snc.
+
+# This script in need of commenting/cleaning, but
+# major current todos:
+
+# 1. Align PIM/PIH inferred CoG's with a better pipeline than the current
+# clunky pivot_wider method:
+#   -coerce the brm coefs into a glm
+#   -use that glm along with the investr package to predict x's given y's
+#       -investr::invest.glm(model, y)
+#  1b. Check whether that already makes the predicted difference functions
+#  (between inferred CoG in PIM vs PIH) monotonic across CoG. If not, figure 
+#  out why.
+#
+# 2. Determine some priors that better align with 1c norm behavior. two
+# methods here:
+#   -single-param optim() using the current priors (which are inferred from
+#    production data) and adding noise.
+#   -Use MVBeliefUpdatr::infer_NIW_ideal_adaptor on the exposure-test data.
+#
+# 3. Fit predictions of belief updating (specifically the reduction of effect
+# when PIM) to the actual behavioral data.
 
 # Packages
 library(tidyverse)
@@ -10,15 +31,10 @@ library(gganimate)
 
 library(brms)
 
-# TODO
-# make sure to calculate CoG effect based on aligned vis. label
-# update beliefs based on penned(cog) (which takes cog and label and y/n pen as inputs)
-# optim()
-
 # devtools::install_github("hlplab/MVBeliefUpdatr")
 library(MVBeliefUpdatr)
 
-setwd("scripts/")
+setwd("/Users/shawncummings/Documents/GitHub/Causal_Inference_in_Speech_Perception/scripts/")
 
 # just for prep_for_analysis()
 source("functions.R")
@@ -235,8 +251,16 @@ sampledata <-
               values_from = "cog_gs",
               values_fn = mean)
 
+# revisit linear interpolation?
+# or map to closest
+# broadly, why is the s-vis-bias not monotonic
+
+# or predict with a glm (cook re structure) and check against the brm
+# or coerce the brm into a 'fake' glm (maybe best option)
+
 # Save this df because it takes forever to generate by brute force
 save(sampledata, file = "sample_data_compensated_by_PIM.RData")
+load(file = "sample_data_compensated_by_PIM.RData")
 
 sd2 <- sampledata %>%
   filter(!is.na(H),
@@ -293,6 +317,10 @@ d.exp.compensated <- d.exp %>%
     # have to still be perceived as intended. Lower values thus imply
     # stronger word superiority effects (less evidence is needed to
     # still be willing to accept the segment as intended).
+    
+    
+    # consider sampling instead such that the chance of being interpreted as /s/ vs
+    # /sh/ changes across continuum, rtahr than a strict cutoff
     cutoff_s = 0.4,
     cutoff_sh = 0.4,
     Condition.Exposure =
@@ -511,6 +539,7 @@ posterior_sh_bias.PiM.compensated <-
         Condition.Exposure == "SH-bias",
         Condition.Pen == "M"),
     exposure.category = "Condition.OriginalLabel",
+    method = "nolabel-sampling",
     exposure.cues = "cog")
 
 plot_grid(
@@ -562,10 +591,12 @@ summary <-
            compensated = "yes", bias = "S", pen = "M"),
     mutate(posterior_sh_bias.PiM.compensated,
            compensated = "yes", bias = "SH", pen = "M"))
-
-p <-
-  plot_expected_categorization_function_1D(
-    summary %>% group_by(bias, pen) %>% filter(observation.n == max(observation.n)),
+  
+p <- plot_expected_categorization_function_1D(
+    summary %>% 
+      group_by(compensated, bias, pen) %>% 
+      filter(observation.n == max(observation.n)) %>%
+      group_by(bias, pen, compensated),
     data.test = d.acoustics.test,
     xlim = xlim,
     target_category = 1) +
@@ -577,3 +608,77 @@ p
 
 a <- animate(p, width = 500, height = 500, fps = 5, renderer = av_renderer())
 anim_save("../figures/updating.webm", a)
+
+
+# next steps
+# -import the exposure-test data 
+
+# fit behavior to predictions
+# free params (before belief updating!):
+# lapse rate, noise, priors themselves
+
+# additional free params for learning:
+# kappa/nu, cutoff endorsement rate, whether low-CoG /s/ is considered /sh/.
+
+# belief updater can infer the prior given enough data
+# infer_NIW_ideal_adaptor()
+# but probably better to fit based on 1c data (without pen)
+
+#optim calcs liklihood of s/sh cat given cog (MAX this not min)
+
+p3 + theme_cowplot() + guides(linetype = "none")
+
+plot_expected_categorization_function_1D(IA, 
+                                         xlim = c(5000, 6300),
+                                         target_category = 2) +
+  theme_cowplot()
+
+# winter and Xie stimulus order accomodation to space
+
+predict_for_optim = function(CoG, model_predict, pars) {
+  # prediction function from priors
+  cat_func <- priors_ALL %>%
+    mutate(m = c(pars[1], pars[2]),
+           S = c(pars[3], pars[4])) %>%
+    get_categorization_function_from_NIW_ideal_adaptor()
+  
+  diff = abs(model_predict - (1 - cat_func(CoG)))
+  
+  # prediction function from model
+  return(sum(diff))
+}
+
+d.control.model.foroptim <- d.control.test.formodel %>%
+  group_by(Talker, CoG, CoG_gs) %>%
+  slice(1) %>%
+  mutate(Cycle.s = 0) %>%
+  bind_cols(estimate = predict(control.model, newdata = ., re.form = NA)) %>%
+  mutate(p.ASI = plogis(estimate)) %>%
+  group_by(Talker) %>%
+  nest() %>%
+  mutate(optim =
+           map2(
+             .x = data,
+             .y = Talker,
+             .f = ~ optim(
+               par = c(
+                 priors_ALL %>% filter(category == "SH") %>% pull(m) %>% as.numeric(),
+                 priors_ALL %>% filter(category == "SS") %>% pull(m) %>% as.numeric(),
+                 priors_ALL %>% filter(category == "SH") %>% pull(S) %>% as.numeric(),
+                 priors_ALL %>% filter(category == "SS") %>% pull(S) %>% as.numeric()),
+               method = "L-BFGS-B",
+               lower = c(1000, 6000, 10000000, 10000000),
+               upper = c(8000, 12000, 100000000, 100000000),
+               fn = predict_for_optim,
+               CoG = .x$CoG,
+               model_predict = .x$p.ASI,
+               control = list(maxit = 1000,
+                              parscale = c(10, 10, 1000, 1000))))) %>%
+  unnest(cols = "optim") %>%
+  separate(col = optim, 
+           into = c("mean_sh", "mean_s", "S_sh", "S_s"), sep = ", ") %>%
+  filter(!is.na(S_sh)) %>%
+  mutate(mean_sh = str_sub(mean_sh, 3, nchar(mean_sh) - 2),
+         S_s = str_sub(S_s, 1, nchar(S_s) - 1))
+
+
