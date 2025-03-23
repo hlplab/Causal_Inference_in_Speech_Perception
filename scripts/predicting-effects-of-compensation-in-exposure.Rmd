@@ -58,6 +58,7 @@ library(MVBeliefUpdatr)
 source("functions.R")
 
 RESET_MODELS <- FALSE
+RESET_ANIMATIONS <- FALSE
 
 # TO DO: replace with constants defined in functions.R
 color.s = "red"
@@ -289,7 +290,7 @@ p %+%
 
 ### Effects of exposure during test
 
-```{r, fig.width=fig.base_width*6, fig.height=fig.base_height*2+1}}
+```{r, fig.width=fig.base_width*6, fig.height=fig.base_height*2+1}
 d.test %>%
   filter(Experiment %in% unique(d.exposure$Experiment)) %>%
   ggplot(aes(x = cog,
@@ -586,7 +587,7 @@ d.exp.compensated  %>%
 
 ### Pen in hand
 
-```{r, fig.height=fig.base_height*3+1, fig.width=fig.base_width*2}
+```{r, fig.height=fig.base_height, fig.width=fig.base_width}
 # make an IO based on the typical tokens (and no pen in mouth)
 IO <-
   make_MVG_ideal_observer_from_data(
@@ -649,7 +650,7 @@ plot_grid(
 
 ### Pen in mouth (without compensation)
 
-```{r, fig.height=fig.base_height*3+1, fig.width=fig.base_width*2}
+```{r, fig.height=fig.base_height, fig.width=fig.base_width}
 posterior_s_bias.PiM <-
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
@@ -725,7 +726,7 @@ summary <-
 
 ### Pen in mouth (with compensation)
 
-```{r, fig.height=fig.base_height*3+1, fig.width=fig.base_width*2}
+```{r, fig.height=fig.base_height, fig.width=fig.base_width}
 posterior_s_bias.PiM.compensated <-
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
@@ -826,10 +827,9 @@ p <-
 p
 ```
 
-```{r, fig.show="animate"}
+```{r, fig.width=5, fig.show="animate"}
 a <- 
-  animate(
-    plot_expected_categorization_function_1D(
+  plot_expected_categorization_function_1D(
       summary %>% 
         group_by(compensated, bias, pen, observation.n) %>% 
         mutate(
@@ -843,13 +843,16 @@ a <-
       scale_color_manual(values = c("black", "red", "blue")) +
       scale_linetype(labels = c("H", "M", "M (compensated)")) +
       theme(legend.position = "right") +
-      transition_states(observation.n, transition_length = 2, state_length = 1), 
-    width = 500, height = 500, 
-  fps = 5, renderer = av_renderer())
+      transition_states(observation.n, transition_length = 2, state_length = 1)
 
 a
-anim_save("../figures/updating.webm", a)
+
+if (!RESET_ANIMATIONS & !file.exists("../figures/updating.webm"))
+  anim_save(
+    "../figures/updating.webm",   
+    animate(a, width = 500, height = 500, fps = 5, renderer = av_renderer()))
 ```
+
 # Finding optimal fit
 
 next steps:
@@ -923,12 +926,105 @@ predict_for_optim = function(CoG, model_predict, pars) {
 ```
 
 ## Infer prior beliefs
+Note, it is important to keep in mind that our designs (partly unintentionally) varied how the pen exposure manipulation was reflected in the pen location across critical exposure items. 
+
+ + CISP 3: pen position manipulated only for shifted items (pen always in hand for typical items)
+ + CISP 4: initial phase showed shifted items of one category and typical items of the other category (pen position manipulated only for shifted items during this phase), followed by only typical items of both categories (pen always in in hand)
+ + CISP 5 and supplemental B: pen position manipulated for both shifted and typical items
+ + supplemental D: pen always in hand 
+
+Experiments might also have differed in how they applied this condition to the filler items (TO CHECK), which might have affected participants but wouldn't be captured by the ideal adaptor model (or other standard distributional learning models).
 
 ```{r}
-infer_NIW_ideal_adaptor(
-  exposure = d.exposure,
-  test = d.test)
+d.exposure.for_ibbu <-
+  d.exposure %>%
+  filter(
+    str_starts(Experiment, "CISP"),
+    Item.Type != "filler", 
+    !Item.isCatchTrial) %>%
+  mutate(
+    Condition = paste0("Experiment=", Experiment, "_Bias=", Condition.Exposure.LexicalLabel, "_Pen=", Condition.Exposure.Pen))
+
+# We do not yet have a way to account, in the ideal adaptor, for the effects of 
+# visual labels and pen position during test. For pen position, we can address this 
+# problem by excluding all test items with pen in mouth. For visual labels, we are 
+# averaging / combining the responses from the two visual labeling conditions. 
+#
+# Later we could consider trying to translate these effects into the CoG heard during 
+# test, thereby implicitly accounting for them.
+d.test.for_ibbu <-
+  d.test %>%
+  filter(
+    !is.na(Response),
+    Experiment %in% unique(d.exposure$Experiment)) %>%
+  # For now exclude test items with pen in mouth 
+  # (since we are not yet modeling the effect during test in the ideal adaptor)
+  filter(Condition.Test.Pen == "H") %>%
+  mutate(
+    Response = ifelse(Response == "ASI", "S", "SH"),
+    Condition = paste0("Experiment=", Experiment, "_Bias=", Condition.Exposure.LexicalLabel, "_Pen=", Condition.Exposure.Pen))
+
+# TO DO: consider *setting/assuming* lapse rate, rather than inferring it (since it's hard to infer)
+m.pen_ignored <-
+  infer_NIW_ideal_adaptor(
+    exposure = d.exposure.for_ibbu,
+    test = d.test.for_ibbu, 
+    cues = "cog", 
+    category = "Condition.VisualLabel", 
+    group = "ParticipantID",
+    group.unique = "Condition", 
+    response = "Response", 
+    center.observations = T, scale.observations = F, 
+    warmup = 1000, iter = 2000, chains = 4, control = list(adapt_delta = .9),
+    file = "../models/IBBU-pen-ignored")
+
+m.pen_ignored
 ```
+
+```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*3}
+groups <- get_group_levels_from_stanfit(m.pen_ignored, include_prior = T)
+group.colors <- 
+  case_when(
+    str_detect(groups, "Bias=SH") ~ color.sh,
+    str_detect(groups, "Bias=S") ~ color.s, 
+    T ~ "gray")
+group.lt <- 
+   case_when(
+    str_detect(groups, "Pen=M") ~ lt.PIM,
+    str_detect(groups, "Pen=H") ~ lt.PIH, 
+    T ~ 3)
+
+plot_ibbu_stanfit_parameters(
+  m.pen_ignored, 
+  untransform_cues = T,
+  ndraws = 100)
+
+plot_ibbu_stanfit_parameter_correlations(
+  m.pen_ignored, 
+  untransform_cues = T,
+  ndraws = 100)
+
+# TO DO -- REPAIR MVBL plot_in_cue_space seems to assume that there are at least two cues
+# Also rename the functions to plot_stanfit_NIW_ideal_adaptor (keep aliases) and check the same for related get_ functions.
+p <- 
+  plot_ibbu_stanfit_test_categorization(
+    m.pen_ignored,
+    untransform_cues = T,
+    panel.group = T,
+    ndraws = 1000, group.colors = group.colors, group.linetypes = group.lt) 
+
+p +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+
+
+
+
+
+
+
 
 
 
