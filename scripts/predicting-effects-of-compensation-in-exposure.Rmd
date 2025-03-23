@@ -26,6 +26,11 @@ header-includes:
 ## TO DO
 This script in need of commenting/cleaning, but
 
+ 1. Update exposure-test experiment data
+ 
+   + Import and add all Liu and Jaeger (2018) exposure-test experiments
+   + **Implement and apply exclusion criteria for exposure experiments**
+
  2. Determine some priors that better align with 1c norm behavior. two
  methods here:
    -single-param optim() using the current priors (which are inferred from
@@ -53,13 +58,25 @@ library(MVBeliefUpdatr)
 source("functions.R")
 
 RESET_MODELS <- FALSE
+
+# TO DO: replace with constants defined in functions.R
+color.s = "red"
+color.sh = "blue"
+color.filler = "gray"
+color.PIM = "white"
+color.PIH = "black"
+color.filler = "gray"
+lt.PIM = 2
+lt.PIH = 1
+shape.PIM = 19
+shape.PIH = 17
 ```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
   comment="",
   echo=FALSE, warning=TRUE, message=TRUE,
-  cache=FALSE,
+  cache=TRUE,
   size="small",
   dev = 'png', dpi = 96,
   tidy.opts = list(width.cutoff = 200),
@@ -146,7 +163,10 @@ d.test <-
       # but here we use the opposite order.
       mutate(word = 32 - as.numeric(word)) %>%
       select(cog, word, type),
-    by = join_by(Phase == type, Condition.Test.Audio == word)) %>%
+    by = join_by(Phase == type, Condition.Test.Audio == word)) 
+
+d.test.for_compensation <-
+  d.test %>%
   # We will be using only Experiments 1a-c from Cummings et al (2025) to estimate the effects of compenstation
   filter(Experiment.internalName %in% c("NORM A", "NORM B", "NORM C")) %>%
   run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c")) %>%
@@ -160,12 +180,12 @@ d.test <-
 # pen (which we do in order to estimate the compensated *perceived* cue(s)).
 # These statistics are used to standardized the cue(s) in all data sets below.
 stats.cog <-
-  d.test %>%
+  d.test.for_compensation %>%
   summarise(mean = mean(cog), sd = sd(cog))
 
 d.exposure <-
   d.perception %>%
-  filter(Phase == "exposure", Item.Type != "filler") %>%
+  filter(Phase == "exposure") %>%
   left_join(
     d.acoustics %>%
       filter(type != "test") %>%
@@ -202,7 +222,7 @@ d.acoustics %>%
 Replotting the effect of the pen along center of gravity (CoG), instead of continuum steps.
 
 ```{r}
-d.test %>%
+d.test.for_compensation %>%
   ggplot(aes(x = cog,
              y = Response.ASHI,
              linetype = Condition.Test.Pen)) +
@@ -218,8 +238,84 @@ d.test %>%
 
 ### Lexical decision accuracy during exposure
 
-```{r}
-d.exposure 
+```{r, fig.width=fig.base_width*5, warnings=FALSE, fig.cap=c("Proportion correct answers in lexical decision task for critical and filler words with typical pronunciation.", 'Proportion "word" answers in lexical decision task for critical words with shifted pronunciation.')}
+p <-
+  d.exposure %>%
+  filter(Item.Type != "shifted", !Item.isCatchTrial) %>%
+  group_by(Experiment, Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, ParticipantID) %>%
+  summarise(Accuracy.bySubject = mean(as.character(Response) == as.character(Item.WordStatus), na.rm = T)) %>%
+  ggplot(
+    aes(
+      x = Condition.Exposure.Pen, 
+      y = Accuracy.bySubject, 
+      color = Condition.Exposure.LexicalLabel, 
+      fill = Condition.Exposure.LexicalLabel,
+      shape = Condition.Exposure.Pen)) +
+  geom_dotplot(binaxis = "y", 
+               stackdir = "center", 
+               binpositions = "bygroup", 
+               binwidth = .02,
+               dotsize = .6, alpha = .1, position = position_dodge(width = c(0,0))) +
+  stat_summary(fun.y = mean, geom = "point", 
+               position = position_dodge(width = c(1,.5)), size = 2.5) +
+  stat_summary(fun.data = mean_cl_boot, geom = "linerange", 
+               position = position_dodge(width = c(1,.5)), size = 1.2, alpha = .7) +
+  scale_x_discrete("") +
+  scale_y_continuous("Proportion correct responses") +
+  scale_color_manual("Label",
+                    breaks = c("SH", "S"),
+                    labels = c("ʃ", "s"),
+                    values = c(color.sh, color.s)) +
+  scale_fill_manual("Label",
+                    breaks = c("SH", "S"),
+                    labels = c("ʃ", "s"),
+                    values = c(color.sh, color.s)) +
+  scale_shape_manual("Pen in",
+                    breaks = c("H", "M"),
+                    labels = c("hand", "mouth"),
+                    values = c(shape.PIH, shape.PIM)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        axis.title.x = element_blank()) +
+  coord_cartesian(ylim = c(0, 1)) + 
+  facet_grid(~ paste(Experiment), space = "free_x", scales = "free_x")
+
+plot(p)
+p %+%
+  (d.exposure %>%
+  filter(Item.Type == "shifted", !Item.isCatchTrial) %>%
+  group_by(Experiment, Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, ParticipantID) %>%
+  summarise(Accuracy.bySubject = mean(as.character(Response) == "word", na.rm = T)))
+```
+
+### Effects of exposure during test
+
+```{r, fig.width=fig.base_width*6, fig.height=fig.base_height*2+1}}
+d.test %>%
+  filter(Experiment %in% unique(d.exposure$Experiment)) %>%
+  ggplot(aes(x = cog,
+             y = Response.ASHI,
+             color = Condition.Exposure.LexicalLabel,
+             shape = Condition.Exposure.Pen,
+             linetype = Condition.Exposure.Pen)) +
+  stat_summary(geom = "pointrange",
+               fun.data = mean_cl_boot) +
+  stat_summary(geom = "line",
+               fun = mean, aes(linetype = Condition.Test.Pen)) +
+  scale_x_continuous("center of gravity") +
+  scale_y_continuous("Proportion of ASHI-responses", limits = c(0, 1))+ 
+  scale_color_manual("Label",
+                    breaks = c("SH", "S"),
+                    labels = c("ʃ", "s"),
+                    values = c(color.sh, color.s)) +
+  scale_shape_manual("Pen in exposure:",
+                    breaks = c("H", "M"),
+                    labels = c("hand", "mouth"),
+                    values = c(shape.PIH, shape.PIM)) +
+  scale_linetype_manual("Pen in exposure:",
+                    breaks = c("H", "M"),
+                    labels = c("hand", "mouth"),
+                    values = c(lt.PIH, lt.PIM)) +
+  facet_grid(paste("Pen in test:", Condition.Test.Pen) ~ paste(Experiment), space = "free_x", scales = "free_x")
 ```
 
 # Estimating effects of compensation
@@ -239,7 +335,7 @@ m1 <-
       # (presumable incl. cog).
       (1 + Condition.Test.Pen * Condition.VisualLabel * cog_gs | ParticipantID),
     data =
-      d.test %>%
+      d.test.for_compensation %>%
       prep_for_analysis(),
     family = "bernoulli",
     prior = my_priors,
@@ -718,7 +814,7 @@ p <-
         pen = ifelse(bias == "prior", "H", pen),
         pen = ifelse(compensated == "yes", "M (compensated)", pen)) %>%
       filter(observation.n == max(observation.n)),
-    data.test = d.test,
+    data.test = d.test.for_compensation,
     xlim = xlim,
     target_category = 2) +
   aes(color = bias,
@@ -739,7 +835,7 @@ a <-
         mutate(
           pen = ifelse(bias == "prior", "H", pen),
           pen = ifelse(compensated == "yes", "M (compensated)", pen)),
-      data.test = d.test,
+      data.test = d.test.for_compensation,
       xlim = xlim,
       target_category = 2) +
       aes(color = bias,
@@ -829,6 +925,9 @@ predict_for_optim = function(CoG, model_predict, pars) {
 ## Infer prior beliefs
 
 ```{r}
+infer_NIW_ideal_adaptor(
+  exposure = d.exposure,
+  test = d.test)
 ```
 
 
