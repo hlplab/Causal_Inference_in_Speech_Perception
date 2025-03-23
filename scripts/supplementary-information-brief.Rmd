@@ -71,14 +71,15 @@ source("functions.R")
 ```
 
 ```{r, include=FALSE}
-opts_chunk$set(dev = 'png', dpi = 96,
-               comment="",
-               echo=FALSE, warning=FALSE, message=FALSE,
-               cache=FALSE,
-               size="small",
-               tidy.opts = list(width.cutoff = 200),
-               fig.width = fig.base_width, fig.height = fig.base_height,
-               fig.pos = "!ht", fig.align = "center")
+knitr::opts_chunk$set(
+  comment="",
+  echo=FALSE, warning=FALSE, message=FALSE,
+  cache=FALSE,
+  size="small",
+  dev = 'png', dpi = 96,
+  tidy.opts = list(width.cutoff = 200),
+  fig.width = fig.base_width, fig.height = fig.base_height,
+  fig.pos = "!ht", fig.align = "center")
 
 def.chunk.hook  <- knitr::knit_hooks$get("chunk")
 knitr::knit_hooks$set(chunk = function(x, options) {

@@ -2,12 +2,26 @@
 title: "Untitled"
 author: "Shawn and Florian"
 date: "03-20-25"
-output: html_document
+output: pdf_document
+header-includes:
+- \usepackage{float}
+- \usepackage{booktabs}
+- \usepackage{siunitx}
+- \usepackage{tabto}
+- \usepackage{soul}
+- \usepackage{xcolor}
+- \usepackage{placeins}
+- \usepackage{lscape}
+- \usepackage{animate}
+- \newcommand{\blandscape}{\begin{landscape}}
+- \newcommand{\elandscape}{\end{landscape}}
+- \makeatletter\renewcommand{\fps@table}{!ht}\makeatother
+- \setstcolor{red}
+- \usepackage{sectsty}
+- \sectionfont{\color{blue}}
+- \subsectionfont{\color{blue}}
+- \subsubsectionfont{\color{darkgray}}
 ---
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ## TO DO
 This script in need of commenting/cleaning, but
@@ -46,7 +60,35 @@ library(brms)
 library(MVBeliefUpdatr)
 
 source("functions.R")
+
+RESET_MODELS <- FALSE
 ```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  comment="",
+  echo=FALSE, warning=TRUE, message=TRUE,
+  cache=FALSE,
+  size="small",
+  dev = 'png', dpi = 96,
+  tidy.opts = list(width.cutoff = 200),
+  fig.width = fig.base_width, fig.height = fig.base_height,
+  fig.pos = "!ht", fig.align = "center")
+
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+
+color_block = function(color) {
+  function(x, options) sprintf('\\color{%s}\\begin{verbatim}%s\\end{verbatim}\\color{black}',
+                               color, x)
+}
+knitr::knit_hooks$set(error = color_block('red'))
+knitr::knit_hooks$set(warning = color_block('orange'))
+```
+
 # Data [TO DO: add Liu & Jaeger (2018) data]
 
 ```{r load-data}
@@ -246,50 +288,51 @@ d.exp <-
 We are estimating the *compensated* CoG for each exposure item. One way of doing so would be to invert the mixed-effects logistic regression model. But for now, we are calculating the prediction for the posterior probability of "sh" along a fine-stepped CoG continuum, while crossing the position of the pen (in mouth or hand) with the visual labeling information of the stimulus ("s" or "sh"). For each CoG step with a pen, we then find the CoG step without a pen that results in the most similar predicted posterior probability of "sh" while holding the visual labeling information identical.
 
 ```{r}
-# Simulate the acoustics in various conditions
-sampledata <- 
-  crossing(
-    Condition.Test.OriginalLabel = c("S", "SH"),
-    Condition.Test.Pen = c("H", "M"),
-    Experiment = c("CISP-1a", "CISP-1b", "CISP-1c"),
-    # Span the CoG continuum at .25 Hz steps, but also include all cog values that occur
-    # in the actual data since we need those below
-    cog = 
-      c(
-        d.acoustics$cog,
-        seq(min(d.acoustics$cog), max(d.acoustics$cog), .25))) %>%
-  # Convert into standardized CoG
-  mutate(cog_gs = (cog - stats.cog$mean) / (2 * stats.cog$sd)) %>%
-  # Get predictions ignoring random effects
-  bind_cols(predict(m1, newdata = ., re_formula = NA, cores = 4)) %>%
-  group_by(Condition.Test.OriginalLabel, Condition.Test.Pen, cog) %>%
-  summarise(Estimate = mean(Estimate))
-
-# For each input with pen find the input without pen that has the most similar estimated 
-# posterior probability of "sh", while keeping the visual labeling information identical.
-sampledata_pen <- tibble()
-for (label in unique(sampledata$Condition.Test.OriginalLabel)) {
-  temp_no_pen <-
-    sampledata %>%
-    filter(Condition.Test.Pen == "H", Condition.Test.OriginalLabel == label)
-
-  temp_pen <-
-    sampledata %>%
-    filter(Condition.Test.Pen == "M", Condition.Test.OriginalLabel == label)
+if (!RESET_MODELS & !file.exists("../data/sample_data_compensated.RData")) {
+  sampledata <- 
+    crossing(
+      Condition.Test.OriginalLabel = c("S", "SH"),
+      Condition.Test.Pen = c("H", "M"),
+      Experiment = c("CISP-1a", "CISP-1b", "CISP-1c"),
+      # Span the CoG continuum at .25 Hz steps, but also include all cog values that occur
+      # in the actual data since we need those below
+      cog = 
+        c(
+          d.acoustics$cog,
+          seq(min(d.acoustics$cog), max(d.acoustics$cog), .25))) %>%
+    # Convert into standardized CoG
+    mutate(cog_gs = (cog - stats.cog$mean) / (2 * stats.cog$sd)) %>%
+    # Get predictions ignoring random effects
+    bind_cols(predict(m1, newdata = ., re_formula = NA, cores = 4)) %>%
+    group_by(Condition.Test.OriginalLabel, Condition.Test.Pen, cog) %>%
+    summarise(Estimate = mean(Estimate))
   
-  temp_pen %<>%
-    rowwise() %>% 
-    mutate(
-      closest_no_pen_estimate = temp_no_pen$Estimate[which.min(abs(Estimate - temp_no_pen$Estimate))], 
-      closest_no_pen_cog = temp_no_pen$cog[which.min(abs(Estimate - temp_no_pen$Estimate))])
-  
-  sampledata_pen <- bind_rows(sampledata_pen, temp_pen)
+  # For each input with pen find the input without pen that has the most similar estimated 
+  # posterior probability of "sh", while keeping the visual labeling information identical.
+  sampledata_pen <- tibble()
+  for (label in unique(sampledata$Condition.Test.OriginalLabel)) {
+    temp_no_pen <-
+      sampledata %>%
+      filter(Condition.Test.Pen == "H", Condition.Test.OriginalLabel == label)
+    
+    temp_pen <-
+      sampledata %>%
+      filter(Condition.Test.Pen == "M", Condition.Test.OriginalLabel == label)
+    
+    temp_pen %<>%
+      rowwise() %>% 
+      mutate(
+        closest_no_pen_estimate = temp_no_pen$Estimate[which.min(abs(Estimate - temp_no_pen$Estimate))], 
+        closest_no_pen_cog = temp_no_pen$cog[which.min(abs(Estimate - temp_no_pen$Estimate))])
+    
+    sampledata_pen <- bind_rows(sampledata_pen, temp_pen)
+  }
+
+  save(sampledata_pen, file = "../data/sample_data_compensated.RData")
+  rm(sampledata)
+} else {
+  load(file = "../data/sample_data_compensated.RData")
 }
-
-# Save this df because it takes forever to generate by brute force
-save(sampledata_pen, file = "../data/sample_data_compensated.RData")
-rm(sampledata)
-load(file = "../data/sample_data_compensated.RData")
 ```
 
 ### Approximation error
@@ -615,8 +658,8 @@ plot_grid(
 summary <-
   rbind(
     mutate(IA,
-           compensated = "NA", bias = "prior", pen = "NA",
-           observation.n = 40),
+           compensated = "NA", bias = "prior", pen = "NA") %>%
+      crossing(observation.n = 1:40),
     mutate(posterior_s_bias.PiM,
            compensated = "no", bias = "S", pen = "M"),
     mutate(posterior_sh_bias.PiM,
@@ -633,16 +676,15 @@ summary <-
 
 ## Effects on expected categorization function
 
-```{r}
+```{r, fig.width=5}
 p <- 
   plot_expected_categorization_function_1D(
     summary %>% 
       group_by(compensated, bias, pen) %>% 
-      filter(observation.n == max(observation.n)) %>%
       mutate(
         pen = ifelse(bias == "prior", "H", pen),
         pen = ifelse(compensated == "yes", "M (compensated)", pen)) %>%
-      group_by(bias, pen, compensated),
+      filter(observation.n == max(observation.n)),
     data.test = d.test,
     xlim = xlim,
     target_category = 2) +
@@ -650,10 +692,33 @@ p <-
       linetype = pen) +
   scale_color_manual(values = c("black", "red", "blue")) +
   scale_linetype(labels = c("H", "M", "M (compensated)")) +
-  theme_cowplot()
-p
+  theme(legend.position = "right")
 
-a <- animate(p, width = 500, height = 500, fps = 5, renderer = av_renderer())
+p
+```
+
+```{r, fig.show="animate"}
+a <- 
+  animate(
+    plot_expected_categorization_function_1D(
+      summary %>% 
+        group_by(compensated, bias, pen, observation.n) %>% 
+        mutate(
+          pen = ifelse(bias == "prior", "H", pen),
+          pen = ifelse(compensated == "yes", "M (compensated)", pen)),
+      data.test = d.test,
+      xlim = xlim,
+      target_category = 2) +
+      aes(color = bias,
+          linetype = pen) +
+      scale_color_manual(values = c("black", "red", "blue")) +
+      scale_linetype(labels = c("H", "M", "M (compensated)")) +
+      theme(legend.position = "right") +
+      transition_states(observation.n, transition_length = 2, state_length = 1), 
+    width = 500, height = 500, 
+  fps = 5, renderer = av_renderer())
+
+a
 anim_save("../figures/updating.webm", a)
 ```
 # Finding optimal fit
@@ -676,6 +741,8 @@ Some other notes
   - optim calcs liklihood of s/sh cat given cog (MAX this not min)
   - winter and Xie stimulus order accomodation to space
 
+## Using likelihood maximization
+
 ```{r}
 predict_for_optim = function(CoG, model_predict, pars) {
   # prediction function from priors
@@ -690,7 +757,8 @@ predict_for_optim = function(CoG, model_predict, pars) {
   return(sum(diff))
 }
 
-d.control.model.foroptim <- d.control.test.formodel %>%
+d.control.model.foroptim <- 
+  d.control.test.formodel %>%
   group_by(Talker, CoG, CoG_gs) %>%
   slice(1) %>%
   mutate(Cycle.s = 0) %>%
