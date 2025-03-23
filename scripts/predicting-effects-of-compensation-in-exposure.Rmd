@@ -252,15 +252,18 @@ p <-
       color = Condition.Exposure.LexicalLabel, 
       fill = Condition.Exposure.LexicalLabel,
       shape = Condition.Exposure.Pen)) +
-  geom_dotplot(binaxis = "y", 
-               stackdir = "center", 
-               binpositions = "bygroup", 
-               binwidth = .02,
-               dotsize = .6, alpha = .1, position = position_dodge(width = c(0,0))) +
-  stat_summary(fun.y = mean, geom = "point", 
-               position = position_dodge(width = c(1,.5)), size = 2.5) +
-  stat_summary(fun.data = mean_cl_boot, geom = "linerange", 
-               position = position_dodge(width = c(1,.5)), size = 1.2, alpha = .7) +
+  geom_dotplot(
+    binaxis = "y", 
+    stackdir = "center", 
+    binpositions = "bygroup", 
+    binwidth = .02,
+    dotsize = .6, alpha = .1, position = position_dodge(width = c(0,0))) +
+  stat_summary(
+    fun = mean, geom = "point", 
+    position = position_dodge2(width = c(1,.5))) +
+  stat_summary(
+    fun.data = mean_cl_boot, geom = "linerange", 
+    position = position_dodge2(width = c(1,.5)), alpha = .7) +
   scale_x_discrete("") +
   scale_y_continuous("Proportion correct responses") +
   scale_color_manual("Label",
@@ -281,6 +284,7 @@ p <-
   facet_grid(~ paste(Experiment), space = "free_x", scales = "free_x")
 
 plot(p)
+
 p %+%
   (d.exposure %>%
   filter(Item.Type == "shifted", !Item.isCatchTrial) %>%
@@ -293,15 +297,19 @@ p %+%
 ```{r, fig.width=fig.base_width*6, fig.height=fig.base_height*2+1}
 d.test %>%
   filter(Experiment %in% unique(d.exposure$Experiment)) %>%
-  ggplot(aes(x = cog,
-             y = Response.ASHI,
-             color = Condition.Exposure.LexicalLabel,
-             shape = Condition.Exposure.Pen,
-             linetype = Condition.Exposure.Pen)) +
-  stat_summary(geom = "pointrange",
-               fun.data = mean_cl_boot) +
-  stat_summary(geom = "line",
-               fun = mean, aes(linetype = Condition.Test.Pen)) +
+  ggplot(
+    aes(
+      x = cog,
+      y = Response.ASHI,
+      color = Condition.Exposure.LexicalLabel,
+      shape = Condition.Exposure.Pen,
+      linetype = Condition.Exposure.Pen)) +
+  stat_summary(
+    geom = "pointrange",
+    fun.data = mean_cl_boot) +
+  stat_summary(
+    geom = "line",
+    fun = mean, aes(linetype = Condition.Test.Pen)) +
   scale_x_continuous("center of gravity") +
   scale_y_continuous("Proportion of ASHI-responses", limits = c(0, 1))+ 
   scale_color_manual("Label",
@@ -352,7 +360,7 @@ m1 <-
     file = "../models/Exp-CISP-1a-c-acoustics", 
     file_refit = "on_change")
 
-summary(m1)
+# summary(m1)
 ```
 
 consider sampling instead such that the chance of being interpreted as /s/ vs /sh/ changes across continuum, rather than a strict cutoff
@@ -537,7 +545,7 @@ d.exp.compensated <-
 
 ## Comparison of approaches
 
-```{r, fig.cap=c('Predicted probability of "sh" along CoG continuum for exposure items under Approach 1', "Same under Approach 2")}
+```{r, fig.height=fig.base_height*2, fig.width=fig.base_width*2, fig.cap=c('Predicted probability of "sh" along CoG continuum for exposure items under Approach 1', "Same under Approach 2")}
 d.exp %>%
   ggplot(
     aes(
@@ -559,7 +567,7 @@ d.exp.compensated %>%
   facet_grid(Condition.Exposure ~ Condition.VisualLabel)
 ```
 
-```{r, fig.cap=c('Predicted consequences for lexical decisions during exposure under Approach 1', "Same under Approach 2")}
+```{r, fig.height=fig.base_height*4, fig.width=fig.base_width*2, fig.cap=c('Predicted consequences for lexical decisions during exposure under Approach 1', "Same under Approach 2")}
 d.exp  %>%
   ggplot(aes(x = cog,
              y = predicted_probability.SH,
@@ -587,7 +595,7 @@ d.exp.compensated  %>%
 
 ### Pen in hand
 
-```{r, fig.height=fig.base_height, fig.width=fig.base_width}
+```{r, fig.height=fig.base_height*3, fig.width=fig.base_width}
 # make an IO based on the typical tokens (and no pen in mouth)
 IO <-
   make_MVG_ideal_observer_from_data(
@@ -650,7 +658,7 @@ plot_grid(
 
 ### Pen in mouth (without compensation)
 
-```{r, fig.height=fig.base_height, fig.width=fig.base_width}
+```{r, fig.height=fig.base_height*3, fig.width=fig.base_width}
 posterior_s_bias.PiM <-
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
@@ -726,7 +734,7 @@ summary <-
 
 ### Pen in mouth (with compensation)
 
-```{r, fig.height=fig.base_height, fig.width=fig.base_width}
+```{r, fig.height=fig.base_height*3, fig.width=fig.base_width}
 posterior_s_bias.PiM.compensated <-
   update_NIW_ideal_adaptor_incrementally(
     prior = IA,
@@ -935,6 +943,8 @@ Note, it is important to keep in mind that our designs (partly unintentionally) 
 
 Experiments might also have differed in how they applied this condition to the filler items (TO CHECK), which might have affected participants but wouldn't be captured by the ideal adaptor model (or other standard distributional learning models).
 
+### Ignoring pen
+
 ```{r}
 d.exposure.for_ibbu <-
   d.exposure %>%
@@ -978,10 +988,10 @@ m.pen_ignored <-
     warmup = 1000, iter = 2000, chains = 4, control = list(adapt_delta = .9),
     file = "../models/IBBU-pen-ignored")
 
-m.pen_ignored
+# m.pen_ignored
 ```
 
-```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*3}
+```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Correlations between inferred posterior distributions")}
 groups <- get_group_levels_from_stanfit(m.pen_ignored, include_prior = T)
 group.colors <- 
   case_when(
@@ -994,27 +1004,36 @@ group.lt <-
     str_detect(groups, "Pen=H") ~ lt.PIH, 
     T ~ 3)
 
-plot_ibbu_stanfit_parameters(
-  m.pen_ignored, 
-  untransform_cues = T,
-  ndraws = 100)
+# plot_ibbu_stanfit_parameters(
+#   m.pen_ignored, 
+#   untransform_cues = T,
+#   ndraws = 100)
 
 plot_ibbu_stanfit_parameter_correlations(
   m.pen_ignored, 
   untransform_cues = T,
   ndraws = 100)
+```
 
+```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Predicted categorization function for Experiment 3", "Predicted categorization function for Experiment 4", "Predicted categorization function for Experiment 5")}
 # TO DO -- REPAIR MVBL plot_in_cue_space seems to assume that there are at least two cues
 # Also rename the functions to plot_stanfit_NIW_ideal_adaptor (keep aliases) and check the same for related get_ functions.
-p <- 
-  plot_ibbu_stanfit_test_categorization(
-    m.pen_ignored,
-    untransform_cues = T,
-    panel.group = T,
-    ndraws = 1000, group.colors = group.colors, group.linetypes = group.lt) 
-
-p +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+map(
+  .x = list(3, 4, 5),
+  .f = function(exp) {
+    group_index <- str_detect(groups, paste0("prior|CISP-", exp))
+    
+    plot_ibbu_stanfit_test_categorization(
+      m.pen_ignored,
+      untransform_cues = T,
+      ndraws = 1000, 
+      groups = groups[group_index],
+      group.colors = group.colors[group_index], group.linetypes = group.lt[group_index]) +
+      theme(
+        legend.position = "right",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+  }
+)
 ```
 
 
