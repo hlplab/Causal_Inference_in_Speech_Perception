@@ -498,15 +498,24 @@ sampledata_pen %>%
 ```
 
 ```{r}
-d.exp.compensated <- 
-  d.exp %>%
+add_compensated_cue <-
+  . %>%
   left_join(
     sampledata_pen %>%
       select(Condition.VisualLabel, cog, closest_no_pen_cog),
     by = c("Condition.VisualLabel", "cog")) %>%
+  { if ("Condition.Exposure.Pen" %in% names(.)) {
+    mutate(., Condition.Pen = Condition.Exposure.Pen)
+    } else if ("Condition.Test.Pen" %in% names(.)) {
+      mutate(., Condition.Pen = Condition.Ten.Pen)
+    } else mutate(., Condition.Pen = "H") } %>%
   mutate(
     cog_compensated = ifelse(Condition.Pen == "M", closest_no_pen_cog, cog),
-    cog_gs_compensated = (cog_compensated - stats.cog$mean) / (2 * stats.cog$sd)) %>%
+    cog_gs_compensated = (cog_compensated - stats.cog$mean) / (2 * stats.cog$sd)) 
+
+d.exp.compensated <- 
+  d.exp %>%
+  add_compensated_cue() %>%
   rename(
     cog_gs_original = cog_gs,
     cog_gs = cog_gs_compensated,
@@ -569,20 +578,24 @@ d.exp.compensated %>%
 
 ```{r, fig.height=fig.base_height*4, fig.width=fig.base_width*2, fig.cap=c('Predicted consequences for lexical decisions during exposure under Approach 1', "Same under Approach 2")}
 d.exp  %>%
-  ggplot(aes(x = cog,
-             y = predicted_probability.SH,
-             color = segment.perceived_as_intended,
-             shape = type)) +
+  ggplot(
+    aes(
+      x = cog,
+      y = predicted_probability.SH,
+      color = segment.perceived_as_intended,
+      shape = type)) +
   scale_shape_manual(values = c(1, 19)) +
   scale_color_manual(values = c("red", "green")) +
   geom_point() +
   facet_grid(Condition.Pen + Condition.Exposure ~ Condition.VisualLabel)
 
 d.exp.compensated  %>%
-  ggplot(aes(x = cog,
-             y = predicted_probability.SH,
-             color = segment.perceived_as_intended,
-             shape = type)) +
+  ggplot(
+    aes(
+      x = cog,
+      y = predicted_probability.SH,
+      color = segment.perceived_as_intended,
+      shape = type)) +
   scale_shape_manual(values = c(1, 19)) +
   scale_color_manual(values = c("red", "green")) +
   geom_point() +
@@ -863,6 +876,11 @@ if (!RESET_ANIMATIONS & !file.exists("../figures/updating.webm"))
 
 # Finding optimal fit
 
+```{r}
+d.exposure %<>% add_compensated_cue()
+d.test %<>% add_compensated_cue()
+```
+
 next steps:
  -import the exposure-test data 
 
@@ -943,8 +961,6 @@ Note, it is important to keep in mind that our designs (partly unintentionally) 
 
 Experiments might also have differed in how they applied this condition to the filler items (TO CHECK), which might have affected participants but wouldn't be captured by the ideal adaptor model (or other standard distributional learning models).
 
-### Ignoring pen
-
 ```{r}
 d.exposure.for_ibbu <-
   d.exposure %>%
@@ -973,7 +989,11 @@ d.test.for_ibbu <-
   mutate(
     Response = ifelse(Response == "ASI", "S", "SH"),
     Condition = paste0("Experiment=", Experiment, "_Bias=", Condition.Exposure.LexicalLabel, "_Pen=", Condition.Exposure.Pen))
+```
 
+### Ignoring pen
+
+```{r}
 # TO DO: consider *setting/assuming* lapse rate, rather than inferring it (since it's hard to infer)
 m.pen_ignored <-
   infer_NIW_ideal_adaptor(
@@ -989,9 +1009,6 @@ m.pen_ignored <-
     file = "../models/IBBU-pen-ignored")
 
 # m.pen_ignored
-```
-
-```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Correlations between inferred posterior distributions")}
 groups <- get_group_levels_from_stanfit(m.pen_ignored, include_prior = T)
 group.colors <- 
   case_when(
@@ -1003,7 +1020,9 @@ group.lt <-
     str_detect(groups, "Pen=M") ~ lt.PIM,
     str_detect(groups, "Pen=H") ~ lt.PIH, 
     T ~ 3)
+```
 
+```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Correlations between inferred posterior distributions")}
 # plot_ibbu_stanfit_parameters(
 #   m.pen_ignored, 
 #   untransform_cues = T,
@@ -1016,8 +1035,6 @@ plot_ibbu_stanfit_parameter_correlations(
 ```
 
 ```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Predicted categorization function for Experiment 3", "Predicted categorization function for Experiment 4", "Predicted categorization function for Experiment 5")}
-# TO DO -- REPAIR MVBL plot_in_cue_space seems to assume that there are at least two cues
-# Also rename the functions to plot_stanfit_NIW_ideal_adaptor (keep aliases) and check the same for related get_ functions.
 map(
   .x = list(3, 4, 5),
   .f = function(exp) {
@@ -1025,6 +1042,9 @@ map(
     
     plot_ibbu_stanfit_test_categorization(
       m.pen_ignored,
+      # TO DO: all_test_locations = F is not working in MVB (might be that not test location is generated for the prior?)
+      # all_test_locations = F,
+      target_category = 2, 
       untransform_cues = T,
       ndraws = 1000, 
       groups = groups[group_index],
@@ -1036,9 +1056,52 @@ map(
 )
 ```
 
+### Compensating for pen
 
+```{r}
+m.pen_compensated <-
+  infer_NIW_ideal_adaptor(
+    exposure = d.exposure.for_ibbu,
+    test = d.test.for_ibbu, 
+    cues = "cog_compensated", 
+    category = "Condition.VisualLabel", 
+    group = "ParticipantID",
+    group.unique = "Condition", 
+    response = "Response", 
+    center.observations = T, scale.observations = F, 
+    warmup = 1000, iter = 2000, chains = 4, control = list(adapt_delta = .9),
+    file = "../models/IBBU-pen-compensated")
 
+# m.pen_compensated
+```
 
+```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Correlations between inferred posterior distributions")}
+plot_ibbu_stanfit_parameter_correlations(
+  m.pen_compensated, 
+  untransform_cues = T,
+  ndraws = 100)
+```
+
+```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Predicted categorization function for Experiment 3", "Predicted categorization function for Experiment 4", "Predicted categorization function for Experiment 5")}
+map(
+  .x = list(3, 4, 5),
+  .f = function(exp) {
+    group_index <- str_detect(groups, paste0("prior|CISP-", exp))
+    
+    plot_ibbu_stanfit_test_categorization(
+      m.pen_compensated,
+      # all_test_locations = F,
+      target_category = 2, 
+      untransform_cues = T,
+      ndraws = 1000, 
+      groups = groups[group_index],
+      group.colors = group.colors[group_index], group.linetypes = group.lt[group_index]) +
+      theme(
+        legend.position = "right",
+        axis.text.x = element_text(angle = 45, hjust = 1))
+  }
+)
+```
 
 
 
