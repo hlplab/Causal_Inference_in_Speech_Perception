@@ -507,7 +507,7 @@ add_compensated_cue <-
   { if ("Condition.Exposure.Pen" %in% names(.)) {
     mutate(., Condition.Pen = Condition.Exposure.Pen)
     } else if ("Condition.Test.Pen" %in% names(.)) {
-      mutate(., Condition.Pen = Condition.Ten.Pen)
+      mutate(., Condition.Pen = Condition.Test.Pen)
     } else mutate(., Condition.Pen = "H") } %>%
   mutate(
     cog_compensated = ifelse(Condition.Pen == "M", closest_no_pen_cog, cog),
@@ -515,15 +515,15 @@ add_compensated_cue <-
 
 d.exp.compensated <- 
   d.exp %>%
+  # Rename for add_compensated_cue() below
+  rename(Condition.Test.Pen = Condition.Pen) %>%
   add_compensated_cue() %>%
   rename(
     cog_gs_original = cog_gs,
-    cog_gs = cog_gs_compensated,
-    Condition.Test.Pen = Condition.Pen) %>%
+    cog_gs = cog_gs_compensated) %>%
   crossing(Experiment = c("CISP-1a", "CISP-1b", "CISP-1c")) %>%
   # re-predict based on these new cogs
   bind_cols(predict(m1, newdata = ., re_formula = NA)) %>%
-  rename(Condition.Pen = Condition.Test.Pen) %>%
   # average prediction across experiments (since we can't really
   # model the effects of selected continuum steps for the exposure
   # data anyway)
@@ -622,13 +622,12 @@ IO <-
 kappa_nu <- 20
 IA <-
   IO %>%
-  mutate(kappa = kappa_nu,
-         nu = kappa_nu,
-         prior_kappa = kappa_nu,
-         prior_nu = kappa_nu,
-         S = get_S_from_expected_Sigma(Sigma, nu)) %>%
-  rename(m = mu) %>%
-  select(!Sigma) %>%
+  mutate(    
+    prior_kappa = kappa_nu,
+    prior_nu = kappa_nu) %>%
+  lift_MVG_ideal_observer_to_NIW_ideal_adaptor(
+    kappa = kappa_nu,
+    nu = kappa_nu) %>%
   arrange(category)
 
 # check classic exposure effect (pen in hand)
@@ -660,9 +659,9 @@ posterior_sh_bias.PiH <-
 
 xlim <- c(4000, 8000)
 plot_grid(
-  p_priors <- plot_expected_categories_density_1D(filter(IA), xlim = xlim),
-  p_sh_PiH <- plot_expected_categories_density_1D(filter(posterior_sh_bias.PiH, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
-  p_s_PiH <- plot_expected_categories_density_1D(filter(posterior_s_bias.PiH, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
+  p_priors <- plot_expected_categories_density1D(filter(IA), xlim = xlim),
+  p_sh_PiH <- plot_expected_categories_density1D(filter(posterior_sh_bias.PiH, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
+  p_s_PiH <- plot_expected_categories_density1D(filter(posterior_s_bias.PiH, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
   labels = c("priors", "after SH-biased exposure (PiH)", "after S-biased exposure (PiH)"),
   hjust = 0,
   ncol = 1,
@@ -700,8 +699,8 @@ posterior_sh_bias.PiM <-
 
 plot_grid(
   p_priors,
-  p_sh_PiM <- plot_expected_categories_density_1D(filter(posterior_sh_bias.PiM, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
-  p_s_PiM <- plot_expected_categories_density_1D(filter(posterior_s_bias.PiM, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
+  p_sh_PiM <- plot_expected_categories_density1D(filter(posterior_sh_bias.PiM, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
+  p_s_PiM <- plot_expected_categories_density1D(filter(posterior_s_bias.PiM, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
   labels = c("priors", "after SH-biased exposure (PiM)", "after S-biased exposure (PiM)"),
   hjust = 0,
   ncol = 1,
@@ -776,8 +775,8 @@ posterior_sh_bias.PiM.compensated <-
 
 plot_grid(
   p_priors,
-  p_sh_PiM.compensated <- plot_expected_categories_density_1D(filter(posterior_sh_bias.PiM, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
-  p_s_PiM.compensated <- plot_expected_categories_density_1D(filter(posterior_s_bias.PiM, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
+  p_sh_PiM.compensated <- plot_expected_categories_density1D(filter(posterior_sh_bias.PiM, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
+  p_s_PiM.compensated <- plot_expected_categories_density1D(filter(posterior_s_bias.PiM, observation.n == max(observation.n)), xlim = xlim) + theme(legend.position = "none"),
   labels = c("priors", "after SH-biased exposure (PiM)", "after S-biased exposure (PiM)"),
   hjust = 0,
   ncol = 1,
@@ -1106,8 +1105,18 @@ map(
 
 
 
+### Model comparison
+
+```{r}
+loo.pen_ignored <- loo(m.pen_ignored)
+loo.pen_compensated <- loo(m.pen_compensated)
+
+loo.pen_ignored <- loo_moment_match(m.pen_ignored, loo.pen_ignored)
+loo.pen_compensated <- loo(m.pen_compensated)
 
 
+loo::loo_compare(loo.pen_ignored, loo.pen_compensated)
+```
 
 
 
