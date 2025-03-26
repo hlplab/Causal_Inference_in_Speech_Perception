@@ -1008,7 +1008,7 @@ m.pen_ignored <-
     file = "../models/IBBU-pen-ignored")
 
 # m.pen_ignored
-groups <- get_group_levels_from_stanfit(m.pen_ignored, include_prior = T)
+groups <- get_group_levels(m.pen_ignored, include_prior = T)
 group.colors <- 
   case_when(
     str_detect(groups, "Bias=SH") ~ color.sh,
@@ -1027,7 +1027,7 @@ group.lt <-
 #   untransform_cues = T,
 #   ndraws = 100)
 
-plot_ibbu_stanfit_parameter_correlations(
+plot_parameter_correlations(
   m.pen_ignored, 
   untransform_cues = T,
   ndraws = 100)
@@ -1039,7 +1039,7 @@ map(
   .f = function(exp) {
     group_index <- str_detect(groups, paste0("prior|CISP-", exp))
     
-    plot_ibbu_stanfit_test_categorization(
+    plot_expected_categorization(
       m.pen_ignored,
       # TO DO: all_test_locations = F is not working in MVB (might be that not test location is generated for the prior?)
       # all_test_locations = F,
@@ -1075,7 +1075,7 @@ m.pen_compensated <-
 ```
 
 ```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Correlations between inferred posterior distributions")}
-plot_ibbu_stanfit_parameter_correlations(
+plot_parameter_correlations(
   m.pen_compensated, 
   untransform_cues = T,
   ndraws = 100)
@@ -1087,7 +1087,7 @@ map(
   .f = function(exp) {
     group_index <- str_detect(groups, paste0("prior|CISP-", exp))
     
-    plot_ibbu_stanfit_test_categorization(
+    plot_expected_categorization(
       m.pen_compensated,
       # all_test_locations = F,
       target_category = 2, 
@@ -1111,11 +1111,16 @@ map(
 loo.pen_ignored <- loo(m.pen_ignored)
 loo.pen_compensated <- loo(m.pen_compensated)
 
-loo.pen_ignored <- loo_moment_match(m.pen_ignored, loo.pen_ignored)
-loo.pen_compensated <- loo(m.pen_compensated)
+# CONTINUE HERE
+# This is not yet working
+# loo.pen_ignored <- loo_moment_match(m.pen_ignored, loo.pen_ignored)
+# loo.pen_compensated <- loo_moment_match(m.pen_compensated)
 
-
-loo::loo_compare(loo.pen_ignored, loo.pen_compensated)
+# Different number of 'data points' since compensations creates more steps along CoG 
+# continuum. Since logLiks are calculated for each unique combination of group.unique
+# and cue value during test, this means that loo_compare views the two models as having
+# been fit on different data (even though they have not)
+# loo::loo_compare(loo.pen_ignored, loo.pen_compensated)
 ```
 
 
