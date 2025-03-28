@@ -40,7 +40,7 @@ This script in need of commenting/cleaning, but
  3. Fit predictions of belief updating (specifically the reduction of effect
  when PIM) to the actual behavioral data.
 
-```{r libraries}
+```{r libraries, message=FALSE}
 library(tidyverse)
 library(data.table)
 library(magrittr)
@@ -100,7 +100,7 @@ knitr::knit_hooks$set(warning = color_block('orange'))
 
 # Data [TO DO: add Liu & Jaeger (2018) data]
 
-```{r load-data}
+```{r load-data, message=FALSE, results='asis'}
 # Import acoustics (including just CoG for now)
 d.acoustics <-
   rbind(
@@ -248,7 +248,7 @@ d.test.for_compensation %>%
 
 ### Visualize design [TO DO]
 
-```{r, fig.height=fig.base_height*10}
+```{r, fig.height=fig.base_height*10, fig.width=fig.base_width*3}
 d.exposure %>%
   # Select one instance of each combination of Experiment and exposure conditions
   group_by(Experiment, Condition.Exposure.LexicalLabel, Condition.Exposure.Pen) %>%
@@ -356,7 +356,7 @@ TO DO: Add plots that show how effects change across test blocks. Below, we're f
 ## Approach 1 [MORE CONTEXT NEEDED HERE]
 We fit the same Bayesian mixed-effects logistic regression as in Cummings et al. (2025), except that we used the CoG instead of the continuum steps as a predictor.
 
-```{r}
+```{r, message=FALSE}
 m1 <-
   brm(
     formula =
@@ -1025,6 +1025,8 @@ d.test.for_ibbu <-
 
 ### Ignoring pen
 
+TO DO: why are there 10 test locations? I was expecting 6 since we're using only PIH test tokens (each test block should have the same 12 items, half of which are PIH). Did test items differ across experiments?
+
 ```{r}
 # TO DO: consider *setting/assuming* lapse rate, rather than inferring it (since it's hard to infer)
 
@@ -1085,7 +1087,18 @@ map(
       group.colors = group.colors[group_index], group.linetypes = group.lt[group_index]) +
       theme(
         legend.position = "right",
-        axis.text.x = element_text(angle = 45, hjust = 1))
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+      stat_summary(
+        data = 
+          d.test.for_ibbu %>% 
+          filter(Experiment == paste0("CISP-", exp)) %>%
+          mutate(
+            group = Condition,
+            token = paste0(as.numeric(as.factor(cog_compensated)), "\n", cog_compensated)) %>%
+          group_by(token, group, ParticipantID) %>%
+          summarise(p_cat = mean(Response == "SH")),
+        fun.data = mean_cl_boot, 
+        geom = "pointrange", position = position_dodge(.1))
   }
 )
 ```
@@ -1133,7 +1146,18 @@ map(
       group.colors = group.colors[group_index], group.linetypes = group.lt[group_index]) +
       theme(
         legend.position = "right",
-        axis.text.x = element_text(angle = 45, hjust = 1))
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
+      stat_summary(
+        data = 
+          d.test.for_ibbu %>% 
+          filter(Experiment == paste0("CISP-", exp)) %>%
+          mutate(
+            group = Condition,
+            token = paste0(as.numeric(as.factor(cog_compensated)), "\n", cog_compensated)) %>%
+          group_by(token, group, ParticipantID) %>%
+          summarise(p_cat = mean(Response == "SH")),
+        fun.data = mean_cl_boot, 
+        geom = "pointrange", position = position_dodge(.1))
   }
 )
 ```
