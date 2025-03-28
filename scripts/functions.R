@@ -785,6 +785,18 @@ prep_for_analysis <- function(data) {
           "contrasts<-"(factor(Condition.Test.Pen), , cbind("M" = c(-0.5, 0.5))),
         Condition.Test.OriginalLabel = 
           "contrasts<-"(factor(Condition.Test.OriginalLabel), , cbind("SH" = c(-0.5, 0.5)))) else . } %>%
+    { if (all(!is.na(.$Item.Pen))) {
+      mutate(
+        .,
+        Item.Pen = 
+          "contrasts<-"(factor(Item.Pen), , cbind("M" = c(-0.5, 0.5)))) 
+    } else . } %>%
+    { if ("Item.VisualLabel" %in% names(.)) {
+      mutate(
+        .,
+        Item.VisualLabel = 
+          "contrasts<-"(factor(Item.VisualLabel), , cbind("SH" = c(-0.5, 0.5)))) 
+    } else . } %>%
     mutate(Block = Block - 1) 
   
   if (length(unique(data$Experiment)) == 2)

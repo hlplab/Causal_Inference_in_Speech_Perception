@@ -124,6 +124,12 @@ d.perception <-
   read.csv("../data/CISP_data.csv") %>%
   # Run formatting from Cummings et al 2025
   mutate(
+    Item.Pen = 
+      factor(
+        case_when(
+          Item.Pen == "hand" ~ "H",
+          Item.Pen == "mouth" ~ "M",
+          T ~ NA_character_)),
     # Different spellings of "colosseum" (both apparently correct) but COLISEUM 
     # is the general term
     Item.Word = ifelse(Item.Word == "COLOSSEUM", "COLISEUM", as.character(Item.Word)),
@@ -134,8 +140,8 @@ d.perception <-
     # Condition.Exposure.LexicalLabel (that is the BIAS condition!). Hence, we are 
     # extracting the lexical label of the particular word from the Item.ID. 
     # For test items, we are just renaming Condition.Test.OriginalLabel to 
-    # Condition.VisualLabel for the sake of coherence.
-    Condition.VisualLabel = 
+    # Item.VisualLabel for the sake of coherence.
+    Item.VisualLabel = 
       case_when(
         Phase == "exposure" ~ gsub("^([A-Z]+)[0-9]+$", "\\1", ItemID),
         Phase == "test" ~ Condition.Test.OriginalLabel,
@@ -195,13 +201,13 @@ d.exposure <-
       filter(type != "test") %>%
       # Adding information about the visual bias, which---for exposure items---was always
       # the same as the intended category (i.e., segment)
-      rename(Condition.VisualLabel = segment) %>%
+      rename(Item.VisualLabel = segment) %>%
       # scale cog based on statistics used for fitted model
       mutate(cog_gs = (cog - stats.cog$mean) / (2 * stats.cog$sd)) %>%
-      select(word, type, cog, cog_gs, Condition.VisualLabel),
+      select(word, type, cog, cog_gs, Item.VisualLabel),
     by = 
       join_by(
-        Condition.VisualLabel == Condition.VisualLabel, 
+        Item.VisualLabel == Item.VisualLabel, 
         Item.Word == word, 
         Item.Type == type))
 ```
@@ -239,6 +245,15 @@ d.test.for_compensation %>%
 ```
 
 ## Exposure effects in exposure-test experiments
+
+### Visualize design [TO DO]
+
+```{r}
+d.exposure %>%
+  ggplot(aes(x = Trial, y = Condition.Exposure.Label, fill = Item.Type, alpha = Item.Pen)) +
+  geom_point() +
+  facet_grid(Experiment + Condition.Exposure.Pen ~ .)
+```
 
 ### Lexical decision accuracy during exposure
 
@@ -338,16 +353,18 @@ TO DO: Add plots that show how effects change across test blocks. Below, we're f
 We fit the same Bayesian mixed-effects logistic regression as in Cummings et al. (2025), except that we used the CoG instead of the continuum steps as a predictor.
 
 ```{r}
-# Not sure that it makes any difference to include Experiment here 
-# (but we're currently assuming as much below)
 m1 <-
   brm(
     formula =
-      Response.ASHI ~ 1 + Experiment * Condition.Test.Pen * Condition.VisualLabel * cog_gs +
+      # Using Item.Pen instead of Condition.Test.Pen to make things easier below
+      # (but the two variables are identical for the test phase and thus for the
+      # experiments fit here). 
+      # Same for Item.VisualLabel instead of Condition.Test.OriginalLabel.
+      Response.ASHI ~ 1 + Experiment * Item.Pen * Item.VisualLabel * cog_gs +
       # Including experiment since there's clear evidence that the
       # selection of test steps affects how participants interpret the input
       # (presumable incl. cog).
-      (1 + Condition.Test.Pen * Condition.VisualLabel * cog_gs | ParticipantID),
+      (1 + Item.Pen * Item.VisualLabel * cog_gs | ParticipantID),
     data =
       d.test.for_compensation %>%
       prep_for_analysis(),
@@ -377,7 +394,6 @@ consider sampling instead such that the chance of being interpreted as /s/ vs /s
 # still be willing to accept the segment as intended).
 cutoff_s <- cutoff_sh <- 0.4
 
-
 # create sample exposure data to test
 # we want to check each exposure item with and without PIM
 # (which should leave cog unaffected but will change the prediction)
@@ -390,40 +406,39 @@ d.exp <-
   filter(type != "test") %>%
   # Adding information about the visual bias, which---for exposure items---was always
   # the same as the intended category (i.e., segment)
-  rename(Condition.VisualLabel = segment) %>%
+  rename(Item.VisualLabel = segment) %>%
   # scale cog based on statistics used for fitted model
   mutate(cog_gs = (cog - stats.cog$mean) / (2 * stats.cog$sd)) %>%
   crossing(
-    Condition.Test.Pen = c("H", "M"),
+    Item.Pen = c("H", "M"),
     # Create one version of the data frame for each experiment
     # (since we included experiment in the model fit, we need
     # to include it in the newdata, and average over it below)
     Experiment = c("CISP-1a", "CISP-1b", "CISP-1c")) %>%
   # Get predictions ignoring random effects
   bind_cols(predict(m1, newdata = ., re_formula = NA)) %>%
-  rename(Condition.Pen = Condition.Test.Pen) %>%
   # average prediction across experiments (since we can't really
   # model the effects of selected continuum steps for the exposure
   # data anyway)
-  group_by(word, type, Condition.VisualLabel, Condition.Pen, cog, cog_gs) %>%
+  group_by(word, type, Item.VisualLabel, Item.Pen, cog, cog_gs) %>%
   summarise(predicted_probability.SH = mean(Estimate)) %>%
+  mutate(
+    Condition.Exposure.Label =
+      case_when(
+        Item.VisualLabel == "S" & type == "typical" ~ "SH-bias",
+        Item.VisualLabel == "S" & type == "shifted" ~ "S-bias",
+        Item.VisualLabel == "SH" & type == "typical" ~ "S-bias",
+        Item.VisualLabel == "SH" & type == "shifted" ~ "SH-bias"),
   # Define cutoff probabilities and determine whether segment would be
   # perceived as intended.
-  mutate(
     cutoff_s = .env$cutoff_s,
     cutoff_sh = .env$cutoff_sh,
-    Condition.Exposure =
-      case_when(
-        Condition.VisualLabel == "S" & type == "typical" ~ "SH-bias",
-        Condition.VisualLabel == "S" & type == "shifted" ~ "S-bias",
-        Condition.VisualLabel == "SH" & type == "typical" ~ "S-bias",
-        Condition.VisualLabel == "SH" & type == "shifted" ~ "SH-bias"),
     segment.perceived_as_intended =
       case_when(
-        Condition.VisualLabel == "S" & 1 - predicted_probability.SH < .data$cutoff_s ~ "no",
-        Condition.VisualLabel == "S" & 1 - predicted_probability.SH >= .data$cutoff_s ~ "yes",
-        Condition.VisualLabel == "SH" & predicted_probability.SH < .data$cutoff_sh ~ "no",
-        Condition.VisualLabel == "SH" & predicted_probability.SH >= .data$cutoff_sh ~ "yes"))
+        Item.VisualLabel == "S" & 1 - predicted_probability.SH < .data$cutoff_s ~ "no",
+        Item.VisualLabel == "S" & 1 - predicted_probability.SH >= .data$cutoff_s ~ "yes",
+        Item.VisualLabel == "SH" & predicted_probability.SH < .data$cutoff_sh ~ "no",
+        Item.VisualLabel == "SH" & predicted_probability.SH >= .data$cutoff_sh ~ "yes"))
 ```
 
 ## Approach 2: compensating before adaptation
@@ -433,8 +448,8 @@ We are estimating the *compensated* CoG for each exposure item. One way of doing
 if (!RESET_MODELS & !file.exists("../data/sample_data_compensated.RData")) {
   sampledata <- 
     crossing(
-      Condition.VisualLabel = c("S", "SH"),
-      Condition.Test.Pen = c("H", "M"),
+      Item.VisualLabel = c("S", "SH"),
+      Item.Pen = c("H", "M"),
       Experiment = c("CISP-1a", "CISP-1b", "CISP-1c"),
       # Span the CoG continuum at .25 Hz steps, but also include all cog values that occur
       # in the actual data since we need those below
@@ -446,20 +461,20 @@ if (!RESET_MODELS & !file.exists("../data/sample_data_compensated.RData")) {
     mutate(cog_gs = (cog - stats.cog$mean) / (2 * stats.cog$sd)) %>%
     # Get predictions ignoring random effects
     bind_cols(predict(m1, newdata = ., re_formula = NA, cores = 4)) %>%
-    group_by(Condition.VisualLabel, Condition.Test.Pen, cog) %>%
+    group_by(Item.VisualLabel, Item.Pen, cog) %>%
     summarise(Estimate = mean(Estimate))
   
   # For each input with pen find the input without pen that has the most similar estimated 
   # posterior probability of "sh", while keeping the visual labeling information identical.
   sampledata_pen <- tibble()
-  for (label in unique(sampledata$Condition.VisualLabel)) {
+  for (label in unique(sampledata$Item.VisualLabel)) {
     temp_no_pen <-
       sampledata %>%
-      filter(Condition.Test.Pen == "H", Condition.VisualLabel == label)
+      filter(Item.Pen == "H", Item.VisualLabel == label)
     
     temp_pen <-
       sampledata %>%
-      filter(Condition.Test.Pen == "M", Condition.VisualLabel == label)
+      filter(Item.Pen == "M", Item.VisualLabel == label)
     
     temp_pen %<>%
       rowwise() %>% 
@@ -494,38 +509,28 @@ sampledata_pen %>%
   ggplot(aes(y = Estimate)) +
   geom_line(aes(x = cog), color = "black", alpha = .5) +
   geom_line(aes(x = closest_no_pen_cog), color = "red", alpha = .5) +
-  facet_wrap(~ Condition.VisualLabel)
+  facet_wrap(~ Item.VisualLabel)
 
 sampledata_pen %>%
   ggplot(aes(x = Estimate, y = closest_no_pen_cog - cog)) +
   geom_line() +
-  facet_wrap(~ Condition.VisualLabel)
+  facet_wrap(~ Item.VisualLabel)
 ```
 
 ```{r}
-add_compensated_cue <-
+add_compensated_cue <- 
   . %>%
-  left_join(
-    sampledata_pen %>%
-      select(Condition.VisualLabel, cog, closest_no_pen_cog),
-    by = c("Condition.VisualLabel", "cog")) %>%
-  { if ("Condition.Exposure.Pen" %in% names(.)) {
-    # If this is exposure data, then compensation depends on *Item.Pen*, which
-    # captures whether that particular item was shown with a pen in hand or mouth
-    mutate(., Condition.Pen = ifelse(Item.Pen == "mouth", "M", "H"))
-  } else if ("Condition.Test.Pen" %in% names(.)) {
-    # If this is test data, then compensation depends on *Condition.Test.Pen*, 
-    # which captures whether that particular item was shown with a pen in mouth
-    mutate(., Condition.Pen = Condition.Test.Pen)
-  } else mutate(., Condition.Pen = "H") } %>%
-  mutate(
-    cog_compensated = ifelse(Condition.Pen == "M", closest_no_pen_cog, cog),
-    cog_gs_compensated = (cog_compensated - stats.cog$mean) / (2 * stats.cog$sd)) 
+    left_join(
+      sampledata_pen %>%
+        select(Item.VisualLabel, cog, closest_no_pen_cog),
+      by = c("Item.VisualLabel", "cog")) %>%
+    { if (!("Item.Pen" %in% names(.))) { mutate(., Condition.Pen = "H") } else . } %>%
+    mutate(
+      cog_compensated = ifelse(Item.Pen == "M", closest_no_pen_cog, cog),
+      cog_gs_compensated = (cog_compensated - stats.cog$mean) / (2 * stats.cog$sd)) 
 
 d.exp.compensated <- 
   d.exp %>%
-  # Rename for add_compensated_cue() below
-  rename(Condition.Test.Pen = Condition.Pen) %>%
   add_compensated_cue() %>%
   rename(
     cog_gs_original = cog_gs,
@@ -536,29 +541,29 @@ d.exp.compensated <-
   # average prediction across experiments (since we can't really
   # model the effects of selected continuum steps for the exposure
   # data anyway)
-  group_by(word, type, Condition.VisualLabel, Condition.Pen, cog, cog_gs) %>%
+  group_by(word, type, Item.VisualLabel, Item.Pen, cog, cog_gs) %>%
   summarise(predicted_probability.SH = mean(Estimate)) %>%
   # Define cutoff probabilities and determine whether segment would be
   # perceived as intended.
   mutate(
+    Condition.Exposure.Label =
+      case_when(
+        Item.VisualLabel == "S" & type == "typical" ~ "SH-bias",
+        Item.VisualLabel == "S" & type == "shifted" ~ "S-bias",
+        Item.VisualLabel == "SH" & type == "typical" ~ "S-bias",
+        Item.VisualLabel == "SH" & type == "shifted" ~ "SH-bias"),
     # Cutoff values are the minimum probability that the segment must
     # have to still be perceived as intended. Lower values thus imply
     # stronger word superiority effects (less evidence is needed to
     # still be willing to accept the segment as intended).
     cutoff_s = .env$cutoff_s,
     cutoff_sh = .env$cutoff_sh,
-    Condition.Exposure =
-      case_when(
-        Condition.VisualLabel == "S" & type == "typical" ~ "SH-bias",
-        Condition.VisualLabel == "S" & type == "shifted" ~ "S-bias",
-        Condition.VisualLabel == "SH" & type == "typical" ~ "S-bias",
-        Condition.VisualLabel == "SH" & type == "shifted" ~ "SH-bias"),
     segment.perceived_as_intended =
       case_when(
-        Condition.VisualLabel == "S" & 1 - predicted_probability.SH < cutoff_s ~ "no",
-        Condition.VisualLabel == "S" & 1 - predicted_probability.SH >= cutoff_s ~ "yes",
-        Condition.VisualLabel == "SH" & predicted_probability.SH < cutoff_sh ~ "no",
-        Condition.VisualLabel == "SH" & predicted_probability.SH >= cutoff_sh ~ "yes"))
+        Item.VisualLabel == "S" & 1 - predicted_probability.SH < cutoff_s ~ "no",
+        Item.VisualLabel == "S" & 1 - predicted_probability.SH >= cutoff_s ~ "yes",
+        Item.VisualLabel == "SH" & predicted_probability.SH < cutoff_sh ~ "no",
+        Item.VisualLabel == "SH" & predicted_probability.SH >= cutoff_sh ~ "yes"))
 ```
 
 ## Comparison of approaches
@@ -569,20 +574,20 @@ d.exp %>%
     aes(
       x = cog,
       y = predicted_probability.SH,
-      color = Condition.Pen)) +
+      color = Item.Pen)) +
   scale_shape_manual(values = c(1, 19)) +
   geom_line(aes(linetype = type)) +
-  facet_grid(Condition.Exposure ~ Condition.VisualLabel)
+  facet_grid(Condition.Exposure.Label ~ Item.VisualLabel)
 
 d.exp.compensated %>%
   ggplot(
     aes(
       x = cog,
       y = predicted_probability.SH,
-      color = Condition.Pen)) +
+      color = Item.Pen)) +
   scale_shape_manual(values = c(1, 19)) +
   geom_line(aes(linetype = type)) +
-  facet_grid(Condition.Exposure ~ Condition.VisualLabel)
+  facet_grid(Condition.Exposure.Label ~ Item.VisualLabel)
 ```
 
 ```{r, fig.height=fig.base_height*4, fig.width=fig.base_width*2, fig.cap=c('Predicted consequences for lexical decisions during exposure under Approach 1', "Same under Approach 2")}
@@ -596,7 +601,7 @@ d.exp  %>%
   scale_shape_manual(values = c(1, 19)) +
   scale_color_manual(values = c("red", "green")) +
   geom_point() +
-  facet_grid(Condition.Pen + Condition.Exposure ~ Condition.VisualLabel)
+  facet_grid(Item.Pen + Condition.Exposure.Label ~ Item.VisualLabel)
 
 d.exp.compensated  %>%
   ggplot(
@@ -608,12 +613,13 @@ d.exp.compensated  %>%
   scale_shape_manual(values = c(1, 19)) +
   scale_color_manual(values = c("red", "green")) +
   geom_point() +
-  facet_grid(Condition.Pen + Condition.Exposure ~ Condition.VisualLabel)
+  facet_grid(Item.Pen + Condition.Exposure.Label ~ Item.VisualLabel)
 ```
 
 # Simulating effects of exposure
 
 ## Effects of exposure on distributional beliefs
+Assuming $\kappa = \nu = 20$ for this simulation.
 
 ### Pen in hand
 
@@ -621,8 +627,8 @@ d.exp.compensated  %>%
 # make an IO based on the typical tokens (and no pen in mouth)
 IO <-
   make_MVG_ideal_observer_from_data(
-  data = d.exp %>% filter(Condition.Pen == "H", type == "typical"),
-  category = "Condition.VisualLabel",
+  data = d.exp %>% filter(Item.Pen == "H", type == "typical"),
+  category = "Item.VisualLabel",
   cues = "cog")
 
 # and make an IA based on it
@@ -648,9 +654,9 @@ posterior_s_bias.PiH <-
       # Make sure token that aren't perceived as intended are not used for updating
       mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
       filter(
-        Condition.Exposure == "S-bias",
-        Condition.Pen == "H"),
-    exposure.category = "Condition.VisualLabel",
+        Condition.Exposure.Label == "S-bias",
+        Item.Pen == "H"),
+    exposure.category = "Item.VisualLabel",
     exposure.cues = "cog")
 
 posterior_sh_bias.PiH <-
@@ -661,9 +667,9 @@ posterior_sh_bias.PiH <-
       # Make sure token that aren't perceived as intended are not used for updating
       mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
       filter(
-        Condition.Exposure == "SH-bias",
-        Condition.Pen == "H"),
-    exposure.category = "Condition.VisualLabel",
+        Condition.Exposure.Label == "SH-bias",
+        Item.Pen == "H"),
+    exposure.category = "Item.VisualLabel",
     exposure.cues = "cog")
 
 xlim <- c(4000, 8000)
@@ -688,9 +694,9 @@ posterior_s_bias.PiM <-
       # Make sure token that aren't perceived as intended are not used for updating
       mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
       filter(
-        Condition.Exposure == "S-bias",
-        Condition.Pen == "M"),
-    exposure.category = "Condition.VisualLabel",
+        Condition.Exposure.Label == "S-bias",
+        Item.Pen == "M"),
+    exposure.category = "Item.VisualLabel",
     exposure.cues = "cog")
 
 posterior_sh_bias.PiM <-
@@ -701,9 +707,9 @@ posterior_sh_bias.PiM <-
       # Make sure token that aren't perceived as intended are not used for updating
       mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
       filter(
-        Condition.Exposure == "SH-bias",
-        Condition.Pen == "M"),
-    exposure.category = "Condition.VisualLabel",
+        Condition.Exposure.Label == "SH-bias",
+        Item.Pen == "M"),
+    exposure.category = "Item.VisualLabel",
     exposure.cues = "cog")
 
 plot_grid(
@@ -764,9 +770,9 @@ posterior_s_bias.PiM.compensated <-
       # Make sure token that aren't perceived as intended are not used for updating
       mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
       filter(
-        Condition.Exposure == "S-bias",
-        Condition.Pen == "M"),
-    exposure.category = "Condition.VisualLabel",
+        Condition.Exposure.Label == "S-bias",
+        Item.Pen == "M"),
+    exposure.category = "Item.VisualLabel",
     exposure.cues = "cog")
 
 posterior_sh_bias.PiM.compensated <-
@@ -777,9 +783,9 @@ posterior_sh_bias.PiM.compensated <-
       # Make sure token that aren't perceived as intended are not used for updating
       mutate(cog = ifelse(segment.perceived_as_intended == "no", NA, cog)) %>%
       filter(
-        Condition.Exposure == "SH-bias",
-        Condition.Pen == "M"),
-    exposure.category = "Condition.VisualLabel",
+        Condition.Exposure.Label == "SH-bias",
+        Item.Pen == "M"),
+    exposure.category = "Item.VisualLabel",
     exposure.cues = "cog")
 
 plot_grid(
@@ -910,7 +916,7 @@ Some other notes
 ## Using likelihood maximization
 
 ```{r}
-predict_for_optim = function(CoG, model_predict, pars) {
+predict_for_optim <- function(CoG, model_predict, pars) {
   # prediction function from priors
   cat_func <- priors_ALL %>%
     mutate(m = c(pars[1], pars[2]),
@@ -1008,6 +1014,9 @@ d.test.for_ibbu <-
   mutate(
     Response = ifelse(Response == "ASI", "S", "SH"),
     Condition = paste0("Experiment=", Experiment, "_Bias=", Condition.Exposure.LexicalLabel, "_Pen=", Condition.Exposure.Pen))
+
+# Confirm that only Items with PIM are included
+# d.test.for_ibbu %>% group_by(Item.Pen) %>% tally()
 ```
 
 ### Ignoring pen
@@ -1021,12 +1030,12 @@ m.pen_ignored <-
     exposure = d.exposure.for_ibbu,
     test = d.test.for_ibbu, 
     cues = "cog", 
-    category = "Condition.VisualLabel", 
+    category = "Item.VisualLabel", 
     group = "ParticipantID",
     group.unique = "Condition", 
     response = "Response", 
-    center.observations = T, scale.observations = F, 
-    warmup = 2000, iter = 3000, chains = 4, control = list(adapt_delta = .9),
+    center.observations = T, scale.observations = F, tau_scale = sd(d.exposure.for_ibbu$cog),
+    warmup = 2000, iter = 3000, chains = 4, control = list(adapt_delta = .95),
     file = "../models/IBBU-pen-ignored")
 
 # m.pen_ignored
@@ -1052,7 +1061,7 @@ group.lt <-
 plot_parameter_correlations(
   m.pen_ignored, 
   untransform_cues = T,
-  ndraws = 100)
+  ndraws = 1000)
 ```
 
 ```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Predicted categorization function for Experiment 3", "Predicted categorization function for Experiment 4", "Predicted categorization function for Experiment 5")}
@@ -1085,11 +1094,11 @@ m.pen_compensated <-
     exposure = d.exposure.for_ibbu,
     test = d.test.for_ibbu, 
     cues = "cog_compensated", 
-    category = "Condition.VisualLabel", 
+    category = "Item.VisualLabel", 
     group = "ParticipantID",
     group.unique = "Condition", 
     response = "Response", 
-    center.observations = T, scale.observations = F, 
+    center.observations = T, scale.observations = F, tau_scale = sd(d.exposure.for_ibbu$cog_compensated),
     warmup = 1000, iter = 2000, chains = 4, control = list(adapt_delta = .9),
     file = "../models/IBBU-pen-compensated")
 
@@ -1101,7 +1110,7 @@ m.pen_compensated <-
 plot_parameter_correlations(
   m.pen_compensated, 
   untransform_cues = T,
-  ndraws = 100)
+  ndraws = 1000)
 ```
 
 ```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Predicted categorization function for Experiment 3", "Predicted categorization function for Experiment 4", "Predicted categorization function for Experiment 5")}
@@ -1140,12 +1149,12 @@ loo.pen_compensated <- loo(m.pen_compensated)
 # loo.pen_compensated <- loo_moment_match(m.pen_compensated)
 
 
-loo_moment_match.NIW_ideal_adaptor_stanfit <- function(...) rstan:::loo_moment_match.stanfit(...)
+# loo_moment_match.NIW_ideal_adaptor_stanfit <- function(...) rstan:::loo_moment_match.stanfit(...)
 # Different number of 'data points' since compensations creates more steps along CoG 
 # continuum. Since logLiks are calculated for each unique combination of group.unique
 # and cue value during test, this means that loo_compare views the two models as having
 # been fit on different data (even though they have not)
-# loo::loo_compare(loo.pen_ignored, loo.pen_compensated)
+loo::loo_compare(loo.pen_ignored, loo.pen_compensated)
 ```
 
 
