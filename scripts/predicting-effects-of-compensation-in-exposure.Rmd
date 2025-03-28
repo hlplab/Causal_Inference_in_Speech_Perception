@@ -124,6 +124,9 @@ d.perception <-
   read.csv("../data/CISP_data.csv") %>%
   # Run formatting from Cummings et al 2025
   mutate(
+    # Different spellings of "colosseum" (both apparently correct) but COLISEUM 
+    # is the general term
+    Item.Word = ifelse(Item.Word == "COLOSSEUM", "COLISEUM", as.character(Item.Word)),
     # Set visual label for exposure items to lexical label since the the visual label
     # for exposure items was always the same as the one for the word (since the video 
     # recordings were actual recording of the talker saying the word). Note though 
@@ -327,6 +330,8 @@ d.test %>%
   facet_grid(paste("Pen in test:", Condition.Test.Pen) ~ paste(Experiment), space = "free_x", scales = "free_x")
 ```
 
+TO DO: Add plots that show how effects change across test blocks. Below, we're for now only using earlier test blocks, under the *assumption* that learning is reduced by repeated testing over the uniform test continuum.
+
 # Estimating effects of compensation
 
 ## Approach 1 [MORE CONTEXT NEEDED HERE]
@@ -505,10 +510,14 @@ add_compensated_cue <-
       select(Condition.VisualLabel, cog, closest_no_pen_cog),
     by = c("Condition.VisualLabel", "cog")) %>%
   { if ("Condition.Exposure.Pen" %in% names(.)) {
-    mutate(., Condition.Pen = Condition.Exposure.Pen)
-    } else if ("Condition.Test.Pen" %in% names(.)) {
-      mutate(., Condition.Pen = Condition.Test.Pen)
-    } else mutate(., Condition.Pen = "H") } %>%
+    # If this is exposure data, then compensation depends on *Item.Pen*, which
+    # captures whether that particular item was shown with a pen in hand or mouth
+    mutate(., Condition.Pen = ifelse(Item.Pen == "mouth", "M", "H"))
+  } else if ("Condition.Test.Pen" %in% names(.)) {
+    # If this is test data, then compensation depends on *Condition.Test.Pen*, 
+    # which captures whether that particular item was shown with a pen in mouth
+    mutate(., Condition.Pen = Condition.Test.Pen)
+  } else mutate(., Condition.Pen = "H") } %>%
   mutate(
     cog_compensated = ifelse(Condition.Pen == "M", closest_no_pen_cog, cog),
     cog_gs_compensated = (cog_compensated - stats.cog$mean) / (2 * stats.cog$sd)) 
@@ -982,9 +991,20 @@ d.test.for_ibbu <-
   filter(
     !is.na(Response),
     Experiment %in% unique(d.exposure$Experiment)) %>%
-  # For now exclude test items with pen in mouth 
-  # (since we are not yet modeling the effect during test in the ideal adaptor)
-  filter(Condition.Test.Pen == "H") %>%
+  filter(
+    # Use only first two test blocks 
+    Block %in% 1:2,
+    # For now exclude test items with pen in mouth 
+    # (since we are not yet modeling the effect during test in the ideal adaptor. While
+    # this is ok under our hypothesis for the effect in the compensated model, it might
+    # unfairly bias against the pen_ignored model).
+    #
+    # Alternatively, one could include the PIM test tokens. That way, the response 
+    # counts of the PIM tokens would be counted where we think they would be perceived
+    # anyway. But if the compensated model performs better when these tokens are included
+    # it will be unclear whether that's because it better accounts for what happens during
+    # exposure and/or because of what happens during test (the latter being less of interest).
+    Condition.Test.Pen == "H") %>%
   mutate(
     Response = ifelse(Response == "ASI", "S", "SH"),
     Condition = paste0("Experiment=", Experiment, "_Bias=", Condition.Exposure.LexicalLabel, "_Pen=", Condition.Exposure.Pen))
@@ -994,6 +1014,8 @@ d.test.for_ibbu <-
 
 ```{r}
 # TO DO: consider *setting/assuming* lapse rate, rather than inferring it (since it's hard to infer)
+
+# TO DO: Compare where the input of pen_ignored and pen_compensated differ
 m.pen_ignored <-
   infer_NIW_ideal_adaptor(
     exposure = d.exposure.for_ibbu,
@@ -1004,7 +1026,7 @@ m.pen_ignored <-
     group.unique = "Condition", 
     response = "Response", 
     center.observations = T, scale.observations = F, 
-    warmup = 1000, iter = 2000, chains = 4, control = list(adapt_delta = .9),
+    warmup = 2000, iter = 3000, chains = 4, control = list(adapt_delta = .9),
     file = "../models/IBBU-pen-ignored")
 
 # m.pen_ignored
@@ -1072,6 +1094,7 @@ m.pen_compensated <-
     file = "../models/IBBU-pen-compensated")
 
 # m.pen_compensated
+# summary(m.pen_compensated)
 ```
 
 ```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Correlations between inferred posterior distributions")}
@@ -1113,9 +1136,11 @@ loo.pen_compensated <- loo(m.pen_compensated)
 
 # CONTINUE HERE
 # This is not yet working
-# loo.pen_ignored <- loo_moment_match(m.pen_ignored, loo.pen_ignored)
+# loo.pen_ignored <- loo_moment_match.NIW_ideal_adaptor_stanfit(m.pen_ignored, loo.pen_ignored)
 # loo.pen_compensated <- loo_moment_match(m.pen_compensated)
 
+
+loo_moment_match.NIW_ideal_adaptor_stanfit <- function(...) rstan:::loo_moment_match.stanfit(...)
 # Different number of 'data points' since compensations creates more steps along CoG 
 # continuum. Since logLiks are calculated for each unique combination of group.unique
 # and cue value during test, this means that loo_compare views the two models as having
