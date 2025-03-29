@@ -58,12 +58,15 @@ library(MVBeliefUpdatr)
 source("functions.R")
 
 RESET_MODELS <- FALSE
-RESET_ANIMATIONS <- FALSE
+INCLUDE_ANIMATIONS <- FALSE
 
 # TO DO: replace with constants defined in functions.R
 color.s = "red"
 color.sh = "blue"
+color.s_sh = "purple"
 color.filler = "gray"
+color.shifted = "orange"
+color.typical = "green"
 color.PIM = "white"
 color.PIH = "black"
 color.filler = "gray"
@@ -225,7 +228,9 @@ d.acoustics %>%
              fill = segment)) +
   geom_histogram(bins = 20, position = "identity", alpha = .5) +
   scale_x_continuous("center of gravity") +
-  facet_wrap(~type)
+  scale_fill_manual("Category",
+                    values = c(color.s, color.sh, color.s_sh)) +
+  facet_wrap(~ type)
 ```
 
 ## Effects of pen in test-only experiment
@@ -246,17 +251,36 @@ d.test.for_compensation %>%
 
 ## Exposure effects in exposure-test experiments
 
-### Visualize design [TO DO]
+### Visualize design
 
-```{r, fig.height=fig.base_height*10, fig.width=fig.base_width*3}
+```{r, fig.height=fig.base_height*10, fig.width=fig.base_width*5}
 d.exposure %>%
   # Select one instance of each combination of Experiment and exposure conditions
   group_by(Experiment, Condition.Exposure.LexicalLabel, Condition.Exposure.Pen) %>%
   filter(ParticipantID == first(ParticipantID)) %>%
-  ggplot(aes(x = Trial, y = Condition.Exposure.LexicalLabel, fill = Item.Type, alpha = Item.Pen)) +
+  ggplot(
+    aes(
+      x = Trial, 
+      y = paste0(Condition.Exposure.LexicalLabel, "-bias"),
+      fill = 
+        factor(
+          case_when(
+            Item.Type == "typical" ~ Item.VisualLabel, 
+            Item.Type == "shifted" ~ "?",
+            Item.Type == "filler" ~ "filler",
+            T ~ NA_character_),
+          level = c("S", "SH", "?", "filler")),
+      alpha = Item.Pen)) +
   geom_tile() +
-  scale_fill_manual(values = c(color.filler, color.s, color.sh)) +
-  facet_grid(Experiment + Condition.Exposure.Pen ~ .)
+  scale_y_discrete("Lexical bias") +
+  scale_fill_manual(
+    "Item type",
+    values = c(color.s, color.sh, color.s_sh, color.filler)) +
+  scale_alpha_manual(
+    breaks = c("M", "H"),
+    values = c(0.5, 1)) +
+  facet_grid(Experiment + Condition.Exposure.Pen ~ .) +
+  coord_cartesian(expand = F)
 ```
 
 ### Lexical decision accuracy during exposure
@@ -867,7 +891,8 @@ p
 ```
 
 ```{r, fig.width=5, fig.show="animate"}
-a <- 
+if (!INCLUDE_ANIMATIONS & !file.exists("../figures/updating.webm")) {
+  a <- 
   plot_expected_categorization_function_1D(
       summary %>% 
         group_by(compensated, bias, pen, observation.n) %>% 
@@ -884,12 +909,11 @@ a <-
       theme(legend.position = "right") +
       transition_states(observation.n, transition_length = 2, state_length = 1)
 
-a
-
-if (!RESET_ANIMATIONS & !file.exists("../figures/updating.webm"))
+  a
   anim_save(
     "../figures/updating.webm",   
     animate(a, width = 500, height = 500, fps = 5, renderer = av_renderer()))
+}
 ```
 
 # Finding optimal fit
@@ -1025,9 +1049,7 @@ d.test.for_ibbu <-
 
 ### Ignoring pen
 
-TO DO: why are there 10 test locations? I was expecting 6 since we're using only PIH test tokens (each test block should have the same 12 items, half of which are PIH). Did test items differ across experiments?
-
-```{r}
+```{r, message=FALSE}
 # TO DO: consider *setting/assuming* lapse rate, rather than inferring it (since it's hard to infer)
 
 # TO DO: Compare where the input of pen_ignored and pen_compensated differ
@@ -1070,7 +1092,7 @@ plot_parameter_correlations(
   ndraws = 1000)
 ```
 
-```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Predicted categorization function for Experiment 3", "Predicted categorization function for Experiment 4", "Predicted categorization function for Experiment 5")}
+```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Predicted categorization function for Experiment 3", "Predicted categorization function for Experiment 4", "Predicted categorization function for Experiment 5"), message=FALSE}
 map(
   .x = list(3, 4, 5),
   .f = function(exp) {
@@ -1094,18 +1116,18 @@ map(
           filter(Experiment == paste0("CISP-", exp)) %>%
           mutate(
             group = Condition,
-            token = paste0(as.numeric(as.factor(cog_compensated)), "\n", cog_compensated)) %>%
-          group_by(token, group, ParticipantID) %>%
+            token.cues = factor(signif(cog), levels = sort(unique(signif(cog)), decreasing = T))) %>%
+          group_by(token.cues, group, ParticipantID) %>%
           summarise(p_cat = mean(Response == "SH")),
         fun.data = mean_cl_boot, 
-        geom = "pointrange", position = position_dodge(.1))
+        geom = "pointrange", position = position_dodge(.25))
   }
 )
 ```
 
 ### Compensating for pen
 
-```{r}
+```{r, message=FALSE}
 m.pen_compensated <-
   infer_NIW_ideal_adaptor(
     exposure = d.exposure.for_ibbu,
@@ -1130,7 +1152,7 @@ plot_parameter_correlations(
   ndraws = 1000)
 ```
 
-```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Predicted categorization function for Experiment 3", "Predicted categorization function for Experiment 4", "Predicted categorization function for Experiment 5")}
+```{r, fig.height=fig.base_height*2+1, fig.width=fig.base_width*2, fig.cap=c("Predicted categorization function for Experiment 3", "Predicted categorization function for Experiment 4", "Predicted categorization function for Experiment 5"), message=FALSE}
 map(
   .x = list(3, 4, 5),
   .f = function(exp) {
@@ -1141,7 +1163,7 @@ map(
       # all_test_locations = F,
       target_category = 2, 
       untransform_cues = T,
-      ndraws = 1000, 
+      ndraws = 10, 
       groups = groups[group_index],
       group.colors = group.colors[group_index], group.linetypes = group.lt[group_index]) +
       theme(
@@ -1153,11 +1175,11 @@ map(
           filter(Experiment == paste0("CISP-", exp)) %>%
           mutate(
             group = Condition,
-            token = paste0(as.numeric(as.factor(cog_compensated)), "\n", cog_compensated)) %>%
-          group_by(token, group, ParticipantID) %>%
+            token.cues = factor(signif(cog_compensated), levels = sort(unique(signif(cog_compensated)), decreasing = T))) %>%
+          group_by(token.cues, group, ParticipantID) %>%
           summarise(p_cat = mean(Response == "SH")),
         fun.data = mean_cl_boot, 
-        geom = "pointrange", position = position_dodge(.1))
+        geom = "pointrange", position = position_dodge(.25))
   }
 )
 ```
