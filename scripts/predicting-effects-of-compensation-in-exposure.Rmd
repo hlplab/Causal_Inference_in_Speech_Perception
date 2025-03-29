@@ -40,7 +40,7 @@ This script in need of commenting/cleaning, but
  3. Fit predictions of belief updating (specifically the reduction of effect
  when PIM) to the actual behavioral data.
 
-```{r libraries, message=FALSE}
+```{r libraries, echo=FALSE, message=FALSE}
 library(tidyverse)
 library(data.table)
 library(magrittr)
