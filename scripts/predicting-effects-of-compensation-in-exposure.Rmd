@@ -52,7 +52,7 @@ library(gganimate)
 
 library(brms)
 
-# devtools::install_github("hlplab/MVBeliefUpdatr")
+#  devtools::install_github("hlplab/MVBeliefUpdatr", ref = "path-stanfit-plotting")
 library(MVBeliefUpdatr)
 
 source("functions.R")
@@ -1063,8 +1063,9 @@ m.pen_ignored <-
     group.unique = "Condition", 
     response = "Response", 
     center.observations = T, scale.observations = F, tau_scale = sd(d.exposure.for_ibbu$cog),
-    warmup = 2000, iter = 3000, chains = 4, control = list(adapt_delta = .95),
-    file = "../models/IBBU-pen-ignored")
+    warmup = 2000, iter = 3000, chains = 4, control = list(adapt_delta = .99), silent = 2,
+    file = "../models/IBBU-pen-ignored",
+    file_refit = "on_change")
 
 # m.pen_ignored
 groups <- get_group_levels(m.pen_ignored, include_prior = T)
@@ -1138,8 +1139,9 @@ m.pen_compensated <-
     group.unique = "Condition", 
     response = "Response", 
     center.observations = T, scale.observations = F, tau_scale = sd(d.exposure.for_ibbu$cog_compensated),
-    warmup = 1000, iter = 2000, chains = 4, control = list(adapt_delta = .95),
-    file = "../models/IBBU-pen-compensated")
+    warmup = 1000, iter = 2000, chains = 4, control = list(adapt_delta = .99),
+    file = "../models/IBBU-pen-compensated",
+    file_refit = "on_change")
 
 # m.pen_compensated
 # summary(m.pen_compensated)
