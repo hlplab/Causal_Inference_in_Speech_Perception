@@ -1083,7 +1083,8 @@ d.test.for_ibbu <-
 # d.test.for_ibbu %>% group_by(Item.Pen) %>% tally()
 ```
 
-### Ignoring pen
+### Ignoring pen (without modeling maximal acceptable shift for "word"-responses during exposure)
+This approach assumes that all inputs during exposure are labeled as intended by the experimenter.
 
 ```{r, message=FALSE}
 # TO DO: consider *setting/assuming* lapse rate, rather than inferring it (since it's hard to infer)
@@ -1164,7 +1165,8 @@ map(
 )
 ```
 
-### Compensating for pen
+### Compensating for pen (without modeling maximal acceptable shift for "word"-responses during exposure)
+This approach assumes that all inputs during exposure are labeled as intended by the experimenter.
 
 ```{r, message=FALSE}
 m.pen_compensated <-
