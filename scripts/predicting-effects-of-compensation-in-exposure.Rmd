@@ -52,7 +52,7 @@ library(gganimate)
 
 library(brms)
 
-#  devtools::install_github("hlplab/MVBeliefUpdatr", ref = "path-stanfit-plotting")
+devtools::install_github("hlplab/MVBeliefUpdatr", ref = "path-stanfit-plotting")
 library(MVBeliefUpdatr)
 
 source("functions.R")
@@ -282,44 +282,44 @@ d.exposure %>%
   facet_grid(Experiment + Condition.Exposure.Pen ~ .) +
   coord_cartesian(expand = F)
 ```
+### Catch trial accuracy during exposure and text
+We need to exclude participants based on their catch trial performance, following the same exclusion criteria applied to the test-only experiments.
 
-### Lexical decision accuracy during exposure
-
-```{r, fig.width=fig.base_width*5, warnings=FALSE, fig.cap=c("Proportion correct answers in lexical decision task for critical and filler words with typical pronunciation.", 'Proportion "word" answers in lexical decision task for critical words with shifted pronunciation.')}
+```{r, fig.width=fig.base_width*8, fig.height=fig.base_height*2+.5, warnings=FALSE, fig.cap=c("Proportion correct catch answers in lexical decision task."), message=FALSE}
 p <-
   d.exposure %>%
-  filter(Item.Type != "shifted", !Item.isCatchTrial) %>%
-  group_by(Experiment, Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, ParticipantID) %>%
-  summarise(Accuracy.bySubject = mean(as.character(Response) == as.character(Item.WordStatus), na.rm = T)) %>%
+  bind_rows(d.test) %>%
+  # One participant for some reason has *one* trial for which Item.isCatchTrial is NA during test
+  # excluding this for now:
+  filter(!is.na(Item.isCatchTrial)) %>%
+  group_by(Experiment, Phase, Item.Pen, Item.isCatchTrial, ParticipantID) %>%
+  summarise(Accuracy.bySubject = mean(Response.CorrectCatch, na.rm = T)) %>%
   ggplot(
     aes(
-      x = Condition.Exposure.Pen, 
+      x = Item.Pen, 
       y = Accuracy.bySubject, 
-      color = Condition.Exposure.LexicalLabel, 
-      fill = Condition.Exposure.LexicalLabel,
-      shape = Condition.Exposure.Pen)) +
+      color = Item.isCatchTrial, 
+      fill = Item.isCatchTrial,
+      shape = Item.Pen)) +
   geom_dotplot(
     binaxis = "y", 
     stackdir = "center", 
     binpositions = "bygroup", 
     binwidth = .02,
-    dotsize = .6, alpha = .1, position = position_dodge(width = c(0,0))) +
+    dotsize = .6, alpha = .2, position = position_dodge(.5)) +
   stat_summary(
     fun = mean, geom = "point", 
-    position = position_dodge2(width = c(1,.5))) +
+    position = position_dodge2(.5)) +
   stat_summary(
     fun.data = mean_cl_boot, geom = "linerange", 
-    position = position_dodge2(width = c(1,.5)), alpha = .7) +
+    position = position_dodge2(.5), alpha = .7) +
   scale_x_discrete("") +
   scale_y_continuous("Proportion correct responses") +
-  scale_color_manual("Label",
-                    breaks = c("SH", "S"),
-                    labels = c("ʃ", "s"),
-                    values = c(color.sh, color.s)) +
-  scale_fill_manual("Label",
-                    breaks = c("SH", "S"),
-                    labels = c("ʃ", "s"),
-                    values = c(color.sh, color.s)) +
+  scale_color_manual("Is catch trial",
+                    breaks = c(T, F),
+                    labels = c("yes", "no"),
+                    values = c("black", "gray"),
+                    aesthetics = c("color", "fill")) +
   scale_shape_manual("Pen in",
                     breaks = c("H", "M"),
                     labels = c("hand", "mouth"),
@@ -327,22 +327,55 @@ p <-
   theme(axis.text.x = element_text(angle = 45, hjust = 1),
         axis.title.x = element_blank()) +
   coord_cartesian(ylim = c(0, 1)) + 
-  facet_grid(~ paste(Experiment), space = "free_x", scales = "free_x")
+  facet_grid(Phase ~ paste(Experiment), space = "free_x", scales = "free_x")
+
+plot(p)
+```
+
+### Lexical decision accuracy during exposure
+
+```{r, fig.width=fig.base_width*5, fig.height=fig.base_height+.5, warnings=FALSE, fig.cap=c("Proportion correct answers in lexical decision task for critical and filler words with typical pronunciation.", 'Proportion "word" answers in lexical decision task for critical words with shifted pronunciation.'), message=FALSE}
+p <- 
+  p %+%
+  (d.exposure %>%
+  filter(Item.Type != "shifted", !Item.isCatchTrial) %>%
+  # Make sure catch answers are treated as wrong for all the non-catch trials
+  mutate(Response = ifelse(is.na(Response), "WRONG", as.character(Response))) %>%
+  group_by(Experiment, Item.Pen, Condition.Exposure.LexicalLabel, ParticipantID) %>%
+  summarise(Accuracy.bySubject = mean(as.character(Response) == as.character(Item.WordStatus), na.rm = T))) +
+  aes(
+      x = Item.Pen, 
+      y = Accuracy.bySubject, 
+      color = Condition.Exposure.LexicalLabel, 
+      fill = Condition.Exposure.LexicalLabel,
+      shape = Item.Pen) +
+  scale_color_manual("Label",
+                     breaks = c("SH", "S"),
+                     labels = c("ʃ", "s"),
+                     values = c(color.sh, color.s),
+                     aesthetics = c("color", "fill")) + 
+  facet_grid(. ~ paste(Experiment), space = "free_x", scales = "free_x")
 
 plot(p)
 
 p %+%
   (d.exposure %>%
   filter(Item.Type == "shifted", !Item.isCatchTrial) %>%
-  group_by(Experiment, Condition.Exposure.Pen, Condition.Exposure.LexicalLabel, ParticipantID) %>%
+  # Make sure catch answers are treated as wrong for all the non-catch trials
+  mutate(Response = ifelse(is.na(Response), "WRONG", as.character(Response))) %>%
+  group_by(Experiment, Item.Pen, Condition.Exposure.LexicalLabel, ParticipantID) %>%
   summarise(Accuracy.bySubject = mean(as.character(Response) == "word", na.rm = T)))
 ```
 
 ### Effects of exposure during test
 
-```{r, fig.width=fig.base_width*6, fig.height=fig.base_height*2+1}
+```{r, fig.width=fig.base_width*6, fig.height=fig.base_height*2+1, fig.cap=c("Effects of exposure conditions on categorization responses during test", "Same but by test block.")}
 d.test %>%
-  filter(Experiment %in% unique(d.exposure$Experiment)) %>%
+  filter(
+    Experiment %in% unique(d.exposure$Experiment),
+    # Some participants give catch trial responses during test (even through test
+    # never contain catch trials)
+    !Response.CatchTrial) %>%
   ggplot(
     aes(
       x = cog,
@@ -355,7 +388,7 @@ d.test %>%
     fun.data = mean_cl_boot) +
   stat_summary(
     geom = "line",
-    fun = mean, aes(linetype = Condition.Test.Pen)) +
+    fun = mean) +
   scale_x_continuous("center of gravity") +
   scale_y_continuous("Proportion of ASHI-responses", limits = c(0, 1))+ 
   scale_color_manual("Label",
@@ -371,9 +404,12 @@ d.test %>%
                     labels = c("hand", "mouth"),
                     values = c(lt.PIH, lt.PIM)) +
   facet_grid(paste("Pen in test:", Condition.Test.Pen) ~ paste(Experiment), space = "free_x", scales = "free_x")
-```
 
-TO DO: Add plots that show how effects change across test blocks. Below, we're for now only using earlier test blocks, under the *assumption* that learning is reduced by repeated testing over the uniform test continuum.
+last_plot() %+%
+  aes(x = Block) +
+  geom_hline(yintercept = .5, color = "gray", linetype = 2) +
+  scale_x_continuous("Test block")
+```
 
 # Estimating effects of compensation
 
@@ -413,7 +449,7 @@ m1 <-
 # summary(m1)
 ```
 
-consider sampling instead such that the chance of being interpreted as /s/ vs /sh/ changes across continuum, rather than a strict cutoff
+NOTE: consider sampling instead such that the chance of being interpreted as /s/ vs /sh/ changes across continuum, rather than a strict cutoff.
 
 ```{r}
 # Cutoff values are the minimum probability that the segment must
@@ -1054,15 +1090,17 @@ d.test.for_ibbu <-
 
 # TO DO: Compare where the input of pen_ignored and pen_compensated differ
 m.pen_ignored <-
-  infer_NIW_ideal_adaptor(
-    exposure = d.exposure.for_ibbu,
-    test = d.test.for_ibbu, 
-    cues = "cog", 
-    category = "Item.VisualLabel", 
-    group = "ParticipantID",
-    group.unique = "Condition", 
-    response = "Response", 
-    center.observations = T, scale.observations = F, tau_scale = sd(d.exposure.for_ibbu$cog),
+  fit_NIW_ideal_adaptor(
+    staninput = make_staninput(
+      exposure = d.exposure.for_ibbu,
+      test = d.test.for_ibbu, 
+      cues = "cog", 
+      category = "Item.VisualLabel", 
+      group = "ParticipantID",
+      group.unique = "Condition", 
+      response = "Response", 
+      center.observations = T, scale.observations = F, tau_scale = sd(d.exposure.for_ibbu$cog),
+      model_type = "NIW_ideal_adaptor"),
     warmup = 2000, iter = 3000, chains = 4, control = list(adapt_delta = .99), silent = 2,
     file = "../models/IBBU-pen-ignored",
     file_refit = "on_change")
@@ -1130,15 +1168,17 @@ map(
 
 ```{r, message=FALSE}
 m.pen_compensated <-
-  infer_NIW_ideal_adaptor(
-    exposure = d.exposure.for_ibbu,
-    test = d.test.for_ibbu, 
-    cues = "cog_compensated", 
-    category = "Item.VisualLabel", 
-    group = "ParticipantID",
-    group.unique = "Condition", 
-    response = "Response", 
-    center.observations = T, scale.observations = F, tau_scale = sd(d.exposure.for_ibbu$cog_compensated),
+  fit_NIW_ideal_adaptor(
+    staninput = make_staninput(
+      exposure = d.exposure.for_ibbu,
+      test = d.test.for_ibbu, 
+      cues = "cog_compensated", 
+      category = "Item.VisualLabel", 
+      group = "ParticipantID",
+      group.unique = "Condition", 
+      response = "Response", 
+      center.observations = T, scale.observations = F, tau_scale = sd(d.exposure.for_ibbu$cog_compensated),
+      model_type = "NIW_ideal_adaptor"),
     warmup = 1000, iter = 2000, chains = 4, control = list(adapt_delta = .99),
     file = "../models/IBBU-pen-compensated",
     file_refit = "on_change")
