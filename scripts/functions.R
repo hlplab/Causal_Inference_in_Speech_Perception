@@ -1024,7 +1024,7 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
   }
   shared_formatting <- 
     list(
-      scale_y_continuous(bquote(paste('Proportion ', italic("ashi"), " responses", sep = ""))),
+      scale_y_continuous(bquote(paste('Proportion ', italic("ashi"), "-responses", sep = ""))),
       scale_shape_manual(
         "Pen location", 
         breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = shapes.test.pen_locations),
