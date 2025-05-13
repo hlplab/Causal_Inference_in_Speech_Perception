@@ -229,6 +229,14 @@ d.test %<>%
 
 # median(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
 # sd(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
+
+mean(d.test %>% 
+       mutate(Response.log_RT = log10(Response.RT)) %>%
+       filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
+
+sd(d.test %>% 
+       mutate(Response.log_RT = log10(Response.RT)) %>%
+       filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
 ```
 
 ## Exit survey
@@ -789,6 +797,16 @@ Figure \@ref(fig:exclusions-exp2) summarized the exclusions for Experiment 2 and
 
 ```{r exclusions-exp2, fig.width=2*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp2)", results='asis', out.width="66%", warning=FALSE}
 d.test.Exp2 %<>% run_exclusions(c("CISP-2", "CISP-2b"))
+
+# mean(d.test.Exp2 %>% 
+#        mutate(Response.log_RT = log10(Response.RT)) %>%
+#        filter(Experiment == "CISP-2") %>% 
+#        pull(Response.log_RT))
+# 
+# sd(d.test.Exp2 %>% 
+#        mutate(Response.log_RT = log10(Response.RT)) %>%
+#        filter(Experiment == "CISP-2") %>% 
+#        pull(Response.log_RT))
 ```
 
 ## Analyses - Experiment 2
