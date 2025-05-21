@@ -204,7 +204,9 @@ d.LJ18.test <-
     rename(Condition.Test.Audio = Step, Item.Filename = Filename, Response.RT = RT) %>%
   select(-c(X, Label, Condition, Subject))
 
-d.test <- bind_rows(d.test.Exp1, d.LJ18.test)
+d.test <- 
+  bind_rows(d.test.Exp1, d.LJ18.test) %>%
+  add_exclusion_information()
 ```
 
 ## Materials: Selection of acoustic continuum steps
@@ -217,26 +219,71 @@ The intention for Experiment 1a was to employ the exact same acoustic steps as i
 (ref:exclusions-exp1) Mean and SD of log-transformed reaction times for participants in Experiments 1a-c.
 
 ```{r exclusions-exp1, fig.width=3*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp1)", results='asis', out.width="100%", warning=FALSE}
+# how many pt's worth of data do we have before exclusions?
+# d.test %>%
+#   group_by(Experiment, ParticipantID) %>%
+#   slice(1) %>%
+#   group_by(Experiment) %>%
+#   summarize(count = n())
+# only 63 for 1c...
+
 # Make exclusion plot for only 1a-c
 d.test.Exp1 <-
   d.test %>%
   run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
+```
 
+(ref:exclusions-exp1-RTs) Trial exclusions based on RTs. Log-transformed RTs were first scaled within participants. Since participants' RTs decreased throughout the experiment (black line), we excluded responses that where more than 3 SDs faster or slower than the scaled log-RTs across participants *at that trial position* (gray ribbon). This exclusion was applied *after* removing excluded participants.
+
+```{r exclusions-exp1-RTs, fig.width=3*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp1-RTs)", results='asis', out.width="100%"}
+d.test %>%
+  excludeParticipants() %>%
+  filter(Experiment != "LJ18-NORM") %>%
+  group_by(Experiment, ParticipantID) %>%
+  # Get mean of log-transformed RTs for each participant
+  mutate(
+    Response.log_RT = log10(ifelse(Response.RT < 0, NA_real_, Response.RT)),
+    Response.log_RT_scaled = scale(Response.log_RT)) %>%
+  group_by(Experiment, Trial) %>%
+  mutate(
+    meanRibbon = mean(Response.log_RT_scaled, na.rm = T),
+    upperRibbon = meanRibbon + 3 * sd(Response.log_RT_scaled, na.rm = T),
+    lowerRibbon = meanRibbon - 3 * sd(Response.log_RT_scaled, na.rm = T)) %>%
+  ggplot(aes(x = Trial)) +
+  geom_ribbon((aes(ymin = lowerRibbon, ymax = upperRibbon)), alpha = 0.2, fill = "black") +
+  geom_point(aes(y = Response.log_RT_scaled, color = Exclude_Trial.because_of_RT), size = .25, alpha = .5) +
+  geom_line((aes(y = meanRibbon)), color = "black") +
+  scale_y_continuous("Scaled log-transformed RTs") +
+  scale_color_discrete("Trial excluded", breaks = c(T, F), labels = c("yes", "no")) +
+  facet_wrap(~Experiment)
+```
+
+```{r}
 # To also make sure exclusions have been applied LJ18
 d.test %<>%
-  excludeData() %>%
-  filter(!is.na(Response.ASHI))
+  excludeParticipants() %>%
+  excludeTrials()
 
 # median(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
 # sd(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
 
-mean(d.test %>% 
-       mutate(Response.log_RT = log10(Response.RT)) %>%
-       filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
-
-sd(d.test %>% 
-       mutate(Response.log_RT = log10(Response.RT)) %>%
-       filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
+# mean(d.test %>% 
+#        mutate(Response.log_RT = log10(Response.RT)) %>%
+#        filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
+# 
+# sd(d.test %>% 
+#        mutate(Response.log_RT = log10(Response.RT)) %>%
+#        filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
+# 
+# d.test %>%
+#   filter(Exclude_Trial.because_of_RT == TRUE | is.na(Response.ASHI)) %>%
+#   mutate(reason = case_when(
+#     Exclude_Trial.because_of_RT == TRUE ~ "RT",
+#     is.na(Response.ASHI) ~ "Catch",
+#     Exclude_Trial.because_of_RT == TRUE & is.na(Response.ASHI) ~ "Both"
+#   )) %>%
+#   group_by(Experiment, reason) %>%
+#   summarise(count = n())
 ```
 
 ## Exit survey
@@ -796,7 +843,9 @@ Figure \@ref(fig:exclusions-exp2) summarized the exclusions for Experiment 2 and
 (ref:exclusions-exp2) Mean and SD of log-transformed reaction times for participants in Experiments 2, 2b.
 
 ```{r exclusions-exp2, fig.width=2*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp2)", results='asis', out.width="66%", warning=FALSE}
-d.test.Exp2 %<>% run_exclusions(c("CISP-2", "CISP-2b"))
+d.test.Exp2 %<>% 
+  add_exclusion_information() %>%
+  run_exclusions(c("CISP-2", "CISP-2b"))
 
 # mean(d.test.Exp2 %>% 
 #        mutate(Response.log_RT = log10(Response.RT)) %>%
