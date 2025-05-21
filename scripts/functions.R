@@ -439,30 +439,38 @@ sortVars <- function(.data) {
 
 add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
   # Get rid of any pre-existing exclusion variables, except for exclusion for technical reasons
+  # and Multiple experiments, because it relies on de-identifiable information.
   data %<>%
-    select(-starts_with("Exclude_Participant"), Exclude_Participant.because_of_TechnicalDifficulty)
+    select(-starts_with("Exclude_Participant"), 
+           Exclude_Participant.because_of_TechnicalDifficulty,
+           Exclude_Participant.because_of_MultipleExperiments)
   # Multiple HITs
-  data %<>%
-    # Remove all but chronologically first instance of experiments by the same participant
-    group_by(Experiment, WorkerID, Platform) %>%
-    mutate(
-      Exclude_Participant.because_of_MultipleExperiments = ifelse(Platform == "MTurk",
-        ifelse(Assignment.Submit.DateTime.UTC > min(Assignment.Submit.DateTime.UTC), T, F),
-        ifelse(userDateTime > min(userDateTime), T, F))) %>%
-    ungroup()
+  # commented out for now, because this was completed before initial import (done so because it 
+  # requires reference to MTurk / Prolific IDs and thus had to be completed prior to de-identifying
+  # the data).
+  #
+  # data %<>%
+  #   # Remove all but chronologically first instance of experiments by the same participant
+  #   group_by(Experiment, WorkerID, Platform) %>%
+  #   mutate(
+  #     Exclude_Participant.because_of_MultipleExperiments = ifelse(Platform == "MTurk",
+  #       ifelse(Assignment.Submit.DateTime.UTC > min(Assignment.Submit.DateTime.UTC), T, F),
+  #       ifelse(userDateTime > min(userDateTime), T, F))) %>%
+  #   ungroup()
    # this will not catch workers who take part in multiple *different* experiments
    # (once each of, e.g. Exp1b and later Exp2a.) We mitigated this possibility via blocking
    # WorkerIDs within each platform (MTurk and Prolific) such that the same workerID could not
    # take part in subsequent studies. 
   
   # Lexical decision accuracy
-  data %<>%
-    group_by(Experiment, ParticipantID) %>%
-    mutate(Accuracy.LD = mean(Response.CorrectWordStatus,
-                         na.rm = T)) %>%
-    ungroup() %>%
-    mutate(Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal = ifelse(
-             Accuracy.LD >= .85, FALSE, TRUE))
+  # commented out for now because none of the studies in the JEP:LMC study included LDA
+  # data %<>%
+  #   group_by(Experiment, ParticipantID) %>%
+  #   mutate(Accuracy.LD = mean(Response.CorrectWordStatus,
+  #                        na.rm = T)) %>%
+  #   ungroup() %>%
+  #   mutate(Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal = ifelse(
+  #            Accuracy.LD >= .85, FALSE, TRUE))
 
   # Failure to follow instructions
   data %<>%
@@ -475,34 +483,37 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
       Exclude_Participant.because_of_CatchQuestion = ifelse(Talker.Sex == "woman", FALSE, TRUE))
   
   # Exclusion based on catch trials
-  data %<>%
-    group_by(Experiment, ParticipantID) %>%
-    mutate(
-      Accuracy.CatchTrials.onCatchTrial = mean(
-        case_when(
-          Phase != "exposure" ~ NA_real_,
-          !Item.isCatchTrial ~ NA_real_,
-          Item.isCatchTrial == Response.CatchTrial ~ 1,
-          Item.isCatchTrial != Response.CatchTrial ~ 0,
-          T ~ NA_real_),
-        na.rm = T),
-      Accuracy.CatchTrials.onNonCatchTrial = mean(
-        case_when(
-          #Phase != "exposure" ~ NA_real_,
-          Item.isCatchTrial ~ NA_real_,
-          Item.isCatchTrial == Response.CatchTrial ~ 1,
-          Item.isCatchTrial != Response.CatchTrial ~ 0,
-          T ~ NA_real_),
-        na.rm = T)) %>%
-    ungroup() %>%
-    mutate(
-      Exclude_Participant.because_of_CatchTrials = case_when(
-        !exclude_based_on_catch_trials ~ FALSE,
-        Accuracy.CatchTrials.onCatchTrial >= .8 & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
-        ## If Accuracy.CatchTrials.onCatchTrial is NaN, then there were no catch trials
-        ## in entire experiment (this is expected of 1a-c, 2a-b). 
-        is.na(Accuracy.CatchTrials.onCatchTrial) & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
-        T ~ TRUE))
+  # commented out because there are no catch trials in these experiments. This criterion was includes for 
+  # the exposure-test (perceptual recalibration) experiments planned later in this project.
+  #
+  # data %<>%
+  #   group_by(Experiment, ParticipantID) %>%
+  #   mutate(
+  #     Accuracy.CatchTrials.onCatchTrial = mean(
+  #       case_when(
+  #         Phase != "exposure" ~ NA_real_,
+  #         !Item.isCatchTrial ~ NA_real_,
+  #         Item.isCatchTrial == Response.CatchTrial ~ 1,
+  #         Item.isCatchTrial != Response.CatchTrial ~ 0,
+  #         T ~ NA_real_),
+  #       na.rm = T),
+  #     Accuracy.CatchTrials.onNonCatchTrial = mean(
+  #       case_when(
+  #         #Phase != "exposure" ~ NA_real_,
+  #         Item.isCatchTrial ~ NA_real_,
+  #         Item.isCatchTrial == Response.CatchTrial ~ 1,
+  #         Item.isCatchTrial != Response.CatchTrial ~ 0,
+  #         T ~ NA_real_),
+  #       na.rm = T)) %>%
+  #   ungroup() %>%
+  #   mutate(
+  #     Exclude_Participant.because_of_CatchTrials = case_when(
+  #       !exclude_based_on_catch_trials ~ FALSE,
+  #       Accuracy.CatchTrials.onCatchTrial >= .8 & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
+  #       ## If Accuracy.CatchTrials.onCatchTrial is NaN, then there were no catch trials
+  #       ## in entire experiment (this is expected of 1a-c, 2a-b). 
+  #       is.na(Accuracy.CatchTrials.onCatchTrial) & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
+  #       T ~ TRUE))
   
   # Exclude based on RTs
   data %<>%
@@ -534,7 +545,7 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
           # Fit GLM if there are at least 24 responses in test
           ~ if ((.x %>% filter(Phase == "test" & !is.na(Response)) %>% nrow(.)) > 24) {
             glm(Response == "ASHI" ~ Condition.Test.Audio, data = .x %>% filter(Phase == "test"), family = binomial) %>% 
-              tidy()
+              broom::tidy()
           } else { 
             # Otherwise just add a data frame with NAs.
             data.frame(term = c("(Intercept)", "Condition.Test.Audio"), estimate = NA, p.value = NA) }) ,
@@ -568,8 +579,8 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
         Exclude_Participant.because_of_MultipleExperiments ~ "Repeat participant",
         Exclude_Participant.because_of_IgnoredInstructions ~ "No headphones",
         Exclude_Participant.because_of_CatchQuestion ~ "Catch question or trials",
-        exclude_based_on_catch_trials & Exclude_Participant.because_of_CatchTrials ~ "Catch question or trials",
-        Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal ~ "Lexical decision accuracy",
+        #exclude_based_on_catch_trials & Exclude_Participant.because_of_CatchTrials ~ "Catch question or trials",
+        #Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal ~ "Lexical decision accuracy",
         Exclude_Participant.because_of_SwappedKeys ~ "Swapped response keys",
         Exclude_Participant.because_of_RT ~ "Reaction time",
         Exclude_Participant.because_of_MissingTrials ~ "Too many missing trials",
@@ -590,7 +601,7 @@ exclusionPlot <- function(data) {
     data %>%
     droplevels() %>%
     group_by(Experiment, ParticipantID, Exclude_Participant.Reason) %>%
-    mutate(Response.log_RT = log10(Response.RT)) %>%
+    mutate(Response.log_RT = log10(ifelse(Response.RT < 0, NA_real_, Response.RT))) %>%
     summarise_at("Response.log_RT", .funs = list("mean" = mean, "sd" = sd), na.rm = T) %>%
     ggplot(aes(x = mean, y = sd)) +
     geom_point(aes(color = Exclude_Participant.Reason, shape = Exclude_Participant.Reason)) +
@@ -634,14 +645,24 @@ exclusionPlot <- function(data) {
 }
 
 
-excludeData <- function(data) {
+excludeParticipants <- function(data) {
   data %<>%
     filter(
-      Exclude_Participant.Reason == "none" | Experiment == "LJ18-NORM",
-      !Exclude_Trial.because_of_RT | Experiment == "LJ18-NORM")
+      Exclude_Participant.Reason == "none" | Experiment == "LJ18-NORM")
   
   return(data)
 }
+
+excludeTrials <- function(data) {
+  data %<>%
+    filter(
+      !is.na(Response.ASHI),
+      Exclude_Trial.because_of_RT == FALSE | Experiment == "LJ18-NORM") # LJ18 did not include RT measurements
+  
+  return(data)
+}
+
+
 
 run_exclusions <- function(data, experiment) {
   data %<>% filter(Experiment %in% experiment)
@@ -675,23 +696,30 @@ run_exclusions <- function(data, experiment) {
   exclusionPlot(data)
   
   data %<>% 
-    excludeData()
+    excludeParticipants()
   
   message(
     "\nData submitted for analysis contains ", 
     nrow(data %>% filter(is.na(Response.ASHI))),
     " missing observations (",
     percent(nrow(data %>% filter(is.na(Response.ASHI))) / nrow(data)),
+    "), and ",
+    nrow(data %>% filter(Exclude_Trial.because_of_RT == TRUE)),
+    " observations excluded for irregular RTs (",
+    percent(nrow(data %>% filter(Exclude_Trial.because_of_RT == TRUE)) / nrow(data)),
     "), leaving ",
-    nrow(data %>% filter(!is.na(Response.ASHI))),
+    nrow(data %>% filter(!is.na(Response.ASHI) &
+                           Exclude_Trial.because_of_RT == FALSE)),
     " observations from ",
-    data %>% filter(!is.na(Response.ASHI)) %>% pull(ParticipantID) %>% unique() %>% length(),
+    data %>% filter(!is.na(Response.ASHI) &
+                      Exclude_Trial.because_of_RT == FALSE) %>% pull(ParticipantID) %>% unique() %>% length(),
     " participants from ",
-    data %>% filter(!is.na(Response.ASHI)) %>% pull(Experiment) %>% unique() %>% length(),
+    data %>% filter(!is.na(Response.ASHI) &
+                      Exclude_Trial.because_of_RT == FALSE) %>% pull(Experiment) %>% unique() %>% length(),
     " experiment(s).")
   
-  data %>%
-    filter(!is.na(Response.ASHI))
+  data %<>%
+    excludeTrials()
 }
 ## Data summaries ------------------------------------------------------- 
 
