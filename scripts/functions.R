@@ -445,7 +445,10 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
            Exclude_Participant.because_of_TechnicalDifficulty,
            Exclude_Participant.because_of_MultipleExperiments)
   # Multiple HITs
-  # commented out for now, because this was completed before initial import
+  # commented out for now, because this was completed before initial import (done so because it 
+  # requires reference to MTurk / Prolific IDs and thus had to be completed prior to de-identifying
+  # the data).
+  #
   # data %<>%
   #   # Remove all but chronologically first instance of experiments by the same participant
   #   group_by(Experiment, WorkerID, Platform) %>%
@@ -480,8 +483,9 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
       Exclude_Participant.because_of_CatchQuestion = ifelse(Talker.Sex == "woman", FALSE, TRUE))
   
   # Exclusion based on catch trials
-  # commented out because there are no catch trials
-  # missing trials is a seperate criterion later
+  # commented out because there are no catch trials in these experiments. This criterion was includes for 
+  # the exposure-test (perceptual recalibration) experiments planned later in this project.
+  #
   # data %<>%
   #   group_by(Experiment, ParticipantID) %>%
   #   mutate(
@@ -575,6 +579,7 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
         Exclude_Participant.because_of_MultipleExperiments ~ "Repeat participant",
         Exclude_Participant.because_of_IgnoredInstructions ~ "No headphones",
         Exclude_Participant.because_of_CatchQuestion ~ "Catch question or trials",
+        #exclude_based_on_catch_trials & Exclude_Participant.because_of_CatchTrials ~ "Catch question or trials",
         #Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal ~ "Lexical decision accuracy",
         Exclude_Participant.because_of_SwappedKeys ~ "Swapped response keys",
         Exclude_Participant.because_of_RT ~ "Reaction time",
