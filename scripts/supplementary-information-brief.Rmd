@@ -204,7 +204,8 @@ d.LJ18.test <-
     rename(Condition.Test.Audio = Step, Item.Filename = Filename, Response.RT = RT) %>%
   select(-c(X, Label, Condition, Subject))
 
-d.test <- bind_rows(d.test.Exp1, d.LJ18.test) %>%
+d.test <- 
+  bind_rows(d.test.Exp1, d.LJ18.test) %>%
   add_exclusion_information()
 ```
 
@@ -259,32 +260,28 @@ d.test %>%
   summarise(count = n())
 ```
 
-Extra analyses of trial-level RT
-maybe keep this sort of plot?
-```{r}
+(ref:exclusions-exp1-RTs) Trial exclusions based on RTs. Log-transformed RTs were first scaled within participants. Since participants' RTs decreased throughout the experiment (black line), we excluded responses that where more than 3 SDs faster or slower than the scaled log-RTs across participants *at that trial position* (gray ribbon). This exclusion was applied *after* removing excluded participants.
+
+```{r, fig.width=3*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp1-RTs)", results='asis', out.width="100%"}
 d.test %>%
   filter(Experiment != "LJ18-NORM") %>%
   group_by(Experiment, ParticipantID) %>%
-  # Get mean and SD of log-transformed RTs for each participant
+  # Get mean of log-transformed RTs for each participant
   mutate(
     Response.log_RT = log10(ifelse(Response.RT < 0, NA_real_, Response.RT)),
-    Response.log_RT_scaled = scale(Response.log_RT),
-    Response.mean_log_RT = mean(Response.log_RT, na.rm = T)) %>%
+    Response.log_RT_scaled = scale(Response.log_RT)) %>%
   group_by(Experiment, Trial) %>%
-  # mutate(Exclude_Trial.because_of_RT = ifelse(is.na(Response.log_RT_scaled) | abs(scale(Response.log_RT_scaled)) > 3, T, F)) %>%
-  mutate(upperRibbon = mean(Response.log_RT_scaled) + 
-           3 * sd(scale(Response.log_RT_scaled), na.rm = T),
-         lowerRibbon = mean(Response.log_RT_scaled) - 
-           3 * sd(scale(Response.log_RT_scaled), na.rm = T)) %>%
+  mutate(
+    meanRibbon = mean(Response.log_RT_scaled, na.rm = T),
+    upperRibbon = meanRibbon + 3 * sd(Response.log_RT_scaled, na.rm = T),
+    lowerRibbon = meanRibbon - 3 * sd(Response.log_RT_scaled, na.rm = T)) %>%
   ggplot(aes(x = Trial)) +
-  geom_point(aes(y = Response.log_RT_scaled,
-                 color = Exclude_Trial.because_of_RT)) +
-  geom_line(aes(y = upperRibbon)) +
-  geom_line(aes(y = lowerRibbon)) +
+  geom_ribbon((aes(ymin = lowerRibbon, ymax = upperRibbon)), alpha = 0.2, fill = "black") +
+  geom_point(aes(y = Response.log_RT_scaled, color = Exclude_Trial.because_of_RT), size = .25, alpha = .5) +
+  geom_line((aes(y = meanRibbon)), color = "black") +
+  scale_y_continuous("Scaled log-transformed RTs") +
+  scale_color_discrete("Trial excluded", breaks = c(T, F), labels = c("yes", "no")) +
   facet_wrap(~Experiment)
-#geom_ribbon()
-#pointrange of sds
-    
 ```
 
 
