@@ -439,8 +439,11 @@ sortVars <- function(.data) {
 
 add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
   # Get rid of any pre-existing exclusion variables, except for exclusion for technical reasons
+  # and Multiple experiments, because it relies on de-identifiable information.
   data %<>%
-    select(-starts_with("Exclude_Participant"), Exclude_Participant.because_of_TechnicalDifficulty)
+    select(-starts_with("Exclude_Participant"), 
+           Exclude_Participant.because_of_TechnicalDifficulty,
+           Exclude_Participant.because_of_MultipleExperiments)
   # Multiple HITs
   # commented out for now, because this was completed before initial import
   # data %<>%
@@ -457,13 +460,14 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
    # take part in subsequent studies. 
   
   # Lexical decision accuracy
-  data %<>%
-    group_by(Experiment, ParticipantID) %>%
-    mutate(Accuracy.LD = mean(Response.CorrectWordStatus,
-                         na.rm = T)) %>%
-    ungroup() %>%
-    mutate(Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal = ifelse(
-             Accuracy.LD >= .85, FALSE, TRUE))
+  # commented out for now because none of the studies in the JEP:LMC study included LDA
+  # data %<>%
+  #   group_by(Experiment, ParticipantID) %>%
+  #   mutate(Accuracy.LD = mean(Response.CorrectWordStatus,
+  #                        na.rm = T)) %>%
+  #   ungroup() %>%
+  #   mutate(Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal = ifelse(
+  #            Accuracy.LD >= .85, FALSE, TRUE))
 
   # Failure to follow instructions
   data %<>%
@@ -476,34 +480,36 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
       Exclude_Participant.because_of_CatchQuestion = ifelse(Talker.Sex == "woman", FALSE, TRUE))
   
   # Exclusion based on catch trials
-  data %<>%
-    group_by(Experiment, ParticipantID) %>%
-    mutate(
-      Accuracy.CatchTrials.onCatchTrial = mean(
-        case_when(
-          Phase != "exposure" ~ NA_real_,
-          !Item.isCatchTrial ~ NA_real_,
-          Item.isCatchTrial == Response.CatchTrial ~ 1,
-          Item.isCatchTrial != Response.CatchTrial ~ 0,
-          T ~ NA_real_),
-        na.rm = T),
-      Accuracy.CatchTrials.onNonCatchTrial = mean(
-        case_when(
-          #Phase != "exposure" ~ NA_real_,
-          Item.isCatchTrial ~ NA_real_,
-          Item.isCatchTrial == Response.CatchTrial ~ 1,
-          Item.isCatchTrial != Response.CatchTrial ~ 0,
-          T ~ NA_real_),
-        na.rm = T)) %>%
-    ungroup() %>%
-    mutate(
-      Exclude_Participant.because_of_CatchTrials = case_when(
-        !exclude_based_on_catch_trials ~ FALSE,
-        Accuracy.CatchTrials.onCatchTrial >= .8 & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
-        ## If Accuracy.CatchTrials.onCatchTrial is NaN, then there were no catch trials
-        ## in entire experiment (this is expected of 1a-c, 2a-b). 
-        is.na(Accuracy.CatchTrials.onCatchTrial) & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
-        T ~ TRUE))
+  # commented out because there are no catch trials
+  # missing trials is a seperate criterion later
+  # data %<>%
+  #   group_by(Experiment, ParticipantID) %>%
+  #   mutate(
+  #     Accuracy.CatchTrials.onCatchTrial = mean(
+  #       case_when(
+  #         Phase != "exposure" ~ NA_real_,
+  #         !Item.isCatchTrial ~ NA_real_,
+  #         Item.isCatchTrial == Response.CatchTrial ~ 1,
+  #         Item.isCatchTrial != Response.CatchTrial ~ 0,
+  #         T ~ NA_real_),
+  #       na.rm = T),
+  #     Accuracy.CatchTrials.onNonCatchTrial = mean(
+  #       case_when(
+  #         #Phase != "exposure" ~ NA_real_,
+  #         Item.isCatchTrial ~ NA_real_,
+  #         Item.isCatchTrial == Response.CatchTrial ~ 1,
+  #         Item.isCatchTrial != Response.CatchTrial ~ 0,
+  #         T ~ NA_real_),
+  #       na.rm = T)) %>%
+  #   ungroup() %>%
+  #   mutate(
+  #     Exclude_Participant.because_of_CatchTrials = case_when(
+  #       !exclude_based_on_catch_trials ~ FALSE,
+  #       Accuracy.CatchTrials.onCatchTrial >= .8 & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
+  #       ## If Accuracy.CatchTrials.onCatchTrial is NaN, then there were no catch trials
+  #       ## in entire experiment (this is expected of 1a-c, 2a-b). 
+  #       is.na(Accuracy.CatchTrials.onCatchTrial) & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
+  #       T ~ TRUE))
   
   # Exclude based on RTs
   data %<>%
@@ -535,7 +541,7 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
           # Fit GLM if there are at least 24 responses in test
           ~ if ((.x %>% filter(Phase == "test" & !is.na(Response)) %>% nrow(.)) > 24) {
             glm(Response == "ASHI" ~ Condition.Test.Audio, data = .x %>% filter(Phase == "test"), family = binomial) %>% 
-              tidy()
+              broom::tidy()
           } else { 
             # Otherwise just add a data frame with NAs.
             data.frame(term = c("(Intercept)", "Condition.Test.Audio"), estimate = NA, p.value = NA) }) ,
@@ -568,9 +574,9 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
         Exclude_Participant.because_of_TechnicalDifficulty ~ "Technical difficulty",
         Exclude_Participant.because_of_MultipleExperiments ~ "Repeat participant",
         Exclude_Participant.because_of_IgnoredInstructions ~ "No headphones",
-        Exclude_Participant.because_of_CatchQuestion ~ "Catch question or trials",
-        exclude_based_on_catch_trials & Exclude_Participant.because_of_CatchTrials ~ "Catch question or trials",
-        Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal ~ "Lexical decision accuracy",
+        #Exclude_Participant.because_of_CatchQuestion ~ "Catch question or trials",
+        #exclude_based_on_catch_trials & Exclude_Participant.because_of_CatchTrials ~ "Catch question or trials",
+        #Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal ~ "Lexical decision accuracy",
         Exclude_Participant.because_of_SwappedKeys ~ "Swapped response keys",
         Exclude_Participant.because_of_RT ~ "Reaction time",
         Exclude_Participant.because_of_MissingTrials ~ "Too many missing trials",
@@ -591,7 +597,7 @@ exclusionPlot <- function(data) {
     data %>%
     droplevels() %>%
     group_by(Experiment, ParticipantID, Exclude_Participant.Reason) %>%
-    mutate(Response.log_RT = log10(Response.RT)) %>%
+    mutate(Response.log_RT = log10(ifelse(Response.RT < 0, NA_real_, Response.RT))) %>%
     summarise_at("Response.log_RT", .funs = list("mean" = mean, "sd" = sd), na.rm = T) %>%
     ggplot(aes(x = mean, y = sd)) +
     geom_point(aes(color = Exclude_Participant.Reason, shape = Exclude_Participant.Reason)) +

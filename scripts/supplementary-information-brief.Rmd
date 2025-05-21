@@ -204,7 +204,8 @@ d.LJ18.test <-
     rename(Condition.Test.Audio = Step, Item.Filename = Filename, Response.RT = RT) %>%
   select(-c(X, Label, Condition, Subject))
 
-d.test <- bind_rows(d.test.Exp1, d.LJ18.test)
+d.test <- bind_rows(d.test.Exp1, d.LJ18.test) %>%
+  add_exclusion_information()
 ```
 
 ## Materials: Selection of acoustic continuum steps
@@ -217,6 +218,15 @@ The intention for Experiment 1a was to employ the exact same acoustic steps as i
 (ref:exclusions-exp1) Mean and SD of log-transformed reaction times for participants in Experiments 1a-c.
 
 ```{r exclusions-exp1, fig.width=3*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp1)", results='asis', out.width="100%", warning=FALSE}
+
+# how many pt's worth of data do we have before exclusions?
+d.test %>%
+  group_by(Experiment, ParticipantID) %>%
+  slice(1) %>%
+  group_by(Experiment) %>%
+  summarize(count = n())
+# only 63 for 1c...
+
 # Make exclusion plot for only 1a-c
 d.test.Exp1 <-
   d.test %>%
@@ -242,7 +252,7 @@ sd(d.test %>%
 Extra analyses of trial-level RT
 maybe keep this sort of plot?
 ```{r}
-d.test.Exp1 %>%
+d.test %>%
     group_by(Experiment, ParticipantID) %>%
     # Get mean and SD of log-transformed RTs for each participant
     mutate(
@@ -253,16 +263,13 @@ d.test.Exp1 %>%
   # mutate(Exclude_Trial.because_of_RT = ifelse(is.na(Response.log_RT_scaled) | abs(scale(Response.log_RT_scaled)) > 3, T, F)) %>%
   mutate(abs_scaled_Response.log_RT_scaled = abs(scale(Response.log_RT_scaled))) %>%
   ggplot(aes(x = Trial,
-             y = Response.log_RT_scaled)) +
+             y = Response.log_RT_scaled,
+             color = Exclude_Trial.because_of_RT)) +
   geom_point() +
-  geom_hline(yintercept = 3.5) +
-  facet_wrap(~Experiment) +
-  geom_ribbon()
+  geom_hline(yintercept = 3) +
+  facet_wrap(~Experiment)
+  #geom_ribbon()
   #pointrange of sds
-
-
-d.test2 <- d.test %>%
-  add_exclusion_information()
     
 ```
 
