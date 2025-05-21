@@ -269,14 +269,15 @@ d.test %>%
       Response.log_RT = log10(ifelse(Response.RT < 0, NA_real_, Response.RT)),
       Response.log_RT_scaled = scale(Response.log_RT),
       Response.mean_log_RT = mean(Response.log_RT, na.rm = T)) %>%
-    group_by(Trial) %>%
+    group_by(Experiment, Trial) %>%
   # mutate(Exclude_Trial.because_of_RT = ifelse(is.na(Response.log_RT_scaled) | abs(scale(Response.log_RT_scaled)) > 3, T, F)) %>%
-  mutate(abs_scaled_Response.log_RT_scaled = abs(scale(Response.log_RT_scaled))) %>%
-  ggplot(aes(x = Trial,
-             y = Response.log_RT_scaled,
+  mutate(upperRibbon = mean(Response.log_RT_scaled) + 3 * sd(scale(Response.log_RT_scaled)),
+         lowerRibbon = mean(Response.log_RT_scaled) - 3 * sd(scale(Response.log_RT_scaled))) %>%
+  ggplot(aes(x = Trial)) +
+  geom_point(aes(y = Response.log_RT_scaled,
              color = Exclude_Trial.because_of_RT)) +
-  geom_point() +
-  geom_hline(yintercept = 3) +
+    geom_line(aes(y = upperRibbon)) +
+  geom_line(aes(y = lowerRibbon)) +
   facet_wrap(~Experiment)
   #geom_ribbon()
   #pointrange of sds
