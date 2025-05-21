@@ -574,8 +574,7 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
         Exclude_Participant.because_of_TechnicalDifficulty ~ "Technical difficulty",
         Exclude_Participant.because_of_MultipleExperiments ~ "Repeat participant",
         Exclude_Participant.because_of_IgnoredInstructions ~ "No headphones",
-        #Exclude_Participant.because_of_CatchQuestion ~ "Catch question or trials",
-        #exclude_based_on_catch_trials & Exclude_Participant.because_of_CatchTrials ~ "Catch question or trials",
+        Exclude_Participant.because_of_CatchQuestion ~ "Catch question or trials",
         #Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal ~ "Lexical decision accuracy",
         Exclude_Participant.because_of_SwappedKeys ~ "Swapped response keys",
         Exclude_Participant.because_of_RT ~ "Reaction time",
@@ -641,15 +640,24 @@ exclusionPlot <- function(data) {
 }
 
 
-excludeData <- function(data) {
+excludeParticipants <- function(data) {
   data %<>%
     filter(
       Exclude_Participant.Reason == "none" | Experiment == "LJ18-NORM")
-  # commented out, as this is performed manually by run_exclusions()
-     # !Exclude_Trial.because_of_RT | Experiment == "LJ18-NORM")
   
   return(data)
 }
+
+excludeTrials <- function(data) {
+  data %<>%
+    filter(
+      !is.na(Response.ASHI),
+      Exclude_Trial.because_of_RT == FALSE | Experiment == "LJ18-NORM") # LJ18 did not include RT measurements
+  
+  return(data)
+}
+
+
 
 run_exclusions <- function(data, experiment) {
   data %<>% filter(Experiment %in% experiment)
@@ -683,7 +691,7 @@ run_exclusions <- function(data, experiment) {
   exclusionPlot(data)
   
   data %<>% 
-    excludeData()
+    excludeParticipants()
   
   message(
     "\nData submitted for analysis contains ", 
@@ -706,8 +714,7 @@ run_exclusions <- function(data, experiment) {
     " experiment(s).")
   
   data %<>%
-    filter(!is.na(Response.ASHI),
-           Exclude_Trial.because_of_RT == FALSE)
+    excludeTrials()
 }
 ## Data summaries ------------------------------------------------------- 
 
