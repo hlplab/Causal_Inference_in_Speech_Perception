@@ -644,8 +644,9 @@ exclusionPlot <- function(data) {
 excludeData <- function(data) {
   data %<>%
     filter(
-      Exclude_Participant.Reason == "none" | Experiment == "LJ18-NORM",
-      !Exclude_Trial.because_of_RT | Experiment == "LJ18-NORM")
+      Exclude_Participant.Reason == "none" | Experiment == "LJ18-NORM")
+  # commented out, as this is performed manually by run_exclusions()
+     # !Exclude_Trial.because_of_RT | Experiment == "LJ18-NORM")
   
   return(data)
 }
@@ -689,16 +690,24 @@ run_exclusions <- function(data, experiment) {
     nrow(data %>% filter(is.na(Response.ASHI))),
     " missing observations (",
     percent(nrow(data %>% filter(is.na(Response.ASHI))) / nrow(data)),
+    "), and ",
+    nrow(data %>% filter(Exclude_Trial.because_of_RT == TRUE)),
+    " observations excluded for irregular RTs (",
+    percent(nrow(data %>% filter(Exclude_Trial.because_of_RT == TRUE)) / nrow(data)),
     "), leaving ",
-    nrow(data %>% filter(!is.na(Response.ASHI))),
+    nrow(data %>% filter(!is.na(Response.ASHI) &
+                           Exclude_Trial.because_of_RT == FALSE)),
     " observations from ",
-    data %>% filter(!is.na(Response.ASHI)) %>% pull(ParticipantID) %>% unique() %>% length(),
+    data %>% filter(!is.na(Response.ASHI) &
+                      Exclude_Trial.because_of_RT == FALSE) %>% pull(ParticipantID) %>% unique() %>% length(),
     " participants from ",
-    data %>% filter(!is.na(Response.ASHI)) %>% pull(Experiment) %>% unique() %>% length(),
+    data %>% filter(!is.na(Response.ASHI) &
+                      Exclude_Trial.because_of_RT == FALSE) %>% pull(Experiment) %>% unique() %>% length(),
     " experiment(s).")
   
-  data %>%
-    filter(!is.na(Response.ASHI))
+  data %<>%
+    filter(!is.na(Response.ASHI),
+           Exclude_Trial.because_of_RT == FALSE)
 }
 ## Data summaries ------------------------------------------------------- 
 

@@ -247,6 +247,16 @@ mean(d.test %>%
 sd(d.test %>% 
        mutate(Response.log_RT = log10(Response.RT)) %>%
        filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
+
+d.test %>%
+  filter(Exclude_Trial.because_of_RT == TRUE | is.na(Response.ASHI)) %>%
+  mutate(reason = case_when(
+    Exclude_Trial.because_of_RT == TRUE ~ "RT",
+    is.na(Response.ASHI) ~ "Catch",
+    Exclude_Trial.because_of_RT == TRUE & is.na(Response.ASHI) ~ "Both"
+  )) %>%
+  group_by(Experiment, reason) %>%
+  summarise(count = n())
 ```
 
 Extra analyses of trial-level RT
