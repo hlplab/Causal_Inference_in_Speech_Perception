@@ -204,7 +204,9 @@ d.LJ18.test <-
     rename(Condition.Test.Audio = Step, Item.Filename = Filename, Response.RT = RT) %>%
   select(-c(X, Label, Condition, Subject))
 
-d.test <- bind_rows(d.test.Exp1, d.LJ18.test)
+d.test <- 
+  bind_rows(d.test.Exp1, d.LJ18.test) %>%
+  add_exclusion_information()
 ```
 
 ## Materials: Selection of acoustic continuum steps
@@ -217,26 +219,71 @@ The intention for Experiment 1a was to employ the exact same acoustic steps as i
 (ref:exclusions-exp1) Mean and SD of log-transformed reaction times for participants in Experiments 1a-c.
 
 ```{r exclusions-exp1, fig.width=3*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp1)", results='asis', out.width="100%", warning=FALSE}
+# how many pt's worth of data do we have before exclusions?
+# d.test %>%
+#   group_by(Experiment, ParticipantID) %>%
+#   slice(1) %>%
+#   group_by(Experiment) %>%
+#   summarize(count = n())
+# only 63 for 1c...
+
 # Make exclusion plot for only 1a-c
 d.test.Exp1 <-
   d.test %>%
   run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
+```
 
+(ref:exclusions-exp1-RTs) Trial exclusions based on RTs. Log-transformed RTs were first scaled within participants. Since participants' RTs decreased throughout the experiment (black line), we excluded responses that where more than 3 SDs faster or slower than the scaled log-RTs across participants *at that trial position* (gray ribbon). This exclusion was applied *after* removing excluded participants.
+
+```{r exclusions-exp1-RTs, fig.width=3*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp1-RTs)", results='asis', out.width="100%"}
+d.test %>%
+  excludeParticipants() %>%
+  filter(Experiment != "LJ18-NORM") %>%
+  group_by(Experiment, ParticipantID) %>%
+  # Get mean of log-transformed RTs for each participant
+  mutate(
+    Response.log_RT = log10(ifelse(Response.RT < 0, NA_real_, Response.RT)),
+    Response.log_RT_scaled = scale(Response.log_RT)) %>%
+  group_by(Experiment, Trial) %>%
+  mutate(
+    meanRibbon = mean(Response.log_RT_scaled, na.rm = T),
+    upperRibbon = meanRibbon + 3 * sd(Response.log_RT_scaled, na.rm = T),
+    lowerRibbon = meanRibbon - 3 * sd(Response.log_RT_scaled, na.rm = T)) %>%
+  ggplot(aes(x = Trial)) +
+  geom_ribbon((aes(ymin = lowerRibbon, ymax = upperRibbon)), alpha = 0.2, fill = "black") +
+  geom_point(aes(y = Response.log_RT_scaled, color = Exclude_Trial.because_of_RT), size = .25, alpha = .5) +
+  geom_line((aes(y = meanRibbon)), color = "black") +
+  scale_y_continuous("Scaled log-transformed RTs") +
+  scale_color_discrete("Trial excluded", breaks = c(T, F), labels = c("yes", "no")) +
+  facet_wrap(~Experiment)
+```
+
+```{r}
 # To also make sure exclusions have been applied LJ18
 d.test %<>%
-  excludeData() %>%
-  filter(!is.na(Response.ASHI))
+  excludeParticipants() %>%
+  excludeTrials()
 
 # median(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
 # sd(d.test %>% filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Duration.Assignment))
 
-mean(d.test %>% 
-       mutate(Response.log_RT = log10(Response.RT)) %>%
-       filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
-
-sd(d.test %>% 
-       mutate(Response.log_RT = log10(Response.RT)) %>%
-       filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
+# mean(d.test %>% 
+#        mutate(Response.log_RT = log10(Response.RT)) %>%
+#        filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
+# 
+# sd(d.test %>% 
+#        mutate(Response.log_RT = log10(Response.RT)) %>%
+#        filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
+# 
+# d.test %>%
+#   filter(Exclude_Trial.because_of_RT == TRUE | is.na(Response.ASHI)) %>%
+#   mutate(reason = case_when(
+#     Exclude_Trial.because_of_RT == TRUE ~ "RT",
+#     is.na(Response.ASHI) ~ "Catch",
+#     Exclude_Trial.because_of_RT == TRUE & is.na(Response.ASHI) ~ "Both"
+#   )) %>%
+#   group_by(Experiment, reason) %>%
+#   summarise(count = n())
 ```
 
 ## Exit survey
@@ -464,7 +511,21 @@ d.Exp1.survey %>%
   xlab('Did the video recordings ever stall during the experiment?')
 ```
 
-The next set of questions assessed how participants perceived the speech of the talker, including potential effects of the pen. The first question simply asked participants whether they noticed anything odd about the talker, followed by an open-ended text prompt. We anotated participants' responses in terms of whether their statement mentioned that 1) the talker sounded atypical (e.g., having a lisp), 2) the talker had a pen in the mouth, and 3) the audio and video were misaligned. For statements that mentioned the pen, we also annotated what participants noted about the pen.
+The next set of questions assessed how participants perceived the speech of the talker, including potential effects of the pen. The first question simply asked participants whether they noticed anything odd about the talker, followed by an open-ended text prompt. We annotated participants' text responses. After agreeing on the criteria, annotations were completed by one of the authors (GEK) and spot-checked by another author (TFJ). The complete set of annotations is available as part of the OSF repo under data/CISP_data_participant-comments.csv. The file contains participants' full comment and 10 binary annotation columns:
+
+ * Whether the participant's comment described the **talker's speech in the experiment as in anyway unusual** (e.g., "accented", exhibiting a "lisp").
+ * Whether the participant's comment mentioned the **pen**.
+ * Whether the participant's comment mentioned that the **pen in the mouth made it difficult to determine what the speaker said**.
+ * Whether the participant's comment mentioned that the **pen in the mouth affects pronunciation**.
+ * Whether the participant's comment mentioned that the **pen was perhaps the purpose of the experiment**.
+ 
+  * Whether the participant's comment mentioned **the white dot** (which was never present, which made some participants nervous that they would have missed the catch trials, and many of these comments asserted that the participant was, in fact, very attentive and/or that they sometimes pressed SPACE---indicating a catch trial---even though they didn't see the white dot, simply because they thought if they didn't it would mean we would consider them inattentive).
+ 
+ * Whether the participant's comment mentioned **audio or video playback issues**.
+ * Whether the participant's comment mentioned **misalignment of the audio and video**.
+ 
+ * Whether the participant's comment sounded non-native.
+ * Whether the participant's comment sounded bot-like.
 
 ```{r}
 d.comment <- read.csv("../data/CISP_data_participant-comments.csv")
@@ -474,7 +535,7 @@ annotation_numbers <- function(var) {
 }
 ```
 
-While only `r annotation_numbers("Odd")` participants across the three experiments considered the talkers' speech atypical (e.g., "accented", exhibiting a "lisp"),  `r annotation_numbers("Pen")` participants commented on the fact that the talker often had a pen in the mouth. The latter is expected given that the pen was in the talker's mouth on half of the trials, and thus rather salient. Of the responses that mentioned the pen, some claimed that the pen affected the pronunciation of the talker (in reality the audio recording was by design independent of the location of the pen). Most participants simply noticed the pen. Some participants, however, further noted that the pen affected their ability to tell whether the talker was saying *asi* or *ashi* (`r annotation_numbers("PenMadeCategorizationDifficult")`), or that the pen affected the talker's pronunciation (`r annotation_numbers("PenAffectsPronunciation")`), and some hypothesized that the experiment was about the pen (`r annotation_numbers("PenHypothesizedToMatter")`). While these responses suggests that relatively few participants had conscious hypotheses about the effects of the pen, Section \@ref(sec:subset-analyses) below presents subset analyses of Experiments 1a-c that exclude those participants. Finally, a substantial minority of participants---`r annotation_numbers("AudioVideoMisaligned")`---noted misalignments between the sound and the video. This is an inevitable consequence of the approach we chose to investigate the effect of the pen (see main text for our rationale for this approach). Critically thought, it is unclear how awareness of audiovisual misalignment would bias the results we reliably observed across Experiments 1a-c.
+While only `r annotation_numbers("Odd")` participants across the three experiments considered the talkers' speech atypical (e.g., "accented", exhibiting a "lisp"),  `r annotation_numbers("Pen")` participants commented on the fact that the talker often had a pen in the mouth. The latter is expected given that the pen was in the talker's mouth on half of the trials, and thus rather salient. Of the responses that mentioned the pen, some claimed that the pen affected the pronunciation of the talker (in reality the audio recording was by design independent of the location of the pen). Most participants simply noticed the pen. Some participants, however, further noted that the pen affected their ability to tell whether the talker was saying *asi* or *ashi* (`r annotation_numbers("PenMadeCategorizationDifficult")`), or that the pen affected the talker's pronunciation (`r annotation_numbers("PenAffectsPronunciation")`), and some hypothesized that the experiment was about the pen (`r annotation_numbers("PenHypothesizedToMatter")`). While these responses suggests that relatively few participants had conscious hypotheses about the effects of the pen, Section \@ref(sec:subset-analyses) below presents subset analyses of Experiments 1a-c that exclude those participants. Finally, a substantial minority of participants---`r annotation_numbers("AudioVideoMisaligned")`---noted misalignment between the sound and the video. This is an inevitable consequence of the approach we chose to investigate the effect of the pen (see main text for our rationale for this approach). Critically thought, it is unclear how awareness of audiovisual misalignment would bias the results we reliably observed across Experiments 1a-c.
 
 ```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*4, out.width="66%"}
 d.comment %>%
@@ -519,6 +580,7 @@ d.Exp1.survey %>%
   facet_wrap(~ Experiment) +
   xlab('Did the talker pronounce "s" and "sh" in an odd way?')
 ```
+
 
 ## Analyses
 \@ref(fig:results-exp1) summarizes the results of Experiments 1a-c. The data suggests qualitatively similar effects of pen location, acoustic continuum, and the visual bias across all three experiments---as also confirmed by the analyses presented below. In particular, participants in all three experiments were less likely to respond "ashi" when the pen was in the mouth during the production of the nonce-word.
@@ -683,7 +745,7 @@ As noted in the description of the survey results in Section \@ref(sec:survey-re
     filter(
       Talker.SpeechDescription_PenMadeCategorizationDifficult != "yes",
       Talker.SpeechDescription_PenAffectsPronunciation != "yes",
-      Talker.SpeechDescription_PenHypothesizedToMatter != "yes") %>% distinct(ParticipantID) %>% nrow()` participants for analysis. As reported in the following subsections, all results reported in the main analyses held for this much smaller subset of participants. In fact, the effect estimates ($\hat{\beta}$) for the subset analyses were as large or larger than in the main analyses.
+      Talker.SpeechDescription_PenHypothesizedToMatter != "yes") %>% distinct(ParticipantID) %>% nrow()` participants for analysis. As reported in the following subsections, all results reported in the main analyses held for this much smaller subset of participants. In fact, the critical effect estimates ($\hat{\beta}$) for the subset analyses were as large or larger than in the main analyses.
 
 ### Experiment 1a
 
@@ -796,7 +858,9 @@ Figure \@ref(fig:exclusions-exp2) summarized the exclusions for Experiment 2 and
 (ref:exclusions-exp2) Mean and SD of log-transformed reaction times for participants in Experiments 2, 2b.
 
 ```{r exclusions-exp2, fig.width=2*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp2)", results='asis', out.width="66%", warning=FALSE}
-d.test.Exp2 %<>% run_exclusions(c("CISP-2", "CISP-2b"))
+d.test.Exp2 %<>% 
+  add_exclusion_information() %>%
+  run_exclusions(c("CISP-2", "CISP-2b"))
 
 # mean(d.test.Exp2 %>% 
 #        mutate(Response.log_RT = log10(Response.RT)) %>%
