@@ -442,14 +442,15 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
   data %<>%
     select(-starts_with("Exclude_Participant"), Exclude_Participant.because_of_TechnicalDifficulty)
   # Multiple HITs
-  data %<>%
-    # Remove all but chronologically first instance of experiments by the same participant
-    group_by(Experiment, WorkerID, Platform) %>%
-    mutate(
-      Exclude_Participant.because_of_MultipleExperiments = ifelse(Platform == "MTurk",
-        ifelse(Assignment.Submit.DateTime.UTC > min(Assignment.Submit.DateTime.UTC), T, F),
-        ifelse(userDateTime > min(userDateTime), T, F))) %>%
-    ungroup()
+  # commented out for now, because this was completed before initial import
+  # data %<>%
+  #   # Remove all but chronologically first instance of experiments by the same participant
+  #   group_by(Experiment, WorkerID, Platform) %>%
+  #   mutate(
+  #     Exclude_Participant.because_of_MultipleExperiments = ifelse(Platform == "MTurk",
+  #       ifelse(Assignment.Submit.DateTime.UTC > min(Assignment.Submit.DateTime.UTC), T, F),
+  #       ifelse(userDateTime > min(userDateTime), T, F))) %>%
+  #   ungroup()
    # this will not catch workers who take part in multiple *different* experiments
    # (once each of, e.g. Exp1b and later Exp2a.) We mitigated this possibility via blocking
    # WorkerIDs within each platform (MTurk and Prolific) such that the same workerID could not

@@ -239,6 +239,35 @@ sd(d.test %>%
        filter(Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c")) %>% pull(Response.log_RT))
 ```
 
+Extra analyses of trial-level RT
+maybe keep this sort of plot?
+```{r}
+d.test.Exp1 %>%
+    group_by(Experiment, ParticipantID) %>%
+    # Get mean and SD of log-transformed RTs for each participant
+    mutate(
+      Response.log_RT = log10(ifelse(Response.RT < 0, NA_real_, Response.RT)),
+      Response.log_RT_scaled = scale(Response.log_RT),
+      Response.mean_log_RT = mean(Response.log_RT, na.rm = T)) %>%
+    group_by(Trial) %>%
+  # mutate(Exclude_Trial.because_of_RT = ifelse(is.na(Response.log_RT_scaled) | abs(scale(Response.log_RT_scaled)) > 3, T, F)) %>%
+  mutate(abs_scaled_Response.log_RT_scaled = abs(scale(Response.log_RT_scaled))) %>%
+  ggplot(aes(x = Trial,
+             y = Response.log_RT_scaled)) +
+  geom_point() +
+  geom_hline(yintercept = 3.5) +
+  facet_wrap(~Experiment) +
+  geom_ribbon()
+  #pointrange of sds
+
+
+d.test2 <- d.test %>%
+  add_exclusion_information()
+    
+```
+
+
+
 ## Exit survey
 
 ### Experiment 1a
