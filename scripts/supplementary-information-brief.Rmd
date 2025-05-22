@@ -513,19 +513,19 @@ d.Exp1.survey %>%
 
 The next set of questions assessed how participants perceived the speech of the talker, including potential effects of the pen. The first question simply asked participants whether they noticed anything odd about the talker, followed by an open-ended text prompt. We annotated participants' text responses. After agreeing on the criteria, annotations were completed by one of the authors (GEK) and spot-checked by another author (TFJ). The complete set of annotations is available as part of the OSF repo under data/CISP_data_participant-comments.csv. The file contains participants' full comment and 10 binary annotation columns:
 
- * Whether the participant's comment described the **talker's speech in the experiment as in anyway unusual** (e.g., "accented", exhibiting a "lisp").
- * Whether the participant's comment mentioned the **pen**.
- * Whether the participant's comment mentioned that the **pen in the mouth made it difficult to determine what the speaker said**.
- * Whether the participant's comment mentioned that the **pen in the mouth affects pronunciation**.
- * Whether the participant's comment mentioned that the **pen was perhaps the purpose of the experiment**.
+  * Whether the participant's comment described the **talker's speech in the experiment as in anyway unusual** (e.g., "accented", exhibiting a "lisp").
+  * Whether the participant's comment mentioned the **pen**.
+  * Whether the participant's comment mentioned that the **pen in the mouth made it difficult to determine what the speaker said**.
+  * Whether the participant's comment mentioned that the **pen in the mouth affects pronunciation**.
+  * Whether the participant's comment mentioned that the **pen was perhaps the purpose of the experiment**.
  
   * Whether the participant's comment mentioned **the white dot** (which was never present, which made some participants nervous that they would have missed the catch trials, and many of these comments asserted that the participant was, in fact, very attentive and/or that they sometimes pressed SPACE---indicating a catch trial---even though they didn't see the white dot, simply because they thought if they didn't it would mean we would consider them inattentive).
  
- * Whether the participant's comment mentioned **audio or video playback issues**.
- * Whether the participant's comment mentioned **misalignment of the audio and video**.
+  * Whether the participant's comment mentioned **audio or video playback issues**.
+  * Whether the participant's comment mentioned **misalignment of the audio and video**.
  
- * Whether the participant's comment sounded non-native.
- * Whether the participant's comment sounded bot-like.
+  * Whether the participant's comment sounded **non-native**. (added after feedback from reviewers)
+  * Whether the participant's comment sounded **bot-like**.  (added after feedback from reviewers)
 
 ```{r}
 d.comment <- read.csv("../data/CISP_data_participant-comments.csv")
@@ -535,7 +535,9 @@ annotation_numbers <- function(var) {
 }
 ```
 
-While only `r annotation_numbers("Odd")` participants across the three experiments considered the talkers' speech atypical (e.g., "accented", exhibiting a "lisp"),  `r annotation_numbers("Pen")` participants commented on the fact that the talker often had a pen in the mouth. The latter is expected given that the pen was in the talker's mouth on half of the trials, and thus rather salient. Of the responses that mentioned the pen, some claimed that the pen affected the pronunciation of the talker (in reality the audio recording was by design independent of the location of the pen). Most participants simply noticed the pen. Some participants, however, further noted that the pen affected their ability to tell whether the talker was saying *asi* or *ashi* (`r annotation_numbers("PenMadeCategorizationDifficult")`), or that the pen affected the talker's pronunciation (`r annotation_numbers("PenAffectsPronunciation")`), and some hypothesized that the experiment was about the pen (`r annotation_numbers("PenHypothesizedToMatter")`). While these responses suggests that relatively few participants had conscious hypotheses about the effects of the pen, Section \@ref(sec:subset-analyses) below presents subset analyses of Experiments 1a-c that exclude those participants. Finally, a substantial minority of participants---`r annotation_numbers("AudioVideoMisaligned")`---noted misalignment between the sound and the video. This is an inevitable consequence of the approach we chose to investigate the effect of the pen (see main text for our rationale for this approach). Critically thought, it is unclear how awareness of audiovisual misalignment would bias the results we reliably observed across Experiments 1a-c.
+While only `r annotation_numbers("Odd")` participants across the three experiments considered the talkers' speech atypical (e.g., "accented", exhibiting a "lisp"),  `r annotation_numbers("Pen")` participants commented on the fact that the talker often had a pen in the mouth. The latter is expected given that the pen was in the talker's mouth on half of the trials, and thus rather salient. Of the responses that mentioned the pen, some claimed that the pen affected the pronunciation of the talker (in reality the audio recording was by design independent of the location of the pen). Most participants simply noticed the pen. Some participants, however, further noted that the pen affected their ability to tell whether the talker was saying *asi* or *ashi* (`r annotation_numbers("PenMadeCategorizationDifficult")`), or that the pen affected the talker's pronunciation (`r annotation_numbers("PenAffectsPronunciation")`), and some hypothesized that the experiment was about the pen (`r annotation_numbers("PenHypothesizedToMatter")`). While these responses suggests that relatively few participants had conscious hypotheses about the effects of the pen, Section \@ref(sec:subset-analyses) below presents subset analyses of Experiments 1a-c that exclude those participants. 
+
+A substantial minority of participants---`r annotation_numbers("AudioVideoMisaligned")`---noted misalignment between the sound and the video. This is an inevitable consequence of the approach we chose to investigate the effect of the pen (see main text for our rationale for this approach). Critically thought, it is unclear how awareness of audiovisual misalignment would bias the results we reliably observed across Experiments 1a-c. Finally, only a very small percentage of participants were annotated as potentially non-native speakers (`r annotation_numbers("PotentialNonNative")`) or potentially a bot (`r annotation_numbers("PotentialBot")`). Given the highly subjective nature of this annotation, and our own uncertainty about it (based on a single free-form text response), we did not further consider this annotation.^[Given that the R markdown code to this SI as well as the data---including our annotations---are shared on OSF, other researchers can explore the consequences of different exclusion criteria with just a few lines of code changes.]
 
 ```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*4, out.width="66%"}
 d.comment %>%
@@ -550,7 +552,8 @@ d.comment %>%
       question == "Talker.SpeechDescription_AudioVideoMisaligned" ~ "Was audiovisual misalignment mentioned?",
       question == "Talker.SpeechDescription_Pen" ~ "Was the pen mentioned?",
       question == "Talker.SpeechDescription_WhiteDot" ~ "Were the (lack of) white dot catch trials mentioned?",
-      question == "Talker.SpeechDescription_NotOdd" ~ "Was the talker described as *not* odd?")) %>%
+      question == "Talker.SpeechDescription_NotOdd" ~ "Was the talker described as *not* odd?",
+      T ~ NA_character_)) %>%
   filter(
     Experiment != "",
     question %in% c("Was the talker described as sounding atypical?", "Was the pen mentioned?", "Was audiovisual misalignment mentioned?")) %>%
@@ -892,7 +895,7 @@ ggsave(
 (ref:results-exp2) Summary of participants’ responses in Experiments 2, depending on pen location and acoustic continuum step (Panel A) or visual bias (Panel B). For comparison, the results from Experiment 1c are shown in the background. The two experiments were identical except for the occlusion introduced in Experiment 2.
 
 ```{r, results='asis'}
-m.Exp2 <- fit_test_model(data = d.test.Exp1, experiment = "CISP-2")
+m.Exp2 <- fit_test_model(data = d.test.Exp2, experiment = "CISP-2")
 m.Exp2 %>%
   brms_SummaryTable() %>%
   kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 2.",
@@ -1082,7 +1085,7 @@ ggsave(
 (ref:results-exp2b) Summary of participants’ responses in Experiments 2b, depending on pen location and acoustic continuum step (Panel A) or visual bias (Panel B). For comparison, the results from Experiment 2 are shown in the background. The two experiments were identical except for the secondary task introduced in Experiment 2b.
 
 ```{r, results='asis'}
-m.Exp2b <- fit_test_model(data = d.test.Exp1, experiment = "CISP-2b")
+m.Exp2b <- fit_test_model(data = d.test.Exp2, experiment = "CISP-2b")
 m.Exp2b %>%
   brms_SummaryTable() %>%
   kable(caption = "Results of Bayesian mixed-effect logistic regression for Experiment 2b.",
