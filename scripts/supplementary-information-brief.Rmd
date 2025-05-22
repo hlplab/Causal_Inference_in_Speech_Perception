@@ -567,29 +567,6 @@ d.comment %>%
                    breaks = c(0, 1),
                    labels = c("no", "yes"))
 ```
-To inform the potential role of the black box in distracting listeners from the pen, we examine the degree to which mentions of the pen changed between experiments 1a-c and 2a. Mentions did indeed decrease from `r annotation_numbers("Pen", subset = c("CISP-1a", "CISP-1b", "CISP-1c"))` to `r annotation_numbers("Pen", subset = "CISP-2a")`. However, given the low overall frequency of pen mentions in this free response question, this change cannot be strongly interpreted. 
-```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*4, out.width="66%"}
-d.comment %>%
-  pivot_longer(
-    cols = starts_with("Talker.SpeechDescription_"),
-    names_to = "question",
-    values_to = "response") %>%
-  filter(question == "Talker.SpeechDescription_Pen",
-         Experiment != "CISP-2b") %>%
-  mutate(
-    Experiment_group = ifelse(Experiment == "CISP-2a", "2", "1a-c"),
-    response = ifelse(response == "yes", "yes", "no"),
-    question = "Was the pen mentioned?") %>%
-  ggplot(aes(x = Experiment_group,
-             fill = response)) +
-  geom_bar(position = "fill",
-           aes(group = response)) +
-  scale_y_continuous(labels = scales::percent) +
-  ylab("Percent responses") +
-  xlab("Experiment group")
-```
-
-
 
 Subsequent multiple choice questions further explored participants' perception of the talker. The clear majority of the participants considered the talker's pronunciations to be typical. At the same time, however, the majority of participants answered on a later question that the talker had "swapped" "s" and "sh". It is possible that some of participants' responses to this latter question reflect confusion. For instance, since "s" and "sh" were always presented in the context of the nonce-word *asi*/*ashi*, it is unclear how participants would come to the conclusion that the talker swapped "s" and "sh". Yet, about one sixth of all participants gave that answer.
 
@@ -617,7 +594,7 @@ For reference, responses from a audio-only experiment using some of the same sti
 
 This dependency on the range of inputs is important to keep in mind when interpreting the results. If the effect of the pen in the mouth is due to compensation, we would expect decreased rates of "ashi" responses relative to a baseline in which the talker's  articulation is not obstructed by anything. While the pen-in-the-hand condition arguably provides this baseline, a skeptic might argue that Experiments 1a-c leave open whether the pen in the mouth decreases the probability of *ashi-*responses, or whether---for unspecified reasons---the pen in the hand *in*creases the probability of *ashi-*responses. In this context, it is encouraging to see that Experiment 1a---the experiment that most closely matches the acoustic continuum from Liu and Jaeger's audio-only experiment---suggests that the pen in the mouth indeed decreases the probability of *ashi-*responses, as predicted by Fowler's compensation account [@fowler2006]. We address this question more directly in Experiment 2, which removes other potential confounds that might result from comparing audio-only to audiovisual experiments.
 
-(ref:results-exp1) Summary of participants’ responses in Experiments 1a-c, depending on pen location and acoustic continuum step (Panel A) or visual bias (Panel B). For comparison, responses from a audio-only experiment using some of the same stimuli [@liu-jaeger2018] are shown in gray. comparison to the audio-only (and thus no pen) continuum used in all previous work helps to assess whether a audiovisual stimulus with the pen in the hand is actually identical to an audio-only stimulus (an assumption made in some previous work). 
+(ref:results-exp1) Summary of participants’ responses in Experiments 1a-c, depending on pen location and acoustic continuum step (Panel A) or visual bias (Panel B). For comparison, responses from a audio-only experiment using some of the same stimuli [@liu-jaeger2018] are shown in gray. Comparison to the audio-only (and thus no pen) continuum used in all previous work helps to assess whether a audiovisual stimulus with the pen in the hand is actually identical to an audio-only stimulus (an assumption made in some previous work). While presented here in case of interest, the data from [@liu-jaeger2018] are omitted for clarity from the figure presented in main text.
 
 ```{r results-exp1, fig.width=fig.base_width*2, fig.height=fig.base_height*3, fig.cap="(ref:results-exp1)", out.width="80%"}
 p <-
@@ -629,9 +606,7 @@ p <-
 plot(p)
 ```
 
-While presented here in case of interest, the data from [@liu-jaeger2018] are omitted for clarity from the figure presented in main text.
-
-```{r results-exp1 main text, fig.width=fig.base_width*2, fig.height=fig.base_height*3, out.width="80%"}
+```{r results-exp1-main-text, fig.width=fig.base_width*2, fig.height=fig.base_height*3, out.width="80%"}
 p <-
   plot_data(
     d.test,
@@ -873,7 +848,8 @@ d.test.Exp2 <-
         Experiment == "CISP-2" & Response.CatchTrial != Item.isCatchTrial ~ 0,
         Experiment == "CISP-2b" & Response.CatchTrial == (Condition.Test.Pen == "M") ~ 1,
         Experiment == "CISP-2b" & Response.CatchTrial != (Condition.Test.Pen == "M") ~ 0,
-        T ~ NA_integer_))
+        T ~ NA_integer_)) %>%
+  add_exclusion_information()
 ```
 
 ## Procedure
@@ -885,9 +861,8 @@ Figure \@ref(fig:exclusions-exp2) summarized the exclusions for Experiment 2 and
 (ref:exclusions-exp2) Mean and SD of log-transformed reaction times for participants in Experiments 2, 2b.
 
 ```{r exclusions-exp2, fig.width=2*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp2)", results='asis', out.width="66%", warning=FALSE}
-# Create exclusion output
-d.test.Exp2 %>% 
-  add_exclusion_information() %>%
+d.test.Exp2.old <- d.test.Exp2
+d.test.Exp2 %<>% 
   run_exclusions(c("CISP-2", "CISP-2b"))
 
 # mean(d.test.Exp2 %>% 
@@ -903,8 +878,9 @@ d.test.Exp2 %>%
 
 (ref:exclusions-exp2-RTs) Trial exclusions based on RTs in Experiment 2 and 2b. Log-transformed RTs were first scaled within participants. Since participants' RTs decreased throughout the experiment (black line), we excluded responses that where more than 3 SDs faster or slower than the scaled log-RTs across participants *at that trial position* (gray ribbon). This exclusion was applied *after* removing excluded participants.
 
-```{r exclusions-exp2-RTs, fig.width=2*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp2-RTs)", results='asis', out.width="66%%"}
-d.test.Exp2 %>%
+```{r exclusions-exp2-RTs, fig.width=2*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp2-RTs)", results='asis', out.width="66%"}
+d.test.Exp2.old %>%
+  excludeParticipants() %>%
   group_by(Experiment, ParticipantID) %>%
   # Get mean of log-transformed RTs for each participant
   mutate(
@@ -922,11 +898,33 @@ d.test.Exp2 %>%
   scale_y_continuous("Scaled log-transformed RTs") +
   scale_color_discrete("Trial excluded", breaks = c(T, F), labels = c("yes", "no")) +
   facet_wrap(~Experiment)
+```
 
-# Now apply exclusions
-d.test.Exp2 %<>% 
-  add_exclusion_information() %>%
-  run_exclusions(c("CISP-2", "CISP-2b"))
+## Exit survey
+
+### Survey results
+
+To inform the potential role of the black box in distracting listeners from the pen, we examined the degree to which participants mentioned the pen in the free-response textbox of the survey. We thus compared Experiment 2 to 1c. If anything, mentions of the pen did *in*crease somewhat from `r annotation_numbers("Pen", subset = "CISP-1c")` in Experiment 1c to `r annotation_numbers("Pen", subset = "CISP-2a")` in Experiment 2. 
+
+```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*4, out.width="66%"}
+d.comment %>%
+  pivot_longer(
+    cols = starts_with("Talker.SpeechDescription_"),
+    names_to = "question",
+    values_to = "response") %>%
+  filter(question == "Talker.SpeechDescription_Pen",
+         Experiment %in% c("CISP-1a", "CISP-2a")) %>%
+  mutate(
+    Experiment_group = ifelse(Experiment == "CISP-2a", "2", "1c"),
+    response = ifelse(response == "yes", "yes", "no"),
+    question = "Was the pen mentioned?") %>%
+  ggplot(aes(x = Experiment_group,
+             fill = response)) +
+  geom_bar(position = "fill",
+           aes(group = response)) +
+  xlab("Experiment group")+ 
+  scale_y_continuous("Percent responses", labels = scales::percent) +
+  scale_fill_discrete("Pen mentioned?")
 ```
 
 ## Analyses - Experiment 2
