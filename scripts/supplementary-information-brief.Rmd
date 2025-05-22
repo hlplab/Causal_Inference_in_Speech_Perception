@@ -530,8 +530,10 @@ The next set of questions assessed how participants perceived the speech of the 
 ```{r}
 d.comment <- read.csv("../data/CISP_data_participant-comments.csv")
 
-annotation_numbers <- function(var) {
-  paste0(x <- sum(d.comment[[paste0("Talker.SpeechDescription_", var)]] == "yes"), " (", round(x / nrow(d.comment) * 100, 1), "%)")
+annotation_numbers <- function(var, subset = unique(d.comment$Experiment)) {
+  df <- d.comment %>%
+    filter(Experiment %in% subset)
+  paste0(x <- sum(df[[paste0("Talker.SpeechDescription_", var)]] == "yes"), " (", round(x / nrow(df) * 100, 1), "%)")
 }
 ```
 
@@ -562,6 +564,29 @@ d.comment %>%
                    breaks = c(0, 1),
                    labels = c("no", "yes"))
 ```
+To inform the potential role of the black box in distracting listeners from the pen, we examine the degree to which mentions of the pen changed between experiments 1a-c and 2a. Mentions did indeed decrease from `r annotation_numbers("Pen", subset = c("CISP-1a", "CISP-1b", "CISP-1c"))` to `r annotation_numbers("Pen", subset = "CISP-2a")`. However, given the low overall frequency of pen mentions in this free response question, this change cannot be strongly interpreted. 
+```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*4, out.width="66%"}
+d.comment %>%
+  pivot_longer(
+    cols = starts_with("Talker.SpeechDescription_"),
+    names_to = "question",
+    values_to = "response") %>%
+  filter(question == "Talker.SpeechDescription_Pen",
+         Experiment != "CISP-2b") %>%
+  mutate(
+    Experiment_group = ifelse(Experiment == "CISP-2a", "2", "1a-c"),
+    response = ifelse(response == "yes", "yes", "no"),
+    question = "Was the pen mentioned?") %>%
+  ggplot(aes(x = Experiment_group,
+             fill = response)) +
+  geom_bar(position = "fill",
+           aes(group = response)) +
+  scale_y_continuous(labels = scales::percent) +
+  ylab("Percent responses") +
+  xlab("Experiment group")
+```
+
+
 
 Subsequent multiple choice questions further explored participants' perception of the talker. The clear majority of the participants considered the talker's pronunciations to be typical. At the same time, however, the majority of participants answered on a later question that the talker had "swapped" "s" and "sh". It is possible that some of participants' responses to this latter question reflect confusion. For instance, since "s" and "sh" were always presented in the context of the nonce-word *asi*/*ashi*, it is unclear how participants would come to the conclusion that the talker swapped "s" and "sh". Yet, about one sixth of all participants gave that answer.
 
