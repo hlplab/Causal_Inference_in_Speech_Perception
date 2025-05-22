@@ -989,7 +989,9 @@ m.Exp2vsExp1c <-
     experiment = c("CISP-1c", "CISP-2"),
     formula = bf(Response.ASHI ~ 1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Block) * mo(Condition.Test.Audio) +
                    (1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)),
-    file = "../models/Exp-CISP-2-vs-CISP-1c-occlusion-test")
+    file = "../models/Exp-CISP-2-vs-CISP-1c-occlusion-test",
+    # Since contrasts are already defined don't run prep_for_analysis
+    .prep_for_analysis = F)
 ```
 
 Overall, the results of this analysis do not provide any notable evidence for the occlusion hypothesis while providing strong evidence for the compensation hypothesis. In the middle of the acoustic continuum, *ashi*-responses were *more* likely in Experiment 2, compared to even the pen-in-hand condition of Experiment 1c (BF = 2). This is the opposite of what would be expected if the main effects of pen location in Experiments 1a-c were due to visual occlusion. There also was strong evidence that the pen-in-mouth condition of Experiment 1c resulted in fewer *ashi*-responses than in Experiment 2 (BF = 73.1).

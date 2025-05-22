@@ -816,8 +816,10 @@ prep_for_analysis <- function(data) {
   return(data)
 }
 
-fit_test_model <- function(data, experiment, formula = NULL, file = NULL) {
+fit_test_model <- function(data, experiment, formula = NULL, file = NULL, .prep_for_analysis = T) {
   data %<>% filter(Experiment %in% experiment)
+  if (.prep_for_analysis) data %<>% prep_for_analysis()
+
   multiple_experiments <- length(unique(data$Experiment)) > 1 
   exposure_experiment <- length(unique(data$Condition.Exposure.LexicalLabel)) > 1
   
@@ -831,22 +833,21 @@ fit_test_model <- function(data, experiment, formula = NULL, file = NULL) {
       "(1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)"))
   } else formula
   
-  m <- brm(
-    formula,
-    data = 
-      data %>% 
-      prep_for_analysis(),
-    family = "bernoulli",
-    prior = my_priors,
-    sample_prior = "yes",
-    backend = "cmdstanr",
-    chains = 4, 
-    warmup = if (multiple_experiments | exposure_experiment) 2000 else 1000,
-    iter = if (multiple_experiments | exposure_experiment) 3000 else 2000,
-    control = list(adapt_delta = if (multiple_experiments | exposure_experiment) .95 else .9),
-    cores = min(parallel::detectCores(), 4), 
-    threads = threading(threads = 4),
-    file = if (is.null(file)) paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-") else file)
+  m <- 
+    brm(
+      formula,
+      data = data,
+      family = "bernoulli",
+      prior = my_priors,
+      sample_prior = "yes",
+      backend = "cmdstanr",
+      chains = 4, 
+      warmup = if (multiple_experiments | exposure_experiment) 2000 else 1000,
+      iter = if (multiple_experiments | exposure_experiment) 3000 else 2000,
+      control = list(adapt_delta = if (multiple_experiments | exposure_experiment) .95 else .9),
+      cores = min(parallel::detectCores(), 4), 
+      threads = threading(threads = 4),
+      file = if (is.null(file)) paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-") else file)
   
   return(m)
 }
