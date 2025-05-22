@@ -625,24 +625,23 @@ p <-
     d.test,
     experiment = c("CISP-1a", "CISP-1b", "CISP-1c"),
     background_experiment = "LJ18-NORM")
+
 plot(p)
 ```
 
 While presented here in case of interest, the data from [@liu-jaeger2018] are omitted for clarity from the figure presented in main text.
 
-```{r results-exp1 main text, fig.width=fig.base_width*2, fig.height=fig.base_height*3, fig.cap="(ref:results-exp1)", out.width="80%"}
+```{r results-exp1 main text, fig.width=fig.base_width*2, fig.height=fig.base_height*3, out.width="80%"}
 p <-
   plot_data(
     d.test,
     experiment = c("CISP-1a", "CISP-1b", "CISP-1c"))
-plot(p)
 
 ggsave(
   p,
   file = "../figures/Experiment 1a-c.png",
   width = fig.base_width * 2,
   height = fig.base_height * 2 + .25)
-
 ```
 
 
