@@ -904,27 +904,48 @@ d.test.Exp2.old %>%
 
 ### Survey results
 
-To inform the potential role of the black box in distracting listeners from the pen, we examined the degree to which participants mentioned the pen in the free-response textbox of the survey. We thus compared Experiment 2 to 1c. If anything, mentions of the pen did *in*crease somewhat from `r annotation_numbers("Pen", subset = "CISP-1c")` in Experiment 1c to `r annotation_numbers("Pen", subset = "CISP-2a")` in Experiment 2. 
+To inform the potential role of the black box in distracting listeners from the pen, we examined the degree to which participants mentioned the pen in the free-response text box of the survey. We thus compared Experiment 2 to 1a-c (of which 1c was the most similar to Experiment 2). Mentions of the pen *de*creased somewhat from `r annotation_numbers("Pen", subset = "CISP-1c")` in Experiment 1c to `r annotation_numbers("Pen", subset = "CISP-2a")` in Experiment 2. 
 
-```{r, fig.width=fig.base_width*3, fig.height=fig.base_height*4, out.width="66%"}
-d.comment %>%
+However, pen-mention also differed across Experiments 1a-c. A logistic regression comparing the probability of pen-mention across Experiments 1a-c and 2 did not find a significant difference (p > .3). Even when Experiment 2 was compared to only Experiment 1c, the difference between the experiments was not significant (p > .2).
+
+```{r, fig.width=fig.base_width * 2, fig.height=fig.base_height*1.25, out.width="50%"}
+d.pen_mention <-
+  d.comment %>%
   pivot_longer(
     cols = starts_with("Talker.SpeechDescription_"),
     names_to = "question",
     values_to = "response") %>%
-  filter(question == "Talker.SpeechDescription_Pen",
-         Experiment %in% c("CISP-1a", "CISP-2a")) %>%
+  filter(
+    question == "Talker.SpeechDescription_Pen",
+    Experiment %in% c("CISP-1a", "CISP-1b", "CISP-1c", "CISP-2a")) %>%
   mutate(
-    Experiment_group = ifelse(Experiment == "CISP-2a", "2", "1c"),
-    response = ifelse(response == "yes", "yes", "no"),
-    question = "Was the pen mentioned?") %>%
-  ggplot(aes(x = Experiment_group,
-             fill = response)) +
-  geom_bar(position = "fill",
-           aes(group = response)) +
-  xlab("Experiment group")+ 
+    Experiment = gsub("CISP-", "", Experiment),
+    Experiment = factor(ifelse(Experiment == "2a", "2", Experiment)),
+    response = factor(ifelse(response == "yes", "yes", "no")),
+    question = "Was the pen mentioned?") 
+
+d.pen_mention %>%
+  ggplot(aes(x = Experiment, fill = response)) +
+  geom_bar(position = "fill", aes(group = response)) +
+  xlab("Experiment")+ 
   scale_y_continuous("Percent responses", labels = scales::percent) +
-  scale_fill_discrete("Pen mentioned?")
+  scale_fill_grey("Did the participant mention the pen?") 
+
+# glm(
+#   response == "yes" ~ 1 + ExperimentGroup,
+#   data = 
+#     d.pen_mention %>%
+#     mutate(ExperimentGroup = factor(ifelse(Experiment == "2", 1, -1))),
+#   family = binomial(link = "logit")) %>%
+#   summary()
+
+# glm(
+#   response == "yes" ~ 1 + Experiment,
+#   data =
+#     d.pen_mention %>%
+#     filter(Experiment %in% c("1a", "2")),
+#   family = binomial(link = "logit")) %>%
+#   summary()
 ```
 
 ## Analyses - Experiment 2
