@@ -852,6 +852,12 @@ fit_test_model <- function(data, experiment, formula = NULL, file = NULL, .prep_
   return(m)
 }
 
+load_test_model <- function(experiment) {
+  m <- readRDS(file = paste0(paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-"), ".rds"))
+  
+  return(m)
+}
+
 format_hypothesis_tables <- function(table, experiment, BF.max = 4000) {
   table %>%
   rename(
@@ -869,7 +875,7 @@ format_hypothesis_tables <- function(table, experiment, BF.max = 4000) {
   relocate(Exp, everything())
 }
 
-my_hypotheses <- function(m, experiment, plot = F) { 
+my_hypotheses <- function(m, experiment, plot = F, short = F) { 
   exposure_experiment <- length(unique(m$data$Condition.Exposure.LexicalLabel)) > 1
   
   # mo() operators imply that the effects of the other variables are assessed at the reference level of the
@@ -895,7 +901,8 @@ my_hypotheses <- function(m, experiment, plot = F) {
         "Enhanced effect of SH-bias when pen location matches in exposure & test")) %>%
       #        "Less SH responses after pen-in-mouth exposure")) %>%
       format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
-      kable(caption = "Effects of exposure.", align = c(rep("l", 2), rep("r", 6), "l"))
+      { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
+      kable(caption = "Effects of exposure.", align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"))
   }
   
   l[["test.pen"]] <- 
@@ -917,12 +924,13 @@ my_hypotheses <- function(m, experiment, plot = F) {
       "Pen effect increases for visually \\textit{ashi}-biased input",
       "Pen effect increases even more when acoustic and visual input is \\textit{ashi}-biased")) %>%
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
     kable(
       caption = "Effects of pen location.", 
-      align = c(rep("l", 2), rep("r", 6), "l"), 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%
     column_spec(2, width = "7cm") %>%
-    column_spec(7, width = "1.1cm") %>%
+    { if (!short) column_spec(7, width = "1.1cm") else . } %>%
     kable_styling(latex_options = "HOLD_position")
   
   l[["test.cues"]] <- 
@@ -938,12 +946,13 @@ my_hypotheses <- function(m, experiment, plot = F) {
       "Visual \\textit{ashi}-bias -> more \\textit{ashi}-responses",
       "Acoustic and visual bias effects are independent")) %>% 
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
     kable(
       caption = "Effects of acoustic continuum and visual bias.", 
-      align = c(rep("l", 2), rep("r", 6), "l"), 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%
     column_spec(2, width = "7cm") %>%
-    column_spec(7, width = "1.1cm") %>%
+    { if (!short) column_spec(7, width = "1.1cm") else . } %>%
     kable_styling(latex_options = "HOLD_position")
   
   l[["test.block"]] <- 
@@ -962,18 +971,124 @@ my_hypotheses <- function(m, experiment, plot = F) {
       "Acoustic effect is stable over blocks",
       "Visual bias effect is stable over blocks")) %>%
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
     kable(
       caption = "Changes across blocks.", 
-      align = c(rep("l", 2), rep("r", 6), "l"), 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%
     column_spec(2, width = "7cm") %>%
-    column_spec(7, width = "1.1cm") %>%
+    { if (!short) column_spec(7, width = "1.1cm") else . } %>%
     kable_styling(latex_options = "HOLD_position")
   
   if (plot) for (H in h) plot(H)
   return(l)
 }
 
+
+my_hypotheses_for_word <- function(m, experiment, short = F, format = "html") { 
+  require(huxtable)
+  exposure_experiment <- length(unique(m$data$Condition.Exposure.LexicalLabel)) > 1
+  
+  # mo() operators imply that the effects of the other variables are assessed at the reference level of the
+  # monotonic predictor. For Block, this is exactly what we want: evaluation of effects in the first Block.
+  # However, for the continuum, we'd like to assess effects in the middle of the continuum. This is taken 
+  # into account below.
+  h <- list()
+  l <- list()
+  if (exposure_experiment) {
+    l[["exposure.label"]] <- 
+      { h[["exposure.label"]] <- hypothesis(
+        m, 
+        c(
+          "b_Condition.Exposure.LexicalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH > 0",
+          "b_Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM < 0",
+          "b_Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM:Condition.Test.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM:Condition.Test.PenM > 0"),
+        #          "b_Condition.Exposure.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.PenM < 0"),
+        class = NULL) } %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "More SH responses after SH-biased exposure",
+        "Reduced effect of SH-bias when pen-in-mouth during critical exposure",
+        "Enhanced effect of SH-bias when pen location matches in exposure & test")) %>%
+      #        "Less SH responses after pen-in-mouth exposure")) %>%
+      format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+      { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
+      kable(
+        format = format,
+        caption = "Effects of exposure.", align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"))
+  }
+  
+  l[["test.pen"]] <- 
+    { h[["test.pen"]] <- hypothesis(
+      m, 
+      c(
+        # There are 5 continuum steps above the baseline, so we add 2.5 * the interaction of continuum and the 
+        # effect of interest to the effect of interest. (a more precise estimate could be obtained by following
+        # Figure 1 in Bürkner & Charpentier, which takes into account the specific simo estimates).
+        "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
+        "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0"),
+      class = NULL) } %>%
+    .[["hypothesis"]] %>% 
+    mutate(Hypothesis = c(
+      "Pen location Mouth -> fewer \\textit{ashi}-responses",
+      "Pen effect increases for more \\textit{ashi}-like acoustic input",
+      "Pen effect increases for visually \\textit{ashi}-biased input",
+      "Pen effect increases even more when acoustic and visual input is \\textit{ashi}-biased")) %>%
+    format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
+    kable(
+      format = format,
+      caption = "Effects of pen location.", 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
+      escape = F) 
+  
+  l[["test.cues"]] <- 
+    { h[["test.cues"]] <- hypothesis(
+      m, 
+      c("bsp_moCondition.Test.Audio > 0", 
+        "b_Condition.Test.OriginalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH > 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"), 
+      class = NULL, scope = "standard") } %>%
+    .[["hypothesis"]] %>% 
+    mutate(Hypothesis = c(
+      "Acoustic continuum more \\textit{ashi}-like -> more \\textit{ashi}-responses",
+      "Visual \\textit{ashi}-bias -> more \\textit{ashi}-responses",
+      "Acoustic and visual bias effects are independent")) %>% 
+    format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
+    kable(
+      format = format,
+      caption = "Effects of acoustic continuum and visual bias.", 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
+      escape = F) 
+  
+  l[["test.block"]] <- 
+    { h[["test.block"]] <- hypothesis(
+      m, 
+      c(
+        if (exposure_experiment) "bsp_moBlock:Condition.Exposure.LexicalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH < 0" else NULL,
+        "bsp_moBlock:Condition.Test.PenM + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.PenM = 0",
+        "bsp_moBlock:moCondition.Test.Audio = 0", 
+        "bsp_moBlock:Condition.Test.OriginalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"),
+      class = NULL) } %>%
+    .[["hypothesis"]] %>% 
+    mutate(Hypothesis = c(
+      if (exposure_experiment) "Effect of SH-biased exposure reduces over blocks" else NULL,
+      "Pen effect is stable over blocks",
+      "Acoustic effect is stable over blocks",
+      "Visual bias effect is stable over blocks")) %>%
+    format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
+    kable(
+      format = format,
+      caption = "Changes across blocks.", 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
+      escape = F) 
+
+  return(l)
+}
 
 ## Functions for formatting knitr output 
 summarize_effect <- function(model, effect, parentheses = T) {
