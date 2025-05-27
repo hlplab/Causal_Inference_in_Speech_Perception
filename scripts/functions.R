@@ -930,7 +930,7 @@ my_hypotheses <- function(m, experiment, plot = F, short = F) {
       align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%
     column_spec(2, width = "7cm") %>%
-    { if (!short) column_spec(7, width = "1.1cm") else . } %>%
+    { if (!short) column_spec(., 7, width = "1.1cm") else . } %>%
     kable_styling(latex_options = "HOLD_position")
   
   l[["test.cues"]] <- 
@@ -952,7 +952,7 @@ my_hypotheses <- function(m, experiment, plot = F, short = F) {
       align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%
     column_spec(2, width = "7cm") %>%
-    { if (!short) column_spec(7, width = "1.1cm") else . } %>%
+    { if (!short) column_spec(., 7, width = "1.1cm") else . } %>%
     kable_styling(latex_options = "HOLD_position")
   
   l[["test.block"]] <- 
@@ -977,7 +977,7 @@ my_hypotheses <- function(m, experiment, plot = F, short = F) {
       align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%
     column_spec(2, width = "7cm") %>%
-    { if (!short) column_spec(7, width = "1.1cm") else . } %>%
+    { if (!short) column_spec(., 7, width = "1.1cm") else . } %>%
     kable_styling(latex_options = "HOLD_position")
   
   if (plot) for (H in h) plot(H)
