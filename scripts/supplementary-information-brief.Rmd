@@ -865,6 +865,10 @@ d.test.Exp2.old <- d.test.Exp2
 d.test.Exp2 %<>% 
   run_exclusions(c("CISP-2", "CISP-2b"))
 
+d.test.Exp2.old %>%
+  filter(Experiment == "CISP-2") %>%
+  run_exclusions(c("CISP-2"))
+
 # mean(d.test.Exp2 %>% 
 #        mutate(Response.log_RT = log10(Response.RT)) %>%
 #        filter(Experiment == "CISP-2") %>% 
