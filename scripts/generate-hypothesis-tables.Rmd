@@ -1,0 +1,118 @@
+---
+title: |
+    | Generate hypothesis tables
+    | for Cummings, Karboga, Yang, & Jaeger 
+    | *Compensation in audiovisual speech perception*
+author: "T. Florian Jaeger and Shawn Cummings"
+date: \today
+output:
+  bookdown::word_document2:
+    toc: true
+    toc_depth: '4'
+  fontsize: 10pt
+geometry: margin=2cm
+---
+
+```{r, include=FALSE}
+library(tidyverse)
+library(magrittr)    # pipes
+library(ggtext)      # markdown formatting for text elements
+library(lubridate)   # date conversion, etc.
+
+library(knitr)   
+# devtools::install_github("crsh/papaja")
+library(papaja)      # R reference list
+library(kableExtra)  # table formatting
+
+library(brms)        # Bayesian GL(M)Ms
+library(rstan)
+
+library(linguisticsdown)  # IPA symbols
+
+# Setting up cmdstanr
+# we recommend running this in a fresh R session or restarting your current session
+# install.packages("cmdstanr", repos = c('https://stan-dev.r-universe.dev', getOption("repos")))
+library(cmdstanr)
+# install_cmdstan()
+
+# install.packages("devtools")
+# devtools::install_github('m-clark/lazerhawk')
+library(lazerhawk)
+```
+
+```{r constants, include=FALSE}
+source("functions.R")
+```
+
+```{r, include=FALSE}
+opts_chunk$set(dev = 'png', dpi = 96,
+               comment="",
+               echo=FALSE, warning=FALSE, message=FALSE,
+               cache=FALSE,
+               size="small",
+               tidy.opts = list(width.cutoff = 200),
+               fig.width = fig.base_width, fig.height = fig.base_height,
+               fig.pos = "!ht", fig.align = "center")
+
+options(knit.r.table.format = "markdown")
+
+def.chunk.hook  <- knitr::knit_hooks$get("chunk")
+knitr::knit_hooks$set(chunk = function(x, options) {
+  x <- def.chunk.hook(x, options)
+  ifelse(options$size != "normalsize", paste0("\n \\", options$size,"\n\n", x, "\n\n \\normalsize"), x)
+})
+
+color_block = function(color) {
+  function(x, options) sprintf('\\color{%s}\\begin{verbatim}%s\\end{verbatim}\\color{black}',
+                               color, x)
+}
+knitr::knit_hooks$set(error = color_block('red'))
+knitr::knit_hooks$set(warning = color_block('orange'))
+```
+
+
+### Experiment 1a
+
+```{r, results='asis'}
+m.Exp1a <- load_test_model(experiment = "CISP-1a")
+```
+
+```{r, results='asis'}
+my_hypotheses_for_word(m.Exp1a, experiment = "Exp 1a", short = T) %>% map(print) -> TEMP
+```
+
+### Experiment 1b
+
+```{r, results='asis'}
+m.Exp1b <- load_test_model(experiment = "CISP-1b")
+```
+
+```{r, results='asis'}
+my_hypotheses_for_word(m.Exp1b, experiment = "Exp 1b", short = T) %>% map(print) -> TEMP
+```
+
+### Experiment 1c
+
+```{r, results='asis'}
+m.Exp1c <- load_test_model(experiment = "CISP-1c")
+```
+
+```{r, results='asis'}
+my_hypotheses_for_word(m.Exp1c, experiment = "Exp 1c", short = T) %>% map(print) -> TEMP
+```
+
+
+# Experiments 2 and 2b
+
+## Experiment 2
+
+```{r, results='asis'}
+m.Exp2 <- load_test_model(experiment = "CISP-2")
+
+```
+
+```{r, results='asis'}
+my_hypotheses_for_word(m.Exp2, experiment = "Exp 2", short = T) %>% map(print) -> TEMP
+```
+
+# References
