@@ -523,15 +523,17 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
       Response.log_RT = log10(ifelse(Response.RT < 0, NA_real_, Response.RT)),
       Response.log_RT_scaled = scale(Response.log_RT),
       Response.mean_log_RT = mean(Response.log_RT, na.rm = T)) %>%
-    group_by(Trial) %>%
+    group_by(Experiment, Trial) %>%
     mutate(Exclude_Trial.because_of_RT = ifelse(is.na(Response.log_RT_scaled) | abs(scale(Response.log_RT_scaled)) > 3, T, F)) %>%
-    ungroup() %>%
+    group_by(Experiment) %>%
     mutate(Exclude_Participant.because_of_RT = ifelse(abs(scale(Response.mean_log_RT)) > 3, T, F))
   
   # Exclude based on too many missing trials
   data %<>%
     group_by(Experiment, ParticipantID) %>%
-    mutate(Exclude_Participant.because_of_MissingTrials = ifelse(sum(Phase == "test" & (Exclude_Trial.because_of_RT | is.na(Response))) > 7, T, F)) %>%
+    mutate(Exclude_Participant.because_of_MissingTrials = 
+             ifelse(sum(Phase == "test" & 
+                          (Exclude_Trial.because_of_RT | is.na(Response))) > 7, T, F)) %>%
     ungroup() 
   
   # Swapped keys
@@ -578,7 +580,7 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
         Exclude_Participant.because_of_TechnicalDifficulty ~ "Technical difficulty",
         Exclude_Participant.because_of_MultipleExperiments ~ "Repeat participant",
         Exclude_Participant.because_of_IgnoredInstructions ~ "No headphones",
-        Exclude_Participant.because_of_CatchQuestion ~ "Catch question or trials",
+        Exclude_Participant.because_of_CatchQuestion ~ "Catch question",
         #exclude_based_on_catch_trials & Exclude_Participant.because_of_CatchTrials ~ "Catch question or trials",
         #Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal ~ "Lexical decision accuracy",
         Exclude_Participant.because_of_SwappedKeys ~ "Swapped response keys",
