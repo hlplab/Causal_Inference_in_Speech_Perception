@@ -1,11 +1,12 @@
 ---
-title: |
-    | Supplementary Information 
-    | for Cummings, Karboga, Yang, & Jaeger 
-    | *Compensation in audiovisual speech perception*
+title: "| Supplementary Information \n| for Cummings, Karboga, Yang, & Jaeger \n|
+  *Compensation in audiovisual speech perception*\n"
 author: "T. Florian Jaeger and Shawn Cummings"
-date: \today
+date: "\today"
 output:
+  pdf_document:
+    toc: true
+    toc_depth: '4'
   bookdown::pdf_document2:
     fig_caption: true
     keep_tex: true
@@ -13,12 +14,15 @@ output:
     number_sections: true
     toc: true
     toc_depth: 4
+  fontsize: 10pt
   word_document:
     toc: true
     toc_depth: '4'
-  fontsize: 10pt
-bibliography: ["references.bib", "r-references.bib"]  
+bibliography:
+- references.bib
+- "r-references.bib"
 geometry: margin=2cm
+always_allow_html: true
 header-includes:
 - \usepackage{float}
 - \usepackage{booktabs}
@@ -231,6 +235,14 @@ The intention for Experiment 1a was to employ the exact same acoustic steps as i
 d.test.Exp1 <-
   d.test %>%
   run_exclusions(c("CISP-1a", "CISP-1b", "CISP-1c"))
+
+# mean(d.test.Exp1 %>%
+#        mutate(Response.log_RT = log10(Response.RT)) %>%
+#        pull(Response.log_RT))
+# 
+# sd(d.test.Exp1 %>%
+#        mutate(Response.log_RT = log10(Response.RT)) %>%
+#        pull(Response.log_RT))
 ```
 
 (ref:exclusions-exp1-RTs) Trial exclusions based on RTs in Experiment 1a-c. Log-transformed RTs were first scaled within participants. Since participants' RTs decreased throughout the experiment (black line), we excluded responses that where more than 3 SDs faster or slower than the scaled log-RTs across participants *at that trial position* (gray ribbon). This exclusion was applied *after* removing excluded participants.
@@ -865,15 +877,15 @@ d.test.Exp2.old <- d.test.Exp2
 d.test.Exp2 %<>% 
   run_exclusions(c("CISP-2", "CISP-2b"))
 
-# mean(d.test.Exp2 %>% 
-#        mutate(Response.log_RT = log10(Response.RT)) %>%
-#        filter(Experiment == "CISP-2") %>% 
-#        pull(Response.log_RT))
-# 
-# sd(d.test.Exp2 %>% 
-#        mutate(Response.log_RT = log10(Response.RT)) %>%
-#        filter(Experiment == "CISP-2") %>% 
-#        pull(Response.log_RT))
+mean(d.test.Exp2 %>%
+       mutate(Response.log_RT = log10(Response.RT)) %>%
+       filter(Experiment == "CISP-2") %>%
+       pull(Response.log_RT))
+
+sd(d.test.Exp2 %>%
+       mutate(Response.log_RT = log10(Response.RT)) %>%
+       filter(Experiment == "CISP-2") %>%
+       pull(Response.log_RT))
 ```
 
 (ref:exclusions-exp2-RTs) Trial exclusions based on RTs in Experiment 2 and 2b. Log-transformed RTs were first scaled within participants. Since participants' RTs decreased throughout the experiment (black line), we excluded responses that where more than 3 SDs faster or slower than the scaled log-RTs across participants *at that trial position* (gray ribbon). This exclusion was applied *after* removing excluded participants.
