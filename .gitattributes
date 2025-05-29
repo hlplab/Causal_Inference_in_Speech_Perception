@@ -4758,3 +4758,4 @@ materials/Audio/FillerNonwords/goned.wav filter=lfs diff=lfs merge=lfs -text
 experiments/experiment-A/JSEXP/sounds/beep.wav filter=lfs diff=lfs merge=lfs -text
 experiments/experiment-A/JSEXP/sounds/cabbage.wav filter=lfs diff=lfs merge=lfs -text
 experiments/experiment-A/JSEXP/sounds/lemonade.wav filter=lfs diff=lfs merge=lfs -text
+*.rds filter=lfs diff=lfs merge=lfs -text
