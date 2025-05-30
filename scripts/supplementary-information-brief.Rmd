@@ -4,9 +4,6 @@ title: "| Supplementary Information \n| for Cummings, Karboga, Yang, & Jaeger \n
 author: "T. Florian Jaeger and Shawn Cummings"
 date: "\today"
 output:
-  pdf_document:
-    toc: true
-    toc_depth: '4'
   bookdown::pdf_document2:
     fig_caption: true
     keep_tex: true
@@ -134,6 +131,8 @@ A project template, including R markdown files that result in APA-formatted PDFs
 ```{r message=T}
 d.CISP.ALL <-
   read.csv("../data/CISP_data.csv") %>%
+  # Add one empty participant to Experiment 1c to reflect the one we lost due to technical issues
+  bind_rows(tibble(Experiment = "CISP-1c", ParticipantID = "1c.64", Exclude_Participant.Reason = "Technical difficulty")) %>%
   mutate(
     across(
       .cols = c(starts_with("Participant"), -Participant.Age,
@@ -220,7 +219,7 @@ The intention for Experiment 1a was to employ the exact same acoustic steps as i
 
 ## Exclusions
 
-(ref:exclusions-exp1) Mean and SD of log-transformed reaction times for participants in Experiments 1a-c.
+(ref:exclusions-exp1) Mean and SD of log-transformed reaction times for participants in Experiments 1a-c, along with reason the participant was excluded from analysis. One additional participant in Experiment 1c was excluded due to technical issues (not shown since we do not have RTs for that participant).
 
 ```{r exclusions-exp1, fig.width=3*fig.base_width, fig.height=fig.base_height*1.25, fig.cap="(ref:exclusions-exp1)", results='asis', out.width="100%", warning=FALSE}
 # how many pt's worth of data do we have before exclusions?
@@ -733,6 +732,7 @@ my_LJ18_hypothesis <-
         BF = ifelse(is.infinite(BF), paste(">", BF.max - 1), as.character(round(BF, 1)))) %>%
       relocate(Exp, everything()) %>%
       kable(
+        format = "latex",
         caption = "Effects of acoustic continuum.",
         align = c(rep("l", 2), rep("r", 6), "l"),
         escape = F) %>%
@@ -877,15 +877,15 @@ d.test.Exp2.old <- d.test.Exp2
 d.test.Exp2 %<>% 
   run_exclusions(c("CISP-2", "CISP-2b"))
 
-mean(d.test.Exp2 %>%
-       mutate(Response.log_RT = log10(Response.RT)) %>%
-       filter(Experiment == "CISP-2") %>%
-       pull(Response.log_RT))
-
-sd(d.test.Exp2 %>%
-       mutate(Response.log_RT = log10(Response.RT)) %>%
-       filter(Experiment == "CISP-2") %>%
-       pull(Response.log_RT))
+# mean(d.test.Exp2 %>%
+#        mutate(Response.log_RT = log10(Response.RT)) %>%
+#        filter(Experiment == "CISP-2") %>%
+#        pull(Response.log_RT))
+# 
+# sd(d.test.Exp2 %>%
+#        mutate(Response.log_RT = log10(Response.RT)) %>%
+#        filter(Experiment == "CISP-2") %>%
+#        pull(Response.log_RT))
 ```
 
 (ref:exclusions-exp2-RTs) Trial exclusions based on RTs in Experiment 2 and 2b. Log-transformed RTs were first scaled within participants. Since participants' RTs decreased throughout the experiment (black line), we excluded responses that where more than 3 SDs faster or slower than the scaled log-RTs across participants *at that trial position* (gray ribbon). This exclusion was applied *after* removing excluded participants.

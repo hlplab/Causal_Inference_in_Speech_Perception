@@ -613,8 +613,8 @@ exclusionPlot <- function(data) {
         . %>% 
         group_by(Experiment) %>% 
         summarise(
-          mean = max(mean),
-          sd = max(sd),
+          mean = max(mean, na.rm = T),
+          sd = max(sd, na.rm = T),
           label = paste0(
             "Excl. N=",
             sum(Exclude_Participant.Reason != "none"),
@@ -622,7 +622,7 @@ exclusionPlot <- function(data) {
             percent(sum(Exclude_Participant.Reason != "none") / length(Exclude_Participant.Reason)),
             ")")) %>%
         ungroup() %>%
-        mutate(mean = max(mean), sd = max(sd)),
+        mutate(mean = max(mean, na.rm = T), sd = max(sd, na.rm = T)),
       aes(label = label), color = "red", hjust = 1, vjust = 1) +
     scale_x_continuous("mean log-RT (in msec)") +
     scale_y_continuous("SD of log-RT") +
@@ -668,23 +668,30 @@ excludeTrials <- function(data) {
 
 run_exclusions <- function(data, experiment) {
   data %<>% filter(Experiment %in% experiment)
+  
+  data.exclusions <- 
+    data %>% 
+    distinct(Experiment, ParticipantID, Exclude_Participant.Reason) %>% 
+    mutate(Exclude_Participant.Reason = ifelse(Exclude_Participant.Reason == "none", "_none", as.character(Exclude_Participant.Reason))) %>%
+    group_by(Experiment, Exclude_Participant.Reason) %>% 
+    tally() %>% 
+    group_by(Experiment) %>%
+    arrange(Experiment, Exclude_Participant.Reason) %>%
+    mutate(Percent = percent(n / sum(n))) %>%
+    mutate(
+      Experiment = gsub("CISP-", "", Experiment),
+      Exclude_Participant.Reason = ifelse(Exclude_Participant.Reason == "_none", "none", as.character(Exclude_Participant.Reason)))
   print(
-    kable(
-      data %>% 
-        distinct(Experiment, ParticipantID, Exclude_Participant.Reason) %>% 
-        group_by(Experiment, Exclude_Participant.Reason) %>% 
-        tally() %>% 
-        group_by(Experiment) %>%
-        mutate(Percent = percent(n / sum(n))),
+    kable(data.exclusions,
       caption = "Summary of exclusions.") %>%
-    kable_styling(latex_options = "HOLD_position"))
-  
-  
+      pack_rows(index = table(data.exclusions$Experiment)) %>%
+      kable_styling(latex_options = "HOLD_position"))
+      
   message(
     data %>% 
       distinct(Experiment, ParticipantID, Duration.Assignment) %>% 
       group_by(Experiment) %>%
-      summarise(across(Duration.Assignment, list("mean" = mean, "sd" = sd))) %>%
+      summarise(across(Duration.Assignment, list("mean" = mean, "sd" = sd), na.rm = T)) %>%
       mutate(msg = paste0(    
         "Participants in ",
         Experiment,
