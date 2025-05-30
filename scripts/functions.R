@@ -877,7 +877,7 @@ format_hypothesis_tables <- function(table, experiment, BF.max = 4000) {
   relocate(Exp, everything())
 }
 
-my_hypotheses <- function(m, experiment, plot = F, short = F) { 
+my_hypotheses <- function(m, experiment, plot = F, short = F, format = "latex") { 
   exposure_experiment <- length(unique(m$data$Condition.Exposure.LexicalLabel)) > 1
   
   # mo() operators imply that the effects of the other variables are assessed at the reference level of the
@@ -904,7 +904,11 @@ my_hypotheses <- function(m, experiment, plot = F, short = F) {
       #        "Less SH responses after pen-in-mouth exposure")) %>%
       format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
       { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
-      kable(caption = "Effects of exposure.", align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"))
+      kable(
+        format = format,
+        caption = "Effects of exposure.", 
+        align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
+        escape = F)
   }
   
   l[["test.pen"]] <- 
@@ -928,6 +932,7 @@ my_hypotheses <- function(m, experiment, plot = F, short = F) {
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
     { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
     kable(
+      format = format,
       caption = "Effects of pen location.", 
       align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%
@@ -950,6 +955,7 @@ my_hypotheses <- function(m, experiment, plot = F, short = F) {
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
     { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
     kable(
+      format = format,
       caption = "Effects of acoustic continuum and visual bias.", 
       align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%
@@ -975,6 +981,7 @@ my_hypotheses <- function(m, experiment, plot = F, short = F) {
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
     { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
     kable(
+      format = format,
       caption = "Changes across blocks.", 
       align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%

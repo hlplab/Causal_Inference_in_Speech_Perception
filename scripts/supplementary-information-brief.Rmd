@@ -1058,43 +1058,49 @@ Overall, the results of this analysis do not provide any notable evidence for th
 The only way in which the visual occluder in Experiment 2 resembled the pen-in-mouth condition in Experiment 1c was in terms of their interaction with visual evidence to the articulation of "sh": both the black rectangle in Experiment 2 and the pen-in-the-mouth in Experiment 1c reduced the effect of visually *ashi*-like stimuli, compared to the pen-in-hand condition (see third row of the two tables). These two effects were almost identical (comparison of occluder vs. pen-in-hand condition: BF = 14.2; comparison of pen-in-mouth vs. occluder condition: BF = .9). This result is not particularly surprising given that the black rectangle completely occluded any direct visual evidence of "s" vs. "sh" articulation.
 
 ```{r, results='asis'}
-hypothesis(m.Exp2vsExp1c,
-           c("b_Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenOvsH < 0",
-             "bsp_moCondition.Test.Audio:Condition.Test.PenOvsH < 0",
-             "b_Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH < 0",
-             "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH< 0"), class = NULL, robust = T) %>%
-      .[["hypothesis"]] %>%
-      mutate(Hypothesis = c(
-        "Pen location Mouth -> fewer ASHI-responses",
-        "Pen effect increases for more ASHI-like acoustic input",
-        "Pen effect increases for visually ASHI-biased input",
-        "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
-      format_hypothesis_tables("Exp 2 vs. 1c") %>%
-      kable(caption = "Effects of pen location: occlusion vs. hand",
-      align = c(rep("l", 2), rep("r", 6), "l"),
-      escape = F) %>%
-    column_spec(2, width = "7cm") %>%
-    column_spec(7, width = "1.1cm") %>%
-    kable_styling(latex_options = "HOLD_position")
+hypothesis(
+  m.Exp2vsExp1c,
+  c("b_Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenOvsH < 0",
+    "bsp_moCondition.Test.Audio:Condition.Test.PenOvsH < 0",
+    "b_Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH < 0",
+    "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH< 0"), class = NULL, robust = T) %>%
+  .[["hypothesis"]] %>%
+  mutate(Hypothesis = c(
+    "Pen location Mouth -> fewer ASHI-responses",
+    "Pen effect increases for more ASHI-like acoustic input",
+    "Pen effect increases for visually ASHI-biased input",
+    "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
+  format_hypothesis_tables("Exp 2 vs. 1c") %>%
+  kable(
+    format = "latex",
+    caption = "Effects of pen location: occlusion vs. hand",
+    align = c(rep("l", 2), rep("r", 6), "l"),
+    escape = F) %>%
+  column_spec(2, width = "7cm") %>%
+  column_spec(7, width = "1.1cm") %>%
+  kable_styling(latex_options = "HOLD_position")
 
-hypothesis(m.Exp2vsExp1c,
-           c("b_Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenMvsO < 0",
-             "bsp_moCondition.Test.Audio:Condition.Test.PenMvsO < 0",
-             "b_Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0",
-             "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0"), class = NULL, robust = T) %>%
-      .[["hypothesis"]] %>%
-      mutate(Hypothesis = c(
-        "Pen location Mouth -> fewer ASHI-responses",
-        "Pen effect increases for more ASHI-like acoustic input",
-        "Pen effect increases for visually ASHI-biased input",
-        "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
-      format_hypothesis_tables("Exp 2 vs. 1c") %>%
-      kable(caption = "Effects of pen location: mouth vs. occlusion",
-      align = c(rep("l", 2), rep("r", 6), "l"),
-      escape = F) %>%
-    column_spec(2, width = "7cm") %>%
-    column_spec(7, width = "1.1cm") %>%
-    kable_styling(latex_options = "HOLD_position")
+hypothesis(
+  m.Exp2vsExp1c,
+  c("b_Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenMvsO < 0",
+    "bsp_moCondition.Test.Audio:Condition.Test.PenMvsO < 0",
+    "b_Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0",
+    "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0"), class = NULL, robust = T) %>%
+  .[["hypothesis"]] %>%
+  mutate(Hypothesis = c(
+    "Pen location Mouth -> fewer ASHI-responses",
+    "Pen effect increases for more ASHI-like acoustic input",
+    "Pen effect increases for visually ASHI-biased input",
+    "Pen effect increases even more when acoustic and visual input is ASHI-biased")) %>%
+  format_hypothesis_tables("Exp 2 vs. 1c") %>%
+  kable(
+    format = "latex",
+    caption = "Effects of pen location: mouth vs. occlusion",
+    align = c(rep("l", 2), rep("r", 6), "l"),
+    escape = F) %>%
+  column_spec(2, width = "7cm") %>%
+  column_spec(7, width = "1.1cm") %>%
+  kable_styling(latex_options = "HOLD_position")
 
 # hypothesis(m.Exp2vsExp1c,
 #            c("b_Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenOvsH + b_Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenMvsO < 0"), class = NULL, robust = T)
