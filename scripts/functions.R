@@ -439,30 +439,38 @@ sortVars <- function(.data) {
 
 add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
   # Get rid of any pre-existing exclusion variables, except for exclusion for technical reasons
+  # and Multiple experiments, because it relies on de-identifiable information.
   data %<>%
-    select(-starts_with("Exclude_Participant"), Exclude_Participant.because_of_TechnicalDifficulty)
+    select(-starts_with("Exclude_Participant"), 
+           Exclude_Participant.because_of_TechnicalDifficulty,
+           Exclude_Participant.because_of_MultipleExperiments)
   # Multiple HITs
-  data %<>%
-    # Remove all but chronologically first instance of experiments by the same participant
-    group_by(Experiment, WorkerID, Platform) %>%
-    mutate(
-      Exclude_Participant.because_of_MultipleExperiments = ifelse(Platform == "MTurk",
-        ifelse(Assignment.Submit.DateTime.UTC > min(Assignment.Submit.DateTime.UTC), T, F),
-        ifelse(userDateTime > min(userDateTime), T, F))) %>%
-    ungroup()
+  # commented out for now, because this was completed before initial import (done so because it 
+  # requires reference to MTurk / Prolific IDs and thus had to be completed prior to de-identifying
+  # the data).
+  #
+  # data %<>%
+  #   # Remove all but chronologically first instance of experiments by the same participant
+  #   group_by(Experiment, WorkerID, Platform) %>%
+  #   mutate(
+  #     Exclude_Participant.because_of_MultipleExperiments = ifelse(Platform == "MTurk",
+  #       ifelse(Assignment.Submit.DateTime.UTC > min(Assignment.Submit.DateTime.UTC), T, F),
+  #       ifelse(userDateTime > min(userDateTime), T, F))) %>%
+  #   ungroup()
    # this will not catch workers who take part in multiple *different* experiments
    # (once each of, e.g. Exp1b and later Exp2a.) We mitigated this possibility via blocking
    # WorkerIDs within each platform (MTurk and Prolific) such that the same workerID could not
    # take part in subsequent studies. 
   
   # Lexical decision accuracy
-  data %<>%
-    group_by(Experiment, ParticipantID) %>%
-    mutate(Accuracy.LD = mean(Response.CorrectWordStatus,
-                         na.rm = T)) %>%
-    ungroup() %>%
-    mutate(Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal = ifelse(
-             Accuracy.LD >= .85, FALSE, TRUE))
+  # commented out for now because none of the studies in the JEP:LMC study included LDA
+  # data %<>%
+  #   group_by(Experiment, ParticipantID) %>%
+  #   mutate(Accuracy.LD = mean(Response.CorrectWordStatus,
+  #                        na.rm = T)) %>%
+  #   ungroup() %>%
+  #   mutate(Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal = ifelse(
+  #            Accuracy.LD >= .85, FALSE, TRUE))
 
   # Failure to follow instructions
   data %<>%
@@ -475,34 +483,37 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
       Exclude_Participant.because_of_CatchQuestion = ifelse(Talker.Sex == "woman", FALSE, TRUE))
   
   # Exclusion based on catch trials
-  data %<>%
-    group_by(Experiment, ParticipantID) %>%
-    mutate(
-      Accuracy.CatchTrials.onCatchTrial = mean(
-        case_when(
-          Phase != "exposure" ~ NA_real_,
-          !Item.isCatchTrial ~ NA_real_,
-          Item.isCatchTrial == Response.CatchTrial ~ 1,
-          Item.isCatchTrial != Response.CatchTrial ~ 0,
-          T ~ NA_real_),
-        na.rm = T),
-      Accuracy.CatchTrials.onNonCatchTrial = mean(
-        case_when(
-          #Phase != "exposure" ~ NA_real_,
-          Item.isCatchTrial ~ NA_real_,
-          Item.isCatchTrial == Response.CatchTrial ~ 1,
-          Item.isCatchTrial != Response.CatchTrial ~ 0,
-          T ~ NA_real_),
-        na.rm = T)) %>%
-    ungroup() %>%
-    mutate(
-      Exclude_Participant.because_of_CatchTrials = case_when(
-        !exclude_based_on_catch_trials ~ FALSE,
-        Accuracy.CatchTrials.onCatchTrial >= .8 & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
-        ## If Accuracy.CatchTrials.onCatchTrial is NaN, then there were no catch trials
-        ## in entire experiment (this is expected of 1a-c, 2a-b). 
-        is.na(Accuracy.CatchTrials.onCatchTrial) & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
-        T ~ TRUE))
+  # commented out because there are no catch trials in these experiments. This criterion was includes for 
+  # the exposure-test (perceptual recalibration) experiments planned later in this project.
+  #
+  # data %<>%
+  #   group_by(Experiment, ParticipantID) %>%
+  #   mutate(
+  #     Accuracy.CatchTrials.onCatchTrial = mean(
+  #       case_when(
+  #         Phase != "exposure" ~ NA_real_,
+  #         !Item.isCatchTrial ~ NA_real_,
+  #         Item.isCatchTrial == Response.CatchTrial ~ 1,
+  #         Item.isCatchTrial != Response.CatchTrial ~ 0,
+  #         T ~ NA_real_),
+  #       na.rm = T),
+  #     Accuracy.CatchTrials.onNonCatchTrial = mean(
+  #       case_when(
+  #         #Phase != "exposure" ~ NA_real_,
+  #         Item.isCatchTrial ~ NA_real_,
+  #         Item.isCatchTrial == Response.CatchTrial ~ 1,
+  #         Item.isCatchTrial != Response.CatchTrial ~ 0,
+  #         T ~ NA_real_),
+  #       na.rm = T)) %>%
+  #   ungroup() %>%
+  #   mutate(
+  #     Exclude_Participant.because_of_CatchTrials = case_when(
+  #       !exclude_based_on_catch_trials ~ FALSE,
+  #       Accuracy.CatchTrials.onCatchTrial >= .8 & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
+  #       ## If Accuracy.CatchTrials.onCatchTrial is NaN, then there were no catch trials
+  #       ## in entire experiment (this is expected of 1a-c, 2a-b). 
+  #       is.na(Accuracy.CatchTrials.onCatchTrial) & Accuracy.CatchTrials.onNonCatchTrial > .9 ~ FALSE,
+  #       T ~ TRUE))
   
   # Exclude based on RTs
   data %<>%
@@ -512,15 +523,17 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
       Response.log_RT = log10(ifelse(Response.RT < 0, NA_real_, Response.RT)),
       Response.log_RT_scaled = scale(Response.log_RT),
       Response.mean_log_RT = mean(Response.log_RT, na.rm = T)) %>%
-    group_by(Trial) %>%
+    group_by(Experiment, Trial) %>%
     mutate(Exclude_Trial.because_of_RT = ifelse(is.na(Response.log_RT_scaled) | abs(scale(Response.log_RT_scaled)) > 3, T, F)) %>%
-    ungroup() %>%
+    group_by(Experiment) %>%
     mutate(Exclude_Participant.because_of_RT = ifelse(abs(scale(Response.mean_log_RT)) > 3, T, F))
   
   # Exclude based on too many missing trials
   data %<>%
     group_by(Experiment, ParticipantID) %>%
-    mutate(Exclude_Participant.because_of_MissingTrials = ifelse(sum(Phase == "test" & (Exclude_Trial.because_of_RT | is.na(Response))) > 7, T, F)) %>%
+    mutate(Exclude_Participant.because_of_MissingTrials = 
+             ifelse(sum(Phase == "test" & 
+                          (Exclude_Trial.because_of_RT | is.na(Response))) > 7, T, F)) %>%
     ungroup() 
   
   # Swapped keys
@@ -534,7 +547,7 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
           # Fit GLM if there are at least 24 responses in test
           ~ if ((.x %>% filter(Phase == "test" & !is.na(Response)) %>% nrow(.)) > 24) {
             glm(Response == "ASHI" ~ Condition.Test.Audio, data = .x %>% filter(Phase == "test"), family = binomial) %>% 
-              tidy()
+              broom::tidy()
           } else { 
             # Otherwise just add a data frame with NAs.
             data.frame(term = c("(Intercept)", "Condition.Test.Audio"), estimate = NA, p.value = NA) }) ,
@@ -567,9 +580,9 @@ add_exclusion_information <- function(data, exclude_based_on_catch_trials = T) {
         Exclude_Participant.because_of_TechnicalDifficulty ~ "Technical difficulty",
         Exclude_Participant.because_of_MultipleExperiments ~ "Repeat participant",
         Exclude_Participant.because_of_IgnoredInstructions ~ "No headphones",
-        Exclude_Participant.because_of_CatchQuestion ~ "Catch question or trials",
-        exclude_based_on_catch_trials & Exclude_Participant.because_of_CatchTrials ~ "Catch question or trials",
-        Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal ~ "Lexical decision accuracy",
+        Exclude_Participant.because_of_CatchQuestion ~ "Catch question",
+        #exclude_based_on_catch_trials & Exclude_Participant.because_of_CatchTrials ~ "Catch question or trials",
+        #Exclude_Participant.because_of_Accuracy.LexicalDecision.Normal ~ "Lexical decision accuracy",
         Exclude_Participant.because_of_SwappedKeys ~ "Swapped response keys",
         Exclude_Participant.because_of_RT ~ "Reaction time",
         Exclude_Participant.because_of_MissingTrials ~ "Too many missing trials",
@@ -590,7 +603,7 @@ exclusionPlot <- function(data) {
     data %>%
     droplevels() %>%
     group_by(Experiment, ParticipantID, Exclude_Participant.Reason) %>%
-    mutate(Response.log_RT = log10(Response.RT)) %>%
+    mutate(Response.log_RT = log10(ifelse(Response.RT < 0, NA_real_, Response.RT))) %>%
     summarise_at("Response.log_RT", .funs = list("mean" = mean, "sd" = sd), na.rm = T) %>%
     ggplot(aes(x = mean, y = sd)) +
     geom_point(aes(color = Exclude_Participant.Reason, shape = Exclude_Participant.Reason)) +
@@ -600,8 +613,8 @@ exclusionPlot <- function(data) {
         . %>% 
         group_by(Experiment) %>% 
         summarise(
-          mean = max(mean),
-          sd = max(sd),
+          mean = max(mean, na.rm = T),
+          sd = max(sd, na.rm = T),
           label = paste0(
             "Excl. N=",
             sum(Exclude_Participant.Reason != "none"),
@@ -609,7 +622,7 @@ exclusionPlot <- function(data) {
             percent(sum(Exclude_Participant.Reason != "none") / length(Exclude_Participant.Reason)),
             ")")) %>%
         ungroup() %>%
-        mutate(mean = max(mean), sd = max(sd)),
+        mutate(mean = max(mean, na.rm = T), sd = max(sd, na.rm = T)),
       aes(label = label), color = "red", hjust = 1, vjust = 1) +
     scale_x_continuous("mean log-RT (in msec)") +
     scale_y_continuous("SD of log-RT") +
@@ -634,34 +647,51 @@ exclusionPlot <- function(data) {
 }
 
 
-excludeData <- function(data) {
+excludeParticipants <- function(data) {
   data %<>%
     filter(
-      Exclude_Participant.Reason == "none" | Experiment == "LJ18-NORM",
-      !Exclude_Trial.because_of_RT | Experiment == "LJ18-NORM")
+      Exclude_Participant.Reason == "none" | Experiment == "LJ18-NORM")
   
   return(data)
 }
 
+excludeTrials <- function(data) {
+  data %<>%
+    filter(
+      !is.na(Response.ASHI),
+      Exclude_Trial.because_of_RT == FALSE | Experiment == "LJ18-NORM") # LJ18 did not include RT measurements
+  
+  return(data)
+}
+
+
+
 run_exclusions <- function(data, experiment) {
   data %<>% filter(Experiment %in% experiment)
+  
+  data.exclusions <- 
+    data %>% 
+    distinct(Experiment, ParticipantID, Exclude_Participant.Reason) %>% 
+    mutate(Exclude_Participant.Reason = ifelse(Exclude_Participant.Reason == "none", "_none", as.character(Exclude_Participant.Reason))) %>%
+    group_by(Experiment, Exclude_Participant.Reason) %>% 
+    tally() %>% 
+    group_by(Experiment) %>%
+    arrange(Experiment, Exclude_Participant.Reason) %>%
+    mutate(Percent = percent(n / sum(n))) %>%
+    mutate(
+      Experiment = gsub("CISP-", "", Experiment),
+      Exclude_Participant.Reason = ifelse(Exclude_Participant.Reason == "_none", "none", as.character(Exclude_Participant.Reason)))
   print(
-    kable(
-      data %>% 
-        distinct(Experiment, ParticipantID, Exclude_Participant.Reason) %>% 
-        group_by(Experiment, Exclude_Participant.Reason) %>% 
-        tally() %>% 
-        group_by(Experiment) %>%
-        mutate(Percent = percent(n / sum(n))),
+    kable(data.exclusions,
       caption = "Summary of exclusions.") %>%
-    kable_styling(latex_options = "HOLD_position"))
-  
-  
+      pack_rows(index = table(data.exclusions$Experiment)) %>%
+      kable_styling(latex_options = "HOLD_position"))
+      
   message(
     data %>% 
       distinct(Experiment, ParticipantID, Duration.Assignment) %>% 
       group_by(Experiment) %>%
-      summarise(across(Duration.Assignment, list("mean" = mean, "sd" = sd))) %>%
+      summarise(across(Duration.Assignment, list("mean" = mean, "sd" = sd), na.rm = T)) %>%
       mutate(msg = paste0(    
         "Participants in ",
         Experiment,
@@ -675,23 +705,30 @@ run_exclusions <- function(data, experiment) {
   exclusionPlot(data)
   
   data %<>% 
-    excludeData()
+    excludeParticipants()
   
   message(
     "\nData submitted for analysis contains ", 
     nrow(data %>% filter(is.na(Response.ASHI))),
     " missing observations (",
     percent(nrow(data %>% filter(is.na(Response.ASHI))) / nrow(data)),
+    "), and ",
+    nrow(data %>% filter(Exclude_Trial.because_of_RT == TRUE)),
+    " observations excluded for irregular RTs (",
+    percent(nrow(data %>% filter(Exclude_Trial.because_of_RT == TRUE)) / nrow(data)),
     "), leaving ",
-    nrow(data %>% filter(!is.na(Response.ASHI))),
+    nrow(data %>% filter(!is.na(Response.ASHI) &
+                           Exclude_Trial.because_of_RT == FALSE)),
     " observations from ",
-    data %>% filter(!is.na(Response.ASHI)) %>% pull(ParticipantID) %>% unique() %>% length(),
+    data %>% filter(!is.na(Response.ASHI) &
+                      Exclude_Trial.because_of_RT == FALSE) %>% pull(ParticipantID) %>% unique() %>% length(),
     " participants from ",
-    data %>% filter(!is.na(Response.ASHI)) %>% pull(Experiment) %>% unique() %>% length(),
+    data %>% filter(!is.na(Response.ASHI) &
+                      Exclude_Trial.because_of_RT == FALSE) %>% pull(Experiment) %>% unique() %>% length(),
     " experiment(s).")
   
-  data %>%
-    filter(!is.na(Response.ASHI))
+  data %<>%
+    excludeTrials()
 }
 ## Data summaries ------------------------------------------------------- 
 
@@ -788,8 +825,10 @@ prep_for_analysis <- function(data) {
   return(data)
 }
 
-fit_test_model <- function(data, experiment, formula = NULL, file = NULL) {
+fit_test_model <- function(data, experiment, formula = NULL, file = NULL, .prep_for_analysis = T) {
   data %<>% filter(Experiment %in% experiment)
+  if (.prep_for_analysis) data %<>% prep_for_analysis()
+
   multiple_experiments <- length(unique(data$Experiment)) > 1 
   exposure_experiment <- length(unique(data$Condition.Exposure.LexicalLabel)) > 1
   
@@ -803,22 +842,27 @@ fit_test_model <- function(data, experiment, formula = NULL, file = NULL) {
       "(1 + Condition.Test.OriginalLabel * Condition.Test.Pen * mo(Condition.Test.Audio) | ParticipantID)"))
   } else formula
   
-  m <- brm(
-    formula,
-    data = 
-      data %>% 
-      prep_for_analysis(),
-    family = "bernoulli",
-    prior = my_priors,
-    sample_prior = "yes",
-    backend = "cmdstanr",
-    chains = 4, 
-    warmup = if (multiple_experiments | exposure_experiment) 2000 else 1000,
-    iter = if (multiple_experiments | exposure_experiment) 3000 else 2000,
-    control = list(adapt_delta = if (multiple_experiments | exposure_experiment) .95 else .9),
-    cores = min(parallel::detectCores(), 4), 
-    threads = threading(threads = 4),
-    file = if (is.null(file)) paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-") else file)
+  m <- 
+    brm(
+      formula,
+      data = data,
+      family = "bernoulli",
+      prior = my_priors,
+      sample_prior = "yes",
+      backend = "cmdstanr",
+      chains = 4, 
+      warmup = if (multiple_experiments | exposure_experiment) 2000 else 1000,
+      iter = if (multiple_experiments | exposure_experiment) 3000 else 2000,
+      control = list(adapt_delta = if (multiple_experiments | exposure_experiment) .95 else .9),
+      cores = min(parallel::detectCores(), 4), 
+      threads = threading(threads = 4),
+      file = if (is.null(file)) paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-") else file)
+  
+  return(m)
+}
+
+load_test_model <- function(experiment) {
+  m <- readRDS(file = paste0(paste("../models/Exp", paste(experiment, collapse = "-"), sep = "-"), ".rds"))
   
   return(m)
 }
@@ -840,7 +884,7 @@ format_hypothesis_tables <- function(table, experiment, BF.max = 4000) {
   relocate(Exp, everything())
 }
 
-my_hypotheses <- function(m, experiment, plot = F) { 
+my_hypotheses <- function(m, experiment, plot = F, short = F, format = "latex") { 
   exposure_experiment <- length(unique(m$data$Condition.Exposure.LexicalLabel)) > 1
   
   # mo() operators imply that the effects of the other variables are assessed at the reference level of the
@@ -866,7 +910,12 @@ my_hypotheses <- function(m, experiment, plot = F) {
         "Enhanced effect of SH-bias when pen location matches in exposure & test")) %>%
       #        "Less SH responses after pen-in-mouth exposure")) %>%
       format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
-      kable(caption = "Effects of exposure.", align = c(rep("l", 2), rep("r", 6), "l"))
+      { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
+      kable(
+        format = format,
+        caption = "Effects of exposure.", 
+        align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
+        escape = F)
   }
   
   l[["test.pen"]] <- 
@@ -888,12 +937,14 @@ my_hypotheses <- function(m, experiment, plot = F) {
       "Pen effect increases for visually \\textit{ashi}-biased input",
       "Pen effect increases even more when acoustic and visual input is \\textit{ashi}-biased")) %>%
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
     kable(
+      format = format,
       caption = "Effects of pen location.", 
-      align = c(rep("l", 2), rep("r", 6), "l"), 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%
     column_spec(2, width = "7cm") %>%
-    column_spec(7, width = "1.1cm") %>%
+    { if (!short) column_spec(., 7, width = "1.1cm") else . } %>%
     kable_styling(latex_options = "HOLD_position")
   
   l[["test.cues"]] <- 
@@ -909,12 +960,14 @@ my_hypotheses <- function(m, experiment, plot = F) {
       "Visual \\textit{ashi}-bias -> more \\textit{ashi}-responses",
       "Acoustic and visual bias effects are independent")) %>% 
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
     kable(
+      format = format,
       caption = "Effects of acoustic continuum and visual bias.", 
-      align = c(rep("l", 2), rep("r", 6), "l"), 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%
     column_spec(2, width = "7cm") %>%
-    column_spec(7, width = "1.1cm") %>%
+    { if (!short) column_spec(., 7, width = "1.1cm") else . } %>%
     kable_styling(latex_options = "HOLD_position")
   
   l[["test.block"]] <- 
@@ -933,18 +986,125 @@ my_hypotheses <- function(m, experiment, plot = F) {
       "Acoustic effect is stable over blocks",
       "Visual bias effect is stable over blocks")) %>%
     format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
     kable(
+      format = format,
       caption = "Changes across blocks.", 
-      align = c(rep("l", 2), rep("r", 6), "l"), 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
       escape = F) %>%
     column_spec(2, width = "7cm") %>%
-    column_spec(7, width = "1.1cm") %>%
+    { if (!short) column_spec(., 7, width = "1.1cm") else . } %>%
     kable_styling(latex_options = "HOLD_position")
   
   if (plot) for (H in h) plot(H)
   return(l)
 }
 
+
+my_hypotheses_for_word <- function(m, experiment, short = F, format = "html") { 
+  require(huxtable)
+  exposure_experiment <- length(unique(m$data$Condition.Exposure.LexicalLabel)) > 1
+  
+  # mo() operators imply that the effects of the other variables are assessed at the reference level of the
+  # monotonic predictor. For Block, this is exactly what we want: evaluation of effects in the first Block.
+  # However, for the continuum, we'd like to assess effects in the middle of the continuum. This is taken 
+  # into account below.
+  h <- list()
+  l <- list()
+  if (exposure_experiment) {
+    l[["exposure.label"]] <- 
+      { h[["exposure.label"]] <- hypothesis(
+        m, 
+        c(
+          "b_Condition.Exposure.LexicalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH > 0",
+          "b_Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM < 0",
+          "b_Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM:Condition.Test.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH:Condition.Exposure.PenM:Condition.Test.PenM > 0"),
+        #          "b_Condition.Exposure.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Exposure.PenM < 0"),
+        class = NULL) } %>%
+      .[["hypothesis"]] %>% 
+      mutate(Hypothesis = c(
+        "More SH responses after SH-biased exposure",
+        "Reduced effect of SH-bias when pen-in-mouth during critical exposure",
+        "Enhanced effect of SH-bias when pen location matches in exposure & test")) %>%
+      #        "Less SH responses after pen-in-mouth exposure")) %>%
+      format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+      { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
+      kable(
+        format = format,
+        caption = "Effects of exposure.", align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"))
+  }
+  
+  l[["test.pen"]] <- 
+    { h[["test.pen"]] <- hypothesis(
+      m, 
+      c(
+        # There are 5 continuum steps above the baseline, so we add 2.5 * the interaction of continuum and the 
+        # effect of interest to the effect of interest. (a more precise estimate could be obtained by following
+        # Figure 1 in Bürkner & Charpentier, which takes into account the specific simo estimates).
+        "b_Condition.Test.PenM  + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.PenM < 0",
+        "b_Condition.Test.OriginalLabelSH:Condition.Test.PenM + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH:Condition.Test.PenM < 0"),
+      class = NULL) } %>%
+    .[["hypothesis"]] %>% 
+    mutate(Hypothesis = c(
+      "Pen location Mouth -> fewer \\textit{ashi}-responses",
+      "Pen effect increases for more \\textit{ashi}-like acoustic input",
+      "Pen effect increases for visually \\textit{ashi}-biased input",
+      "Pen effect increases even more when acoustic and visual input is \\textit{ashi}-biased")) %>%
+    format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
+    kable(
+      format = format,
+      caption = "Effects of pen location.", 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
+      escape = F) 
+  
+  l[["test.cues"]] <- 
+    { h[["test.cues"]] <- hypothesis(
+      m, 
+      c("bsp_moCondition.Test.Audio > 0", 
+        "b_Condition.Test.OriginalLabelSH + 2.5 * bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH > 0",
+        "bsp_moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"), 
+      class = NULL, scope = "standard") } %>%
+    .[["hypothesis"]] %>% 
+    mutate(Hypothesis = c(
+      "Acoustic continuum more \\textit{ashi}-like -> more \\textit{ashi}-responses",
+      "Visual \\textit{ashi}-bias -> more \\textit{ashi}-responses",
+      "Acoustic and visual bias effects are independent")) %>% 
+    format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
+    kable(
+      format = format,
+      caption = "Effects of acoustic continuum and visual bias.", 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
+      escape = F) 
+  
+  l[["test.block"]] <- 
+    { h[["test.block"]] <- hypothesis(
+      m, 
+      c(
+        if (exposure_experiment) "bsp_moBlock:Condition.Exposure.LexicalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Exposure.LexicalLabelSH < 0" else NULL,
+        "bsp_moBlock:Condition.Test.PenM + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.PenM = 0",
+        "bsp_moBlock:moCondition.Test.Audio = 0", 
+        "bsp_moBlock:Condition.Test.OriginalLabelSH + 2.5 * bsp_moBlock:moCondition.Test.Audio:Condition.Test.OriginalLabelSH = 0"),
+      class = NULL) } %>%
+    .[["hypothesis"]] %>% 
+    mutate(Hypothesis = c(
+      if (exposure_experiment) "Effect of SH-biased exposure reduces over blocks" else NULL,
+      "Pen effect is stable over blocks",
+      "Acoustic effect is stable over blocks",
+      "Visual bias effect is stable over blocks")) %>%
+    format_hypothesis_tables(experiment, BF.max = ndraws(m)) %>%
+    { if (short) select(., Exp, Hypothesis, `$\\hat{\\beta}$`, BF, `$p_{posterior}$`) else . } %>%
+    kable(
+      format = format,
+      caption = "Changes across blocks.", 
+      align = c(rep("l", 2), rep("r", if (short) 3 else 6), "l"), 
+      escape = F) 
+
+  return(l)
+}
 
 ## Functions for formatting knitr output 
 summarize_effect <- function(model, effect, parentheses = T) {
@@ -1024,7 +1184,7 @@ plot_data <- function(data, experiment, background_experiment = NULL) {
   }
   shared_formatting <- 
     list(
-      scale_y_continuous(bquote(paste('Proportion ', italic("ashi"), " responses", sep = ""))),
+      scale_y_continuous(bquote(paste('Proportion ', italic("ashi"), "-responses", sep = ""))),
       scale_shape_manual(
         "Pen location", 
         breaks = levels.test.pen_locations, labels = labels.test.pen_locations, values = shapes.test.pen_locations),
